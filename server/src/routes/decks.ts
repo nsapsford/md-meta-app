@@ -141,14 +141,50 @@ router.get('/:name', async (req: Request, res: Response) => {
       }));
     }
 
+    // Collect all unique card names from top decks for batch enrichment
+    const allNames = new Set<string>();
+    const parsedTopDecks = topDecks.map((d: any) => {
+      const main = d.main_deck_json ? JSON.parse(d.main_deck_json) : null;
+      const extra = d.extra_deck_json ? JSON.parse(d.extra_deck_json) : null;
+      const side = d.side_deck_json ? JSON.parse(d.side_deck_json) : null;
+      for (const arr of [main, extra, side]) {
+        if (arr) for (const c of arr) if (c.cardName) allNames.add(c.cardName);
+      }
+      return { ...d, main_deck_json: main, extra_deck_json: extra, side_deck_json: side };
+    });
+
+    // Batch lookup card info (images, type, archetype)
+    const cardInfoMap = new Map<string, any>();
+    if (allNames.size > 0) {
+      const names = Array.from(allNames);
+      const placeholders = names.map(() => '?').join(',');
+      const cardRows = queryAll(db,
+        `SELECT name, type, frame_type, archetype, image_small_url FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
+        names);
+      for (const row of cardRows) {
+        cardInfoMap.set(row.name.toLowerCase(), row);
+      }
+    }
+
+    const enrichCard = (c: any) => {
+      const info = cardInfoMap.get((c.cardName || '').toLowerCase());
+      return {
+        ...c,
+        imageUrl: info?.image_small_url || null,
+        type: info?.type || null,
+        frameType: info?.frame_type || null,
+        archetype: info?.archetype || null,
+      };
+    };
+
     res.json({
       ...deck,
       breakdown_json: breakdown,
-      topDecks: topDecks.map((d: any) => ({
+      topDecks: parsedTopDecks.map((d: any) => ({
         ...d,
-        main_deck_json: d.main_deck_json ? JSON.parse(d.main_deck_json) : null,
-        extra_deck_json: d.extra_deck_json ? JSON.parse(d.extra_deck_json) : null,
-        side_deck_json: d.side_deck_json ? JSON.parse(d.side_deck_json) : null,
+        main_deck_json: d.main_deck_json?.map(enrichCard) || null,
+        extra_deck_json: d.extra_deck_json?.map(enrichCard) || null,
+        side_deck_json: d.side_deck_json?.map(enrichCard) || null,
       })),
     });
   } catch (err: any) {

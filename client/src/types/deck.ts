@@ -35,9 +35,9 @@ export interface TopDeck {
   id: string;
   deck_type_name: string;
   author: string | null;
-  main_deck_json: DeckCard[] | null;
-  extra_deck_json: DeckCard[] | null;
-  side_deck_json: DeckCard[] | null;
+  main_deck_json: EnrichedDeckCard[] | null;
+  extra_deck_json: EnrichedDeckCard[] | null;
+  side_deck_json: EnrichedDeckCard[] | null;
   tournament_name: string | null;
   tournament_placement: string | null;
   ranked_type: string | null;
@@ -51,6 +51,13 @@ export interface DeckCard {
   cardName: string;
   amount: number;
   rarity?: string;
+}
+
+export interface EnrichedDeckCard extends DeckCard {
+  imageUrl?: string | null;
+  type?: string | null;
+  frameType?: string | null;
+  archetype?: string | null;
 }
 
 export interface DeckProfile extends DeckType {

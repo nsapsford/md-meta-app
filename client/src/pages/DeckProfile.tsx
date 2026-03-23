@@ -6,18 +6,71 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import TierBadge from '../components/common/TierBadge';
 import CardImage from '../components/common/CardImage';
+import DecklistView from '../components/decks/DecklistView';
+
+function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
+  // Get top 3 archetype cards from the first top decklist
+  const deckNameLower = deck.name.toLowerCase();
+  const deckWords = deckNameLower.split(/\s+/).filter(w => w.length > 2);
+  const firstDeck = deck.topDecks?.[0];
+  const allCards = [...(firstDeck?.main_deck_json || []), ...(firstDeck?.extra_deck_json || [])];
+  const archetypeCards = allCards.filter(c => {
+    const arch = (c.archetype || '').toLowerCase();
+    const name = c.cardName.toLowerCase();
+    return deckWords.some(w => arch.includes(w) || name.includes(w));
+  }).filter(c => c.imageUrl).slice(0, 3);
+
+  if (archetypeCards.length === 0) return null;
+
+  const count = archetypeCards.length;
+  const totalSpread = 30;
+  const angles = Array.from({ length: count }, (_, i) =>
+    count === 1 ? 0 : -totalSpread / 2 + (i * totalSpread) / (count - 1)
+  );
+  const xOffsets = Array.from({ length: count }, (_, i) =>
+    count === 1 ? 0 : -14 * (count - 1) / 2 + i * 14
+  );
+
+  return (
+    <div className="relative flex items-end justify-center shrink-0" style={{ height: '120px', width: '120px' }}>
+      {archetypeCards.map((card, i) => (
+        <div
+          key={card.cardName}
+          className="absolute bottom-0"
+          style={{
+            transform: `translateX(${xOffsets[i]}px) rotate(${angles[i]}deg)`,
+            transformOrigin: 'bottom center',
+            zIndex: i,
+          }}
+        >
+          <img
+            src={card.imageUrl!}
+            alt={card.cardName}
+            className="rounded shadow-lg border border-md-border/50"
+            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function DeckProfile() {
   const { name } = useParams<{ name: string }>();
   const [deck, setDeck] = useState<DeckProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedDeck, setExpandedDeck] = useState<string | null>(null);
 
   useEffect(() => {
     if (!name) return;
     setLoading(true);
     getDeckProfile(decodeURIComponent(name))
-      .then(setDeck)
+      .then((d) => {
+        setDeck(d);
+        if (d.topDecks?.[0]?.id) setExpandedDeck(d.topDecks[0].id);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [name]);
@@ -36,10 +89,8 @@ export default function DeckProfile() {
 
       {/* Header */}
       <div className="bg-md-surface border border-md-border rounded-lg p-6">
-        <div className="flex items-start gap-4">
-          {deck.thumbnail_image && (
-            <img src={deck.thumbnail_image} alt="" className="w-20 h-20 rounded-lg object-cover" />
-          )}
+        <div className="flex items-start gap-6">
+          <HeaderCardFan deck={deck} />
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h2 className="text-2xl font-bold">{deck.name}</h2>
@@ -74,7 +125,6 @@ export default function DeckProfile() {
                 )}
               </div>
             )}
-            {deck.overview && <p className="mt-3 text-sm text-md-textMuted leading-relaxed">{deck.overview}</p>}
           </div>
         </div>
       </div>
@@ -135,38 +185,47 @@ export default function DeckProfile() {
         </div>
       )}
 
-      {/* Sample Decklists */}
+      {/* Top Decklists */}
       {deck.topDecks && deck.topDecks.length > 0 && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-4">Top Decklists ({deck.topDecks.length})</h3>
-          <div className="space-y-4">
-            {deck.topDecks.slice(0, 5).map((td) => (
-              <div key={td.id} className="bg-md-bg rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    {td.author && <p className="text-sm font-medium">{td.author}</p>}
-                    <div className="flex items-center gap-3 text-xs text-md-textMuted">
-                      {td.tournament_name && <span>{td.tournament_name}</span>}
-                      {td.tournament_placement && <span>#{td.tournament_placement}</span>}
-                      {td.ranked_type && <span>{td.ranked_type}</span>}
+          <div className="space-y-3">
+            {deck.topDecks.slice(0, 5).map((td, idx) => {
+              const isExpanded = expandedDeck === td.id;
+              return (
+                <div key={td.id} className="bg-md-bg rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setExpandedDeck(isExpanded ? null : td.id)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-md-surface/50 transition-colors text-left"
+                  >
+                    <div>
+                      {td.author && <p className="text-sm font-medium">{td.author}</p>}
+                      <div className="flex items-center gap-3 text-xs text-md-textMuted">
+                        {td.tournament_name && <span>{td.tournament_name}</span>}
+                        {td.tournament_placement && <span>#{td.tournament_placement}</span>}
+                        {td.ranked_type && <span>{td.ranked_type}</span>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-md-textMuted">
-                    {td.ur_price != null && <span className="text-rarity-ur">{td.ur_price} UR</span>}
-                    {td.sr_price != null && <span className="text-rarity-sr">{td.sr_price} SR</span>}
-                  </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 text-xs text-md-textMuted">
+                        {td.ur_price != null && <span className="text-rarity-ur">{td.ur_price} UR</span>}
+                        {td.sr_price != null && <span className="text-rarity-sr">{td.sr_price} SR</span>}
+                      </div>
+                      <span className={`text-md-textMuted transition-transform ${isExpanded ? 'rotate-180' : ''}`}>&#9660;</span>
+                    </div>
+                  </button>
+                  {isExpanded && td.main_deck_json && (
+                    <div className="px-4 pb-4">
+                      <DecklistView
+                        mainDeck={td.main_deck_json}
+                        extraDeck={td.extra_deck_json || []}
+                        deckArchetype={deck.name}
+                      />
+                    </div>
+                  )}
                 </div>
-                {td.main_deck_json && (
-                  <div className="flex flex-wrap gap-1">
-                    {td.main_deck_json.map((c, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-md-surface rounded text-xs">
-                        {c.cardName} x{c.amount}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

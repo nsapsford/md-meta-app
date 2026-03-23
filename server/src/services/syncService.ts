@@ -1,5 +1,5 @@
 import { getDb, saveDb } from '../db/connection.js';
-import { run } from '../utils/dbHelpers.js';
+import { run, queryAll } from '../utils/dbHelpers.js';
 import * as ygopd from './ygoprodeckService.js';
 import * as mdm from './mdmService.js';
 import * as untapped from './untappedService.js';
@@ -79,6 +79,26 @@ export async function syncDeckTypes(): Promise<number> {
       run(db, `INSERT OR REPLACE INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
         VALUES (?, ?, ?, ?, date('now'))`,
         [d.name, tier, power, d.masterPopRank ?? null]);
+    }
+  }
+
+  // Remove duplicate deck_types: for each name, keep the MDM entry (has power/tier)
+  // and delete slug-based duplicates created by old scraper or untapped sync
+  const dupes = queryAll(db,
+    `SELECT name FROM deck_types GROUP BY LOWER(name) HAVING COUNT(*) > 1`
+  );
+  for (const d of dupes) {
+    // Keep the entry with highest power, or the one with a non-slug ID (MDM IDs are hex ObjectIds)
+    const entries = queryAll(db,
+      `SELECT id, power FROM deck_types WHERE LOWER(name) = LOWER(?) ORDER BY power DESC NULLS LAST`,
+      [d.name]
+    );
+    if (entries.length > 1) {
+      // Keep the first (best) entry, delete the rest
+      const keepId = entries[0].id;
+      for (const e of entries.slice(1)) {
+        run(db, `DELETE FROM deck_types WHERE id = ?`, [e.id]);
+      }
     }
   }
 
