@@ -13,7 +13,7 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <nav className="w-56 bg-md-surface border-r border-md-border min-h-[calc(100vh-3.5rem)] p-3 flex flex-col gap-1">
+    <nav className="w-52 min-h-[calc(100vh-3.5rem)] border-r border-md-border/40 bg-md-surface/40 py-4 px-2.5 flex flex-col gap-0.5">
       {navItems.map((item) => (
         <NavLink
           key={item.to}
@@ -21,14 +21,14 @@ export default function Sidebar() {
           end={item.to === '/'}
           className={({ isActive }) =>
             clsx(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
               isActive
-                ? 'bg-md-blue/15 text-md-blue'
-                : 'text-md-textMuted hover:text-md-text hover:bg-md-surfaceHover'
+                ? 'bg-md-blue/10 text-md-blue nav-active'
+                : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/50'
             )
           }
         >
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-[18px] h-[18px] flex-shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
           </svg>
           {item.label}

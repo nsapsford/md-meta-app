@@ -50,6 +50,7 @@ export interface BanCard {
   banStatus: string;
   rarity: string | null;
   konamiID: string | null;
+  banListDate: string | null;
   id: number | null;
   image_small_url: string | null;
   image_cropped_url: string | null;

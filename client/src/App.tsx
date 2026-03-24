@@ -17,17 +17,19 @@ export default function App() {
         <Header />
         <div className="flex">
           <Sidebar />
-          <main className="flex-1 p-6 overflow-x-hidden">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/decks/:name" element={<DeckProfile />} />
-              <Route path="/cards" element={<CardSearch />} />
-              <Route path="/matchups" element={<Matchups />} />
-              <Route path="/ban-list" element={<BanList />} />
-              <Route path="/trends" element={<MetaTrends />} />
-              <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/deck-builder" element={<DeckBuilder />} />
-            </Routes>
+          <main className="flex-1 p-6 overflow-x-hidden bg-hero-glow">
+            <div className="max-w-[1400px] mx-auto animate-fade-in">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/decks/:name" element={<DeckProfile />} />
+                <Route path="/cards" element={<CardSearch />} />
+                <Route path="/matchups" element={<Matchups />} />
+                <Route path="/ban-list" element={<BanList />} />
+                <Route path="/trends" element={<MetaTrends />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/deck-builder" element={<DeckBuilder />} />
+              </Routes>
+            </div>
           </main>
         </div>
       </div>

@@ -137,6 +137,7 @@ export interface MDMBanCard {
   banStatus: 'Forbidden' | 'Limited 1' | 'Limited 2';
   rarity: string | null;
   konamiID: string | null;
+  banListDate: string | null;
 }
 
 export interface MDMBanList {
@@ -152,6 +153,7 @@ export async function getBanList(): Promise<MDMBanList> {
         params: { banStatus: status, limit: 500 },
       });
       const data = Array.isArray(res.data) ? res.data : [];
+      if (data.length > 0) console.log('[MDM ban-list fields]', Object.keys(data[0]));
       // Deduplicate by name
       const seen = new Set<string>();
       return data.filter((c: any) => {
@@ -163,6 +165,7 @@ export async function getBanList(): Promise<MDMBanList> {
         banStatus: status as MDMBanCard['banStatus'],
         rarity: c.rarity ?? null,
         konamiID: c.konamiID ?? null,
+        banListDate: c.banListDate ?? c.startDate ?? c.date ?? null,
       }));
     };
 

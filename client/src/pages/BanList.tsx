@@ -4,60 +4,74 @@ import type { BanListData, BanCard } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 
-const RARITY_COLORS: Record<string, string> = {
+const RARITY_BORDER: Record<string, string> = {
+  UR: 'border-b-2 border-rarity-ur',
+  SR: 'border-b-2 border-rarity-sr',
+  R: 'border-b-2 border-rarity-r',
+  N: 'border-b-2 border-md-textMuted/40',
+};
+
+const RARITY_LABEL: Record<string, string> = {
   UR: 'text-rarity-ur',
   SR: 'text-rarity-sr',
   R: 'text-rarity-r',
   N: 'text-md-textMuted',
 };
 
+function BanCardCell({ card }: { card: BanCard }) {
+  const [imgError, setImgError] = useState(false);
+  const rarityBorder = card.rarity ? (RARITY_BORDER[card.rarity] ?? '') : '';
+
+  return (
+    <div className={`group cursor-default ${rarityBorder}`}>
+      <div className="relative w-full aspect-[7/10] rounded-md overflow-hidden bg-md-surfaceAlt shadow-card">
+        {card.image_small_url && !imgError ? (
+          <img
+            src={card.image_small_url}
+            alt={card.name}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center p-1">
+            <span className="text-md-textMuted text-[9px] text-center leading-tight">{card.name.slice(0, 20)}</span>
+          </div>
+        )}
+        {card.rarity && (
+          <span className={`absolute top-0.5 right-0.5 text-[8px] font-bold px-1 rounded ${RARITY_LABEL[card.rarity] ?? 'text-md-textMuted'} bg-black/60`}>
+            {card.rarity}
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] mt-1 truncate text-md-textSecondary leading-tight" title={card.name}>{card.name}</p>
+    </div>
+  );
+}
+
 function BanSection({
   title,
   subtitle,
   cards,
-  accentClass,
+  accentColor,
 }: {
   title: string;
   subtitle: string;
   cards: BanCard[];
-  accentClass: string;
+  accentColor: string;
 }) {
   if (cards.length === 0) return null;
   return (
-    <div className="bg-md-surface border border-md-border rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-md-border flex items-center gap-3">
-        <span className={`w-3 h-3 rounded-full ${accentClass}`} />
-        <h3 className="font-semibold">{title}</h3>
+    <div className="bg-md-surface rounded-xl border border-md-border overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-md-border/60 flex items-center gap-3">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accentColor }} />
+        <h3 className="font-semibold text-sm">{title}</h3>
         <span className="text-md-textMuted text-xs">{subtitle}</span>
-        <span className="text-md-textMuted text-sm ml-auto">({cards.length})</span>
+        <span className="text-md-textMuted text-xs ml-auto font-mono">{cards.length}</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-4">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2.5 p-4">
         {cards.map((card) => (
-          <div key={card.name} className="text-center group">
-            <div className="relative mx-auto" style={{ width: 60, height: 88 }}>
-              {card.image_small_url ? (
-                <img
-                  src={card.image_small_url}
-                  alt={card.name}
-                  className="rounded shadow w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty('display', 'flex');
-                  }}
-                />
-              ) : null}
-              <div
-                className={`${card.image_small_url ? 'hidden' : 'flex'} w-full h-full rounded border border-md-border bg-md-surfaceHover items-center justify-center`}
-                style={{ width: 60, height: 88 }}
-              >
-                <span className="text-md-textMuted text-xs text-center px-1 leading-tight">{card.name.slice(0, 12)}</span>
-              </div>
-            </div>
-            <p className="text-xs mt-1 truncate leading-tight" title={card.name}>{card.name}</p>
-            {card.rarity && (
-              <span className={`text-xs ${RARITY_COLORS[card.rarity] ?? 'text-md-textMuted'}`}>{card.rarity}</span>
-            )}
-          </div>
+          <BanCardCell key={card.name} card={card} />
         ))}
       </div>
     </div>
@@ -79,38 +93,36 @@ export default function BanList() {
 
   useEffect(() => { load(); }, []);
 
-  if (loading) return <LoadingSpinner size="lg" />;
+  if (loading) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
   if (error) return <ErrorBanner message={error} onRetry={load} />;
   if (!data) return null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-md-gold">Master Duel Ban List</h2>
-        <p className="text-md-textMuted text-sm mt-1">
-          {data.forbidden.length} Forbidden · {data.limited.length} Limited 1 · {data.semiLimited.length} Limited 2
-          <span className="ml-2 opacity-60">· Source: MasterDuelMeta</span>
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">
+          <span className="text-shimmer">Ban List</span>
+        </h2>
+        <div className="flex items-center gap-4 text-xs text-md-textMuted mt-2">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-md-red" />
+            {data.forbidden.length} Forbidden
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-md-orange" />
+            {data.limited.length} Limited 1
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-yellow-400" />
+            {data.semiLimited.length} Limited 2
+          </span>
+          <span className="text-md-textMuted/50 ml-1">Source: MasterDuelMeta</span>
+        </div>
       </div>
 
-      <BanSection
-        title="Forbidden"
-        subtitle="0 copies allowed"
-        cards={data.forbidden}
-        accentClass="bg-md-red"
-      />
-      <BanSection
-        title="Limited 1"
-        subtitle="Maximum 1 copy"
-        cards={data.limited}
-        accentClass="bg-md-orange"
-      />
-      <BanSection
-        title="Limited 2"
-        subtitle="Maximum 2 copies"
-        cards={data.semiLimited}
-        accentClass="bg-yellow-400"
-      />
+      <BanSection title="Forbidden" subtitle="0 copies allowed" cards={data.forbidden} accentColor="#ff4d5e" />
+      <BanSection title="Limited 1" subtitle="1 copy max" cards={data.limited} accentColor="#ff9147" />
+      <BanSection title="Limited 2" subtitle="2 copies max" cards={data.semiLimited} accentColor="#facc15" />
     </div>
   );
 }

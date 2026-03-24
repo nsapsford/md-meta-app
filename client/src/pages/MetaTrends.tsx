@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#3d7eff', '#7c5cfc', '#ff6b9d', '#00d4aa', '#ff4757', '#c9a84c'];
+const COLORS = ['#ff4d5e', '#ff9147', '#ffd60a', '#3dd975', '#4a8eff', '#8b6cff', '#ff6b9d', '#00d4aa', '#f97316', '#d4af37'];
 
 export default function MetaTrends() {
   const [trends, setTrends] = useState<Record<string, MetaSnapshot[]>>({});
@@ -20,7 +20,7 @@ export default function MetaTrends() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingSpinner size="lg" />;
+  if (loading) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
   if (error) return <ErrorBanner message={error} />;
 
   const deckNames = Object.keys(trends);
@@ -31,22 +31,20 @@ export default function MetaTrends() {
   if (deckNames.length === 0 || !hasRealData) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-md-gold">Meta Trends</h2>
-        <div className="bg-md-surface border border-md-border rounded-lg p-8 text-center text-md-textMuted">
-          No trend data yet. Run a meta sync to capture the first snapshot, then data will accumulate daily.
+        <h2 className="text-2xl font-bold"><span className="text-shimmer">Meta Trends</span></h2>
+        <div className="bg-md-surface border border-md-border rounded-xl p-10 text-center text-md-textMuted">
+          No trend data yet. Run a meta sync to capture the first snapshot.
         </div>
       </div>
     );
   }
 
-  // Build chart data
   const dates = new Set<string>();
   for (const snapshots of Object.values(trends)) {
     for (const s of snapshots) dates.add(s.snapshot_date);
   }
   const sortedDates = Array.from(dates).sort();
 
-  // Pick top 10 decks by latest power (only decks with actual power data)
   const topDecks = deckNames
     .map((name) => {
       const latest = trends[name]?.find((s) => s.power != null && s.power > 0);
@@ -69,40 +67,53 @@ export default function MetaTrends() {
   }).filter((point) => topDecks.some((dn) => point[dn] != null));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-md-gold">Meta Trends</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setMetric('power')}
-            className={`px-3 py-1.5 rounded text-sm ${metric === 'power' ? 'bg-md-blue text-white' : 'bg-md-surface border border-md-border text-md-textMuted hover:bg-md-surfaceHover'}`}
-          >
-            Power
-          </button>
-          <button
-            onClick={() => setMetric('tier')}
-            className={`px-3 py-1.5 rounded text-sm ${metric === 'tier' ? 'bg-md-blue text-white' : 'bg-md-surface border border-md-border text-md-textMuted hover:bg-md-surfaceHover'}`}
-          >
-            Tier
-          </button>
+        <h2 className="text-2xl font-bold tracking-tight"><span className="text-shimmer">Meta Trends</span></h2>
+        <div className="flex gap-1 bg-md-surface border border-md-border rounded-lg p-0.5">
+          {(['power', 'tier'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMetric(m)}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 capitalize ${
+                metric === m
+                  ? 'bg-md-blue/15 text-md-blue shadow-sm'
+                  : 'text-md-textMuted hover:text-md-textSecondary'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="bg-md-surface border border-md-border rounded-lg p-4">
-        <ResponsiveContainer width="100%" height={500}>
+      <div className="bg-md-surface border border-md-border rounded-xl p-5">
+        <ResponsiveContainer width="100%" height={420}>
           <LineChart data={chartData}>
-            <XAxis dataKey="date" stroke="#8892a8" fontSize={11} />
+            <XAxis dataKey="date" stroke="#6b7694" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis
-              stroke="#8892a8"
-              fontSize={12}
+              stroke="#6b7694"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
               reversed={metric === 'tier'}
               domain={metric === 'tier' ? [0, 3] : ['auto', 'auto']}
             />
             <Tooltip
-              contentStyle={{ backgroundColor: '#131829', border: '1px solid #2a3050', borderRadius: 8 }}
-              labelStyle={{ color: '#e8eaf0' }}
+              contentStyle={{
+                backgroundColor: '#141a2e',
+                border: '1px solid #1e2740',
+                borderRadius: 10,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                fontSize: 12,
+              }}
+              labelStyle={{ color: '#eceef4', fontWeight: 600 }}
             />
-            <Legend />
+            <Legend
+              wrapperStyle={{ paddingTop: 16, fontSize: 11 }}
+              iconType="circle"
+              iconSize={8}
+            />
             {topDecks.map((name, i) => (
               <Line
                 key={name}
@@ -110,7 +121,8 @@ export default function MetaTrends() {
                 dataKey={name}
                 stroke={COLORS[i % COLORS.length]}
                 strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2 }}
+                dot={{ r: 4, strokeWidth: 2, fill: '#0f1423' }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
                 connectNulls
               />
             ))}
@@ -118,28 +130,28 @@ export default function MetaTrends() {
         </ResponsiveContainer>
       </div>
 
-      {/* Deck Legend Table */}
-      <div className="bg-md-surface border border-md-border rounded-lg overflow-hidden">
+      {/* Deck table */}
+      <div className="bg-md-surface border border-md-border rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-md-border">
-              <th className="text-left px-4 py-2 text-sm text-md-textMuted">Deck</th>
-              <th className="text-center px-4 py-2 text-sm text-md-textMuted">Data Points</th>
-              <th className="text-center px-4 py-2 text-sm text-md-textMuted">Latest Power</th>
+            <tr className="border-b border-md-border/60">
+              <th className="text-left px-5 py-3 text-[11px] text-md-textMuted uppercase tracking-wider font-medium">Deck</th>
+              <th className="text-center px-4 py-3 text-[11px] text-md-textMuted uppercase tracking-wider font-medium">Data Points</th>
+              <th className="text-right px-5 py-3 text-[11px] text-md-textMuted uppercase tracking-wider font-medium">Latest Power</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-md-border">
+          <tbody className="divide-y divide-md-border/40">
             {topDecks.map((name, i) => {
               const snaps = trends[name] || [];
               const latest = snaps.find((s) => s.power != null && s.power > 0) || snaps[0];
               return (
-                <tr key={name} className="hover:bg-md-surfaceHover">
-                  <td className="px-4 py-2 flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-sm">{name}</span>
+                <tr key={name} className="hover:bg-md-surfaceHover/50 transition-colors">
+                  <td className="px-5 py-2.5 flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-sm font-medium">{name}</span>
                   </td>
-                  <td className="text-center px-4 py-2 text-sm text-md-textMuted">{snaps.length}</td>
-                  <td className="text-center px-4 py-2 text-sm">{latest?.power?.toFixed(1) || '-'}</td>
+                  <td className="text-center px-4 py-2.5 text-sm text-md-textMuted font-mono">{snaps.length}</td>
+                  <td className="text-right px-5 py-2.5 text-sm font-semibold font-mono">{latest?.power?.toFixed(1) || '-'}</td>
                 </tr>
               );
             })}
