@@ -116,9 +116,21 @@ router.get('/:name', async (req: Request, res: Response) => {
     const deck = queryOne(db, 'SELECT * FROM deck_types WHERE name = ? COLLATE NOCASE', [req.params.name]);
     if (!deck) return res.status(404).json({ error: 'Deck not found' });
 
-    const topDecks = queryAll(db,
+    let topDecks = queryAll(db,
       'SELECT * FROM top_decks WHERE deck_type_name = ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 10',
       [req.params.name]);
+
+    // Fuzzy fallback: if no exact match, try LIKE-based matching (e.g. "Snake-Eye" → "Snake-Eye Fire King")
+    if (topDecks.length === 0) {
+      const words = req.params.name.split(/[\s\-]+/).filter((w: string) => w.length >= 3);
+      if (words.length > 0) {
+        const likeClause = words.map(() => 'LOWER(deck_type_name) LIKE ?').join(' AND ');
+        const likeParams = words.map((w: string) => `%${w.toLowerCase()}%`);
+        topDecks = queryAll(db,
+          `SELECT * FROM top_decks WHERE ${likeClause} ORDER BY created_at DESC LIMIT 10`,
+          likeParams);
+      }
+    }
 
     // Parse breakdown and resolve card IDs to names if needed
     let breakdown = deck.breakdown_json ? JSON.parse(deck.breakdown_json) : null;

@@ -80,8 +80,8 @@ export default function DeckProfile() {
   if (!deck) return null;
 
   const breakdown = deck.breakdown_json;
-  const mainCards = breakdown?.main || [];
-  const extraCards = breakdown?.extra || [];
+  const mainCards = Array.isArray(breakdown?.main) ? breakdown.main : [];
+  const extraCards = Array.isArray(breakdown?.extra) ? breakdown.extra : [];
 
   return (
     <div className="space-y-6">
@@ -128,6 +128,20 @@ export default function DeckProfile() {
           </div>
         </div>
       </div>
+
+      {/* Empty State — no breakdown and no top decklists */}
+      {mainCards.length === 0 && extraCards.length === 0 && (!deck.topDecks || deck.topDecks.length === 0) && (
+        <div className="bg-md-surface border border-md-border rounded-lg p-10 text-center">
+          <svg className="w-12 h-12 mx-auto text-md-textMuted/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+            <path d="M8 12h8M12 8v8" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <h3 className="text-lg font-semibold text-md-textSecondary mb-1">No Decklist Available</h3>
+          <p className="text-sm text-md-textMuted max-w-md mx-auto">
+            No decklist data is currently available for <span className="text-md-text font-medium">{deck.name}</span>. This archetype may be newly tracked or awaiting tournament results.
+          </p>
+        </div>
+      )}
 
       {/* Deck Breakdown */}
       {mainCards.length > 0 && (
