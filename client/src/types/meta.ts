@@ -19,6 +19,7 @@ export interface DeckTierEntry {
   play_rate: number | null;
   sample_size: number | null;
   untapped_tier: number | null;
+  cards?: Array<{ name: string; image: string | null }>;
 }
 
 export interface MetaSnapshot {

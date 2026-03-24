@@ -32,17 +32,42 @@ export default function TierListView({ tierList }: TierListViewProps) {
                   to={`/decks/${encodeURIComponent(deck.name)}`}
                   className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-3.5 hover:bg-white/[0.025] transition-colors duration-150 group"
                 >
-                  {/* Thumbnail */}
-                  <div className="w-9 h-9 flex-shrink-0">
-                    {deck.thumbnail_image ? (
-                      <img
-                        src={deck.thumbnail_image}
-                        alt=""
-                        className="w-9 h-9 rounded-lg object-cover ring-1 ring-white/[0.07]"
-                        onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-                      />
+                  {/* Card images — overlapping thumbnails */}
+                  <div className="flex items-center min-w-[8rem]">
+                    {deck.cards && deck.cards.length > 0 ? (
+                      deck.cards.map((card, index) => (
+                        <div
+                          key={index}
+                          className={`relative w-24 h-16 rounded-md overflow-hidden border border-white/[0.07] bg-md-surfaceAlt flex-shrink-0 ${index > 0 ? '-ml-12' : ''}`}
+                          style={{ zIndex: index }}
+                        >
+                          {/* Placeholder icon (behind image) */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-md-textMuted/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                              <path d="M3 16l5-5 4 4 4-4 5 5" strokeWidth="1.5" strokeLinejoin="round" />
+                              <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+                            </svg>
+                          </div>
+                          {/* Image layer */}
+                          {card.image && (
+                            <img
+                              src={card.image}
+                              alt={card.name}
+                              className="absolute inset-0 w-full h-full object-cover object-top"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
+                        </div>
+                      ))
                     ) : (
-                      <div className="w-9 h-9 rounded-lg bg-white/[0.04] ring-1 ring-white/[0.07]" />
+                      <div className="w-24 h-16 rounded-md border border-red-500/40 bg-md-surfaceAlt flex-shrink-0 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-500/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                          <path d="M3 16l5-5 4 4 4-4 5 5" strokeWidth="1.5" strokeLinejoin="round" />
+                          <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+                        </svg>
+                      </div>
                     )}
                   </div>
 
