@@ -15,7 +15,24 @@ interface FeaturedDeck {
   cards: Array<{ name: string; image: string | null }>;
 }
 
-function CardFanMini({ cards }: { cards: Array<{ name: string; image: string | null }> }) {
+function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image: string | null }>; thumbnail?: string | null }) {
+  // Fallback: if no card data but we have a thumbnail, show it as a single centered card
+  if ((!cards || cards.length === 0) && thumbnail) {
+    return (
+      <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
+        <div className="absolute bottom-0" style={{ transformOrigin: 'bottom center', zIndex: 0 }}>
+          <img
+            src={thumbnail}
+            alt="Deck thumbnail"
+            className="rounded-md shadow-card border border-white/5"
+            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!cards || cards.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-md-textMuted text-xs">
@@ -119,7 +136,7 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
                 </div>
 
                 {/* Card fan */}
-                <CardFanMini cards={deck.cards} />
+                <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} />
 
                 {/* Name + stats */}
                 <div className="mt-4 text-center">

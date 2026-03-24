@@ -60,6 +60,22 @@ export default function TierListView({ tierList }: TierListViewProps) {
                           )}
                         </div>
                       ))
+                    ) : deck.thumbnail_image ? (
+                      <div className="relative w-24 h-16 rounded-md overflow-hidden border border-white/[0.07] bg-md-surfaceAlt flex-shrink-0">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-md-textMuted/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                            <path d="M3 16l5-5 4 4 4-4 5 5" strokeWidth="1.5" strokeLinejoin="round" />
+                            <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.5" />
+                          </svg>
+                        </div>
+                        <img
+                          src={deck.thumbnail_image}
+                          alt={deck.name}
+                          className="absolute inset-0 w-full h-full object-cover object-top"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      </div>
                     ) : (
                       <div className="w-24 h-16 rounded-md border border-red-500/40 bg-md-surfaceAlt flex-shrink-0 flex items-center justify-center">
                         <svg className="w-5 h-5 text-red-500/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
