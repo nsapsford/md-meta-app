@@ -55,6 +55,35 @@ router.get('/', async (_req: Request, res: Response) => {
           }
         }
       }
+      if (!thumbnail) {
+        // Strategy 3: look up the most-used card from actual top deck lists
+        // (mirrors /decks/featured — handles MDM-specific names like "Dracotail")
+        const recentDecks = queryAll(db,
+          `SELECT main_deck_json FROM top_decks
+           WHERE deck_type_name = ? COLLATE NOCASE
+           ORDER BY created_at DESC LIMIT 20`,
+          [d.name]
+        );
+        const freq = new Map<string, number>();
+        for (const td of recentDecks) {
+          if (!td.main_deck_json) continue;
+          try {
+            const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
+            for (const c of cards) {
+              if (c.cardName && c.cardName !== 'Unknown')
+                freq.set(c.cardName, (freq.get(c.cardName) || 0) + (c.amount || 1));
+            }
+          } catch { /* skip malformed */ }
+        }
+        const topCard = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (topCard) {
+          const card = queryOne(db,
+            `SELECT image_cropped_url, image_small_url FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1`,
+            [topCard]
+          );
+          thumbnail = card ? (card.image_cropped_url || card.image_small_url || null) : null;
+        }
+      }
 
       grouped[key].push({
         ...d,
