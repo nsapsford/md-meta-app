@@ -3,6 +3,20 @@ import { getDb } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 import { syncDeckTypes } from '../services/syncService.js';
 
+// Manual overrides for MDM deck names → YGOProDeck archetype keys
+const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
+  'vanquish soul k9': ['vanquish soul'],
+  'solfachord yummy': ['solfachord'],
+  'mitsurugi yummy': ['mitsurugi'],
+  'crystron k9': ['crystron'],
+  'white forest azamina': ['white forest', 'azamina'],
+  'ryzeal mitsurugi': ['ryzeal', 'mitsurugi'],
+  'dinos': ['dinomorphia', 'dinosaur'],
+  'earth machine': ['machina', 'infinitrack'],
+  'zombies': ['zombie'],
+  'telefon combo': ['telefon'],
+};
+
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
@@ -31,16 +45,28 @@ router.get('/', async (_req: Request, res: Response) => {
       const key = d.tier != null ? String(d.tier) : 'rogue';
       if (!grouped[key]) grouped[key] = [];
 
-      // Find archetype card names for this deck (mirrors /decks/featured logic)
       const deckNameLower = (d.name as string).toLowerCase();
       const deckArchetypeNames = new Set<string>();
-      for (const [archKey, cardSet] of archetypeCards) {
-        if (deckNameLower.includes(archKey) || archKey.includes(deckNameLower)) {
-          for (const name of cardSet) deckArchetypeNames.add(name);
+
+      // Step 0: Check manual overrides first
+      const overrideKeys = ARCHETYPE_OVERRIDES[deckNameLower];
+      if (overrideKeys) {
+        for (const ok of overrideKeys) {
+          const cardSet = archetypeCards.get(ok);
+          if (cardSet) for (const name of cardSet) deckArchetypeNames.add(name);
         }
       }
 
-      // Get recent top decks for card frequency
+      // Step 1: Substring match against all archetypes
+      if (deckArchetypeNames.size === 0) {
+        for (const [archKey, cardSet] of archetypeCards) {
+          if (deckNameLower.includes(archKey) || archKey.includes(deckNameLower)) {
+            for (const name of cardSet) deckArchetypeNames.add(name);
+          }
+        }
+      }
+
+      // Step 2: Get recent top decks for card frequency
       const topDecks = queryAll(db,
         `SELECT main_deck_json FROM top_decks
          WHERE deck_type_name = ? COLLATE NOCASE
@@ -48,7 +74,7 @@ router.get('/', async (_req: Request, res: Response) => {
         [d.name]
       );
 
-      // Aggregate card frequencies — prefer archetype-matched cards
+      // Step 3: Aggregate card frequencies — prefer archetype-matched cards
       const freq = new Map<string, number>();
       for (const td of topDecks) {
         if (!td.main_deck_json) continue;
@@ -62,7 +88,7 @@ router.get('/', async (_req: Request, res: Response) => {
         } catch { /* skip */ }
       }
 
-      // Fallback: if no archetype-matched cards, use most-played cards overall
+      // Step 3b: Fallback — use most-played cards overall from top_decks
       if (freq.size === 0) {
         for (const td of topDecks) {
           if (!td.main_deck_json) continue;
@@ -77,7 +103,7 @@ router.get('/', async (_req: Request, res: Response) => {
         }
       }
 
-      // Top 3 cards by frequency
+      // Step 4: Build cards array from frequency data
       const topCardNames = [...freq.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
@@ -97,7 +123,24 @@ router.get('/', async (_req: Request, res: Response) => {
         }
       }
 
-      // Fuzzy fallback: word-overlap scoring against all archetypes
+      // Step 5: If no top_decks data but archetype cards were found, use archetype cards directly
+      if (cards.length === 0 && deckArchetypeNames.size > 0) {
+        const archCards = queryAll(db,
+          `SELECT name, image_cropped_url, image_small_url FROM cards
+           WHERE name IN (${[...deckArchetypeNames].slice(0, 50).map(() => '?').join(',')})
+             AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
+           LIMIT 3`,
+          [...deckArchetypeNames].slice(0, 50)
+        );
+        for (const card of archCards) {
+          cards.push({
+            name: card.name as string,
+            image: (card.image_cropped_url || card.image_small_url || null) as string | null,
+          });
+        }
+      }
+
+      // Step 6: Fuzzy fallback — word-overlap scoring against all archetypes (up to 3 cards)
       if (cards.length === 0) {
         const deckWords = (d.name as string).toLowerCase().split(/[\s\-]+/).filter((w: string) => w.length >= 3);
         let bestMatch: string | null = null;
@@ -108,8 +151,9 @@ router.get('/', async (_req: Request, res: Response) => {
           if (score > bestScore) { bestScore = score; bestMatch = archKey; }
         }
         if (bestMatch && bestScore > 0) {
-          const matchedCards = archetypeCards.get(bestMatch)!;
-          for (const cardName of matchedCards) {
+          const matchedCardNames = [...archetypeCards.get(bestMatch)!];
+          for (const cardName of matchedCardNames) {
+            if (cards.length >= 3) break;
             const card = queryOne(db,
               `SELECT name, image_cropped_url, image_small_url FROM cards
                WHERE name = ? COLLATE NOCASE AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
@@ -121,7 +165,6 @@ router.get('/', async (_req: Request, res: Response) => {
                 name: card.name as string,
                 image: (card.image_cropped_url || card.image_small_url || null) as string | null,
               });
-              break;
             }
           }
         }
