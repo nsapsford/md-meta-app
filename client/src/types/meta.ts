@@ -44,6 +44,8 @@ export interface Tournament {
   banner_image: string | null;
   next_date: string | null;
   placements_json: any[] | null;
+  winner_deck_thumbnail: string | null;
+  winner_deck_name: string | null;
 }
 
 export interface TournamentResult {
