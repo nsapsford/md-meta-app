@@ -46,6 +46,14 @@ export interface Tournament {
   placements_json: any[] | null;
 }
 
+export interface TournamentResult {
+  deck_type_name: string;
+  tournament_placement: string;
+  author: string | null;
+  created_at: string | null;
+  url: string | null;
+}
+
 export interface BanCard {
   name: string;
   banStatus: string;

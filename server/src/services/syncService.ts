@@ -166,10 +166,15 @@ export async function syncTournaments(): Promise<number> {
   for (const t of tournaments) {
     try {
       const toStr = (v: any) => v == null ? null : typeof v === 'object' ? JSON.stringify(v) : String(v);
+      const rawBanner = t.bannerImage ?? null;
+      const bannerImage = typeof rawBanner === 'string' && rawBanner.startsWith('/')
+        ? `https://www.masterduelmeta.com${rawBanner}`
+        : rawBanner;
+
       run(db, `INSERT OR REPLACE INTO tournaments (id, name, short_name, banner_image, next_date, placements_json, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, strftime('%s','now'))`,
         [toStr(t._id), toStr(t.name), toStr(t.shortName),
-         toStr(t.bannerImage), toStr(t.nextDate),
+         bannerImage, toStr(t.nextDate),
          t.placements ? JSON.stringify(t.placements) : null]);
     } catch (e) {
       // Skip individual tournaments that fail

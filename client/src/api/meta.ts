@@ -1,5 +1,5 @@
 import api from './client';
-import type { TierList, Matchup, MetaSnapshot, Tournament, BanListData } from '../types/meta';
+import type { TierList, Matchup, MetaSnapshot, Tournament, TournamentResult, BanListData } from '../types/meta';
 import type { DeckType, DeckProfile } from '../types/deck';
 
 export async function getTierList(): Promise<TierList> {
@@ -49,6 +49,11 @@ export async function getTournaments(): Promise<Tournament[]> {
 
 export async function getTournament(id: string): Promise<Tournament> {
   const res = await api.get(`/tournaments/${id}`);
+  return res.data;
+}
+
+export async function getRecentTournamentResults(): Promise<TournamentResult[]> {
+  const res = await api.get('/tournaments/recent-results');
   return res.data;
 }
 
