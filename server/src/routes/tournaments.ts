@@ -17,6 +17,22 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
+router.get('/recent-results', async (_req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const results = queryAll(db,
+      `SELECT deck_type_name, tournament_placement, author, created_at, url
+       FROM top_decks
+       WHERE tournament_placement IS NOT NULL
+       ORDER BY created_at DESC
+       LIMIT 50`
+    );
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const db = getDb();
