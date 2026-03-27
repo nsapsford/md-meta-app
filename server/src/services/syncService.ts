@@ -212,6 +212,25 @@ export async function syncUntapped(): Promise<number> {
   return archetypes.length;
 }
 
+export async function syncCardNegateEffectiveness(): Promise<number> {
+  const db = getDb();
+  const data = await untapped.scrapeCardNegateEffectiveness();
+
+  let updated = 0;
+  for (const { cardName, negateEffectiveness } of data) {
+    const stmt = db.prepare(
+      `UPDATE cards SET negate_effectiveness = ? WHERE LOWER(name) = LOWER(?)`
+    );
+    stmt.run([negateEffectiveness, cardName]);
+    stmt.free();
+    updated++;
+  }
+
+  if (data.length > 0) saveDb();
+  console.log(`[Sync] Updated ${updated} cards with negate effectiveness data`);
+  return updated;
+}
+
 function deriveTier(power?: number | null): number | null {
   if (power == null || power <= 0) return null;
   if (power >= 12) return 1;   // Tier 1: power >= 12 (matches MDM definition)

@@ -99,6 +99,11 @@ function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
         >
           <img src={largeUrl} alt={card.cardName} className="w-full rounded" />
           <p className="text-sm text-center text-md-text mt-1.5 font-medium truncate px-2">{card.cardName}</p>
+          {card.negate_effectiveness != null && card.negate_effectiveness > 2 && (
+            <p className={`text-xs text-center mt-0.5 font-semibold ${card.negate_effectiveness > 8 ? 'text-md-red' : card.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+              ⛔ Negate Impact: +{card.negate_effectiveness.toFixed(1)}%
+            </p>
+          )}
         </div>
       )}
     </div>

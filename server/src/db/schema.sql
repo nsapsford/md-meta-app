@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS cards (
   image_cropped_url TEXT,
   ban_status_md TEXT,
   md_rarity TEXT,
+  negate_effectiveness REAL,
   updated_at INTEGER DEFAULT (strftime('%s','now'))
 );
 

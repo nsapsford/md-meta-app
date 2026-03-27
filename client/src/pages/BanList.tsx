@@ -43,6 +43,11 @@ function BanCardCell({ card }: { card: BanCard }) {
             {card.rarity}
           </span>
         )}
+        {card.negate_effectiveness != null && card.negate_effectiveness > 2 && (
+          <span className="absolute bottom-0.5 left-0.5 text-[8px] font-bold px-1 rounded bg-black/70 text-md-orange">
+            ⛔+{card.negate_effectiveness.toFixed(1)}%
+          </span>
+        )}
       </div>
       <p className="text-[10px] mt-1 truncate text-md-textSecondary leading-tight" title={card.name}>{card.name}</p>
     </div>

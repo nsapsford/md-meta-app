@@ -65,6 +65,7 @@ export interface BanCard {
   id: number | null;
   image_small_url: string | null;
   image_cropped_url: string | null;
+  negate_effectiveness: number | null;
 }
 
 export interface BanListData {

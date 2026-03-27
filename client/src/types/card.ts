@@ -18,6 +18,7 @@ export interface Card {
   image_cropped_url: string;
   ban_status_md: string | null;
   md_rarity: string | null;
+  negate_effectiveness: number | null;
 }
 
 export interface CardSearchResult {

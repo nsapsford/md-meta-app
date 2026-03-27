@@ -117,6 +117,187 @@ export async function scrapeTierList(): Promise<UntappedArchetype[]> {
  */
 export async function closeBrowser(): Promise<void> {}
 
+export interface CardNegateData {
+  cardName: string;
+  negateEffectiveness: number; // win rate delta % when this card is negated
+}
+
+/**
+ * Scrapes card negate effectiveness from untapped.gg.
+ *
+ * Strategy A: Try known /free API query names directly.
+ * Strategy B: Use Puppeteer to navigate the site and intercept XHR requests
+ *             to discover the actual endpoint, then parse the response.
+ * Strategy C: DOM scraping fallback — render a deck page and extract card
+ *             impact stats from the HTML.
+ */
+export async function scrapeCardNegateEffectiveness(): Promise<CardNegateData[]> {
+  const cacheKey = 'untapped:card-negate';
+  const cached = getCached<CardNegateData[]>(cacheKey);
+  if (cached) return cached;
+
+  console.log('[Untapped] Fetching card negate effectiveness...');
+
+  // Strategy A: Try likely public API query names
+  const candidateQueries = [
+    'cards_negate_impact_v3',
+    'card_negate_stats_v3',
+    'card_impact_stats_v3',
+    'cards_impact_v3',
+    'card_stats_v3',
+    'negate_cards_v3',
+  ];
+
+  for (const queryName of candidateQueries) {
+    try {
+      const res = await api.get(`/analytics/query/${queryName}/free`, {
+        params: { TimeRangeFilter: 'CURRENT_META_PERIOD' },
+      });
+      const data = res.data?.data;
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+        console.log(`[Untapped] Found card negate data at query: ${queryName}`);
+        const results = parseCardNegateResponse(data);
+        if (results.length > 0) {
+          setCache(cacheKey, results, config.cache.untappedTtl);
+          return results;
+        }
+      }
+    } catch {
+      // "No registered query" — try next
+    }
+  }
+
+  // Strategy B: Puppeteer network interception
+  console.log('[Untapped] Strategy A failed — trying Puppeteer network interception...');
+  try {
+    const puppeteerResults = await scrapeViaPuppeteer();
+    if (puppeteerResults.length > 0) {
+      setCache(cacheKey, puppeteerResults, config.cache.untappedTtl);
+      return puppeteerResults;
+    }
+  } catch (err) {
+    console.error('[Untapped] Puppeteer scrape failed:', (err as Error).message);
+  }
+
+  console.warn('[Untapped] No card negate data found from any strategy.');
+  return [];
+}
+
+/**
+ * Attempts to parse various API response shapes into CardNegateData[].
+ * Handles both {cardName, winDelta} and raw stat arrays.
+ */
+function parseCardNegateResponse(data: Record<string, any>): CardNegateData[] {
+  const results: CardNegateData[] = [];
+  for (const [key, value] of Object.entries(data)) {
+    // Shape: { name: string, win_delta: number } or { name: string, negate_win_rate: number }
+    const cardName: string = value?.name || value?.card_name || value?.cardName || key;
+    const winDelta: number | undefined =
+      value?.win_delta ?? value?.negate_win_delta ?? value?.negate_impact ??
+      value?.winDelta ?? value?.impact;
+
+    if (typeof cardName === 'string' && cardName && typeof winDelta === 'number') {
+      results.push({ cardName, negateEffectiveness: Math.round(winDelta * 10) / 10 });
+    }
+  }
+  return results;
+}
+
+/**
+ * Uses Puppeteer to navigate untapped.gg, intercept XHR calls to the analytics
+ * API, and extract card negate effectiveness data.
+ */
+async function scrapeViaPuppeteer(): Promise<CardNegateData[]> {
+  const puppeteer = await import('puppeteer');
+  const browser = await puppeteer.default.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  try {
+    const page = await browser.newPage();
+    const capturedData: CardNegateData[] = [];
+    let discoveredEndpoint: string | null = null;
+
+    // Intercept responses from the untapped analytics API
+    page.on('response', async (response) => {
+      const url = response.url();
+      if (!url.includes('api.ygom.untapped.gg')) return;
+      try {
+        const json = await response.json();
+        const data = json?.data;
+        if (data && typeof data === 'object') {
+          const parsed = parseCardNegateResponse(data);
+          if (parsed.length > 0) {
+            discoveredEndpoint = url;
+            console.log(`[Untapped] Discovered card negate endpoint: ${url}`);
+            capturedData.push(...parsed);
+          }
+        }
+      } catch { /* non-JSON response */ }
+    });
+
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'
+    );
+
+    // Navigate to decks page and wait for content to load
+    await page.goto('https://ygom.untapped.gg/en/decks', {
+      waitUntil: 'networkidle2',
+      timeout: 30000,
+    });
+
+    // Try to click the first deck link to trigger card-level API calls
+    try {
+      await page.waitForSelector('a[href*="/en/decks/"]', { timeout: 10000 });
+      const deckLinks = await page.$$('a[href*="/en/decks/"]');
+      if (deckLinks.length > 0) {
+        await deckLinks[0].click();
+        await page.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
+      }
+    } catch { /* no deck links found */ }
+
+    if (capturedData.length === 0) {
+      // Strategy C: scrape rendered DOM for card impact stats
+      const domResults = await scrapeCardImpactFromDom(page);
+      capturedData.push(...domResults);
+    }
+
+    if (discoveredEndpoint) {
+      console.log(`[Untapped] Discovered endpoint for future use: ${discoveredEndpoint}`);
+    }
+
+    return capturedData;
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Scrapes card impact stats from the rendered DOM of the current Puppeteer page.
+ * Looks for elements containing card names paired with win delta percentages.
+ */
+async function scrapeCardImpactFromDom(page: any): Promise<CardNegateData[]> {
+  return page.evaluate(() => {
+    const results: Array<{ cardName: string; negateEffectiveness: number }> = [];
+    // Look for any section labelled "negate", "impact", "card impact" etc.
+    const allText = document.querySelectorAll('[class*="negate"], [class*="impact"], [class*="card-stat"]');
+    allText.forEach((el) => {
+      const nameEl = el.querySelector('[class*="name"], [class*="card"]');
+      const valueEl = el.querySelector('[class*="delta"], [class*="value"], [class*="rate"]');
+      if (nameEl && valueEl) {
+        const cardName = nameEl.textContent?.trim();
+        const rawValue = valueEl.textContent?.replace('%', '').trim();
+        const value = parseFloat(rawValue || '');
+        if (cardName && !isNaN(value)) {
+          results.push({ cardName, negateEffectiveness: value });
+        }
+      }
+    });
+    return results;
+  });
+}
+
 /**
  * Fetches stats for a specific archetype by name.
  * Returns data from the cached tier list.

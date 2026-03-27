@@ -31,6 +31,7 @@ export async function initDb(): Promise<Database> {
       'ALTER TABLE deck_types ADD COLUMN play_rate REAL',
       'ALTER TABLE deck_types ADD COLUMN sample_size INTEGER',
       'ALTER TABLE deck_types ADD COLUMN untapped_tier INTEGER',
+      'ALTER TABLE cards ADD COLUMN negate_effectiveness REAL',
     ];
     for (const sql of migrations) {
       try { db.run(sql); } catch { /* column already exists */ }

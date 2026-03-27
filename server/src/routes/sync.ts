@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped } from '../services/syncService.js';
+import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped, syncCardNegateEffectiveness } from '../services/syncService.js';
 import { clearCache } from '../services/cacheService.js';
 
 const router = Router();
@@ -44,6 +44,16 @@ router.post('/untapped', async (_req: Request, res: Response) => {
   }
 });
 
+router.post('/negate', async (_req: Request, res: Response) => {
+  try {
+    clearCache('untapped:card-negate');
+    const count = await syncCardNegateEffectiveness();
+    res.json({ message: `Updated ${count} cards with negate effectiveness data` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/all', async (_req: Request, res: Response) => {
   try {
     clearCache('mdm');  // Force fresh data from MDM API
@@ -53,6 +63,7 @@ router.post('/all', async (_req: Request, res: Response) => {
     const tdCount = await syncTopDecks();
     const tCount = await syncTournaments();
     const uCount = await syncUntapped();
+    const nCount = await syncCardNegateEffectiveness();
     res.json({
       message: 'Full sync complete',
       cards: cardCount,
@@ -60,6 +71,7 @@ router.post('/all', async (_req: Request, res: Response) => {
       topDecks: tdCount,
       tournaments: tCount,
       untappedArchetypes: uCount,
+      cardNegateEffectiveness: nCount,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

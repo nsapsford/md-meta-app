@@ -171,7 +171,7 @@ router.get('/:name', async (req: Request, res: Response) => {
       const names = Array.from(allNames);
       const placeholders = names.map(() => '?').join(',');
       const cardRows = queryAll(db,
-        `SELECT name, type, frame_type, archetype, image_small_url FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
+        `SELECT name, type, frame_type, archetype, image_small_url, negate_effectiveness FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
         names);
       for (const row of cardRows) {
         cardInfoMap.set(row.name.toLowerCase(), row);
@@ -186,6 +186,7 @@ router.get('/:name', async (req: Request, res: Response) => {
         type: info?.type || null,
         frameType: info?.frame_type || null,
         archetype: info?.archetype || null,
+        negate_effectiveness: info?.negate_effectiveness ?? null,
       };
     };
 

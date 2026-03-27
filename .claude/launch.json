@@ -3,10 +3,9 @@
   "configurations": [
     {
       "name": "client",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173"],
-      "port": 5173,
-      "cwd": "client"
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "client"],
+      "port": 5173
     }
   ]
 }

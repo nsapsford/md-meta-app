@@ -12,6 +12,12 @@ const ATTRIBUTES = ['DARK', 'LIGHT', 'WATER', 'FIRE', 'EARTH', 'WIND', 'DIVINE']
 
 const selectClass = "bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors";
 
+function negateColorClass(value: number): string {
+  if (value > 8) return 'text-md-red border-md-red/20 bg-md-red/10';
+  if (value > 4) return 'text-md-orange border-md-orange/20 bg-md-orange/10';
+  return 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10';
+}
+
 export default function CardSearch() {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
@@ -91,7 +97,7 @@ export default function CardSearch() {
                 </div>
                 <div className="p-2.5">
                   <p className="text-xs font-medium truncate group-hover:text-md-blue transition-colors">{card.name}</p>
-                  <div className="flex items-center gap-1 mt-1.5">
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
                     {card.ban_status_md && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${card.ban_status_md === 'Banned' ? 'bg-md-red/10 text-md-red border border-md-red/20' : card.ban_status_md === 'Limited' ? 'bg-md-orange/10 text-md-orange border border-md-orange/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>
                         {card.ban_status_md}
@@ -100,6 +106,11 @@ export default function CardSearch() {
                     {card.md_rarity && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${card.md_rarity === 'UR' ? 'bg-rarity-ur/10 text-rarity-ur border border-rarity-ur/20' : card.md_rarity === 'SR' ? 'bg-rarity-sr/10 text-rarity-sr border border-rarity-sr/20' : 'bg-rarity-r/10 text-rarity-r border border-rarity-r/20'}`}>
                         {card.md_rarity}
+                      </span>
+                    )}
+                    {card.negate_effectiveness != null && card.negate_effectiveness > 2 && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium border ${negateColorClass(card.negate_effectiveness)}`}>
+                        ⛔ +{card.negate_effectiveness.toFixed(1)}%
                       </span>
                     )}
                   </div>
@@ -140,7 +151,7 @@ export default function CardSearch() {
                   {selectedCard.link_val != null && <span className="text-md-textMuted">Link <span className="text-md-blue font-bold">{selectedCard.link_val}</span></span>}
                 </div>
                 <p className="text-sm text-md-textSecondary leading-relaxed">{selectedCard.description}</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {selectedCard.ban_status_md && (
                     <span className={`text-xs px-2 py-1 rounded-md font-medium ${selectedCard.ban_status_md === 'Banned' ? 'bg-md-red/10 text-md-red border border-md-red/20' : 'bg-md-orange/10 text-md-orange border border-md-orange/20'}`}>
                       {selectedCard.ban_status_md}
@@ -152,6 +163,15 @@ export default function CardSearch() {
                     </span>
                   )}
                 </div>
+                {selectedCard.negate_effectiveness != null && selectedCard.negate_effectiveness > 2 && (
+                  <div className="text-sm flex items-center gap-2 pt-1">
+                    <span className="text-md-textMuted">Negate Impact</span>
+                    <span className={`font-semibold ${selectedCard.negate_effectiveness > 8 ? 'text-md-red' : selectedCard.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+                      +{selectedCard.negate_effectiveness.toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] text-md-textMuted">win rate delta</span>
+                  </div>
+                )}
               </div>
             </div>
             <button
