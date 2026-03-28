@@ -102,6 +102,41 @@ export async function syncDeckTypes(): Promise<number> {
     }
   }
 
+  // Scrape MDM website for authoritative power values (includes engine aggregations)
+  try {
+    const scraped = await mdm.scrapeTierList();
+    const scrapedMap = new Map(scraped.map(s => [s.name.toLowerCase(), s]));
+
+    // Update existing decks with scraped power values (more current than API)
+    for (const s of scraped) {
+      const existing = queryAll(db, `SELECT id FROM deck_types WHERE LOWER(name) = LOWER(?)`, [s.name]);
+      const tier = deriveTier(s.power);
+
+      if (existing.length > 0) {
+        // Update power/tier to match website
+        run(db, `UPDATE deck_types SET power = ?, tier = ?, updated_at = strftime('%s','now') WHERE LOWER(name) = LOWER(?)`,
+          [s.power, tier, s.name]);
+      } else {
+        // Engine deck not in API — create a new entry
+        const id = `scraped-${s.name.toLowerCase().replace(/\s+/g, '-')}`;
+        run(db, `INSERT OR IGNORE INTO deck_types (id, name) VALUES (?, ?)`, [id, s.name]);
+        run(db, `UPDATE deck_types SET tier = ?, power = ?, updated_at = strftime('%s','now') WHERE id = ?`,
+          [tier, s.power, id]);
+      }
+
+      // Snapshot for meta trends
+      if (s.power > 0) {
+        run(db, `INSERT OR REPLACE INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
+          VALUES (?, ?, ?, NULL, date('now'))`,
+          [s.name, tier, s.power]);
+      }
+    }
+
+    console.log(`[Sync] Applied ${scraped.length} scraped power values from MDM website`);
+  } catch (err: any) {
+    console.warn(`[Sync] MDM scrape failed (non-fatal): ${err.message}`);
+  }
+
   // Clean up stale snapshots:
   // - null/zero power entries
   // - decks no longer in the active tiered meta (must have tier assigned)

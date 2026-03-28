@@ -15,6 +15,10 @@ const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
   'earth machine': ['machina', 'infinitrack'],
   'zombies': ['zombie'],
   'telefon combo': ['telefon'],
+  // Engine aggregations from MDM website
+  'mitsurugi engine': ['mitsurugi'],
+  'yummy engine': ['yummy'],
+  'k9 engine': ['k9'],
 };
 
 const router = Router();

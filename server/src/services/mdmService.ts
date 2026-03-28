@@ -111,24 +111,45 @@ export async function getTournaments(): Promise<MDMTournament[]> {
   });
 }
 
-export async function scrapeTierList(): Promise<Array<{ name: string; tier: number }>> {
+export async function scrapeTierList(): Promise<Array<{ name: string; tier: number; power: number }>> {
   return fetchWithCache('mdm:tier-list-scraped', config.cache.tierListTtl, async () => {
     const res = await siteApi.get('/tier-list');
-    const $ = cheerio.load(res.data);
-    const tiers: Array<{ name: string; tier: number }> = [];
+    const html = res.data as string;
+    const entries: Array<{ name: string; tier: number; power: number }> = [];
 
-    $('[class*="tier-list"]').find('[class*="tier-section"], [class*="tier-row"]').each((_i, el) => {
-      const tierText = $(el).find('[class*="tier-label"]').text();
-      const tierNum = parseInt(tierText.replace(/\D/g, '')) || 3;
-      $(el).find('[class*="deck-name"], a').each((_j, deck) => {
-        const name = $(deck).text().trim();
-        if (name && name.length > 1) {
-          tiers.push({ name, tier: tierNum });
+    // Find tier section boundaries via alt="Tier N" images
+    const tierBounds: Array<{ tier: number; index: number }> = [];
+    const tierImgRe = /alt="Tier\s*(\d)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = tierImgRe.exec(html)) !== null) {
+      tierBounds.push({ tier: parseInt(m[1]), index: m.index });
+    }
+    // Add sentinel for content after last tier
+    tierBounds.push({ tier: tierBounds.length > 0 ? tierBounds[tierBounds.length - 1].tier : 3, index: html.length });
+
+    // Extract deck entries: label div followed by power-label div
+    const entryRe = /<div class="label[^"]*">([^<]+)<\/div>\s*<\/a>\s*\n*\s*<\/div>\s*\n*\s*<div class="power-label[^"]*">Power:\s*<b>(\d+\.?\d*)<\/b>/g;
+    while ((m = entryRe.exec(html)) !== null) {
+      const name = m[1].trim();
+      const power = parseFloat(m[2]);
+      const pos = m.index;
+
+      // Determine tier from position between tier boundaries
+      let tier = 3;
+      for (let i = 0; i < tierBounds.length - 1; i++) {
+        if (pos >= tierBounds[i].index && pos < tierBounds[i + 1].index) {
+          tier = tierBounds[i].tier;
+          break;
         }
-      });
-    });
+      }
 
-    return tiers;
+      if (name && !isNaN(power)) {
+        entries.push({ name, tier, power });
+      }
+    }
+
+    console.log(`[MDM Scraper] Extracted ${entries.length} decks from tier list page`);
+    return entries;
   });
 }
 
