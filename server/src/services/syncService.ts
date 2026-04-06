@@ -1,8 +1,10 @@
+import axios from 'axios';
 import { getDb, saveDb } from '../db/connection.js';
 import { run, queryAll } from '../utils/dbHelpers.js';
 import * as ygopd from './ygoprodeckService.js';
 import * as mdm from './mdmService.js';
 import * as untapped from './untappedService.js';
+import { getValidAccessToken, invalidateToken } from './untappedAuthService.js';
 
 export async function syncCards(): Promise<number> {
   const db = getDb();
@@ -222,13 +224,14 @@ export async function syncTournaments(): Promise<number> {
 
 export async function syncUntapped(): Promise<number> {
   const db = getDb();
-  const archetypes = await untapped.scrapeTierList();
+  const [archetypes, matchupPairings] = await Promise.all([
+    untapped.scrapeTierList(),
+    untapped.getMatchupPairings(),
+  ]);
 
   let updated = 0;
   for (const a of archetypes) {
-    // Skip entries with no actual stat data
     if (a.winRate === null && a.playRate === null) continue;
-
     run(db,
       `UPDATE deck_types SET
          win_rate = COALESCE(?, win_rate),
@@ -242,27 +245,236 @@ export async function syncUntapped(): Promise<number> {
     updated++;
   }
 
+  // Store per-matchup win rates in matchup_sources and legacy matchups table
+  let matchupsStored = 0;
+  for (const p of matchupPairings) {
+    run(db,
+      `INSERT OR REPLACE INTO matchup_sources (deck_a, deck_b, source, win_rate, sample_size, updated_at)
+       VALUES (LOWER(?), LOWER(?), 'untapped', ?, ?, strftime('%s','now'))`,
+      [p.deckA, p.deckB, p.winRate, p.sampleSize]
+    );
+    // Also populate legacy matchups table (win_rate_a stored as 0-100 percentage)
+    run(db,
+      `INSERT OR REPLACE INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at)
+       VALUES (LOWER(?), LOWER(?), ?, ?, strftime('%s','now'))`,
+      [p.deckA, p.deckB, Math.round(p.winRate * 1000) / 10, p.sampleSize]
+    );
+    matchupsStored++;
+  }
+
   saveDb();
-  console.log(`[Sync] Updated ${updated} deck types with untapped.gg data (${archetypes.length} scraped)`);
+  console.log(`[Sync] Updated ${updated} deck types and ${matchupsStored} matchup pairings with untapped.gg data`);
   return archetypes.length;
 }
 
+interface RealNegateEntry {
+  cardId: number;
+  negatedWinRate: number;
+  notNegatedWinRate: number;
+  negateEffectiveness: number;
+  sampleSize: number;
+}
+
+/**
+ * Attempts to fetch real per-card negate data from the Untapped.gg companion API.
+ * Requires the Untapped Companion app to be installed and authenticated.
+ * Returns null if unavailable (caller falls back to local computation).
+ */
+async function fetchRealNegateData(): Promise<RealNegateEntry[] | null> {
+  const token = await getValidAccessToken();
+  if (!token) return null;
+
+  try {
+    console.log('[Sync] Fetching real negate data from untapped.gg card_impact_analysis...');
+    const res = await axios.get(
+      'https://api.ygom.untapped.gg/api/v1/analytics/query/card_impact_analysis',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const raw = res.data?.data ?? res.data;
+
+    if (!raw || (Array.isArray(raw) && raw.length === 0) || (typeof raw === 'object' && Object.keys(raw).length === 0)) {
+      console.warn('[Sync] card_impact_analysis returned empty data — feature flag may not be enabled for this account');
+      return null;
+    }
+
+    const entries: RealNegateEntry[] = [];
+    // Response is keyed by card ID (numeric string), e.g. { "3401": { playedAnd... }, ... }
+    for (const [idStr, item] of Object.entries(raw) as [string, any][]) {
+      const cardId = parseInt(idStr, 10);
+      if (!cardId) continue;
+
+      const negatedWins = item.playedAndNegatedWins ?? 0;
+      const negatedTotal = item.playedAndNegatedTotal ?? 0;
+      const notNegatedWins = item.playedAndNotNegatedWins ?? 0;
+      const notNegatedTotal = item.playedAndNotNegatedTotal ?? 0;
+
+      if (negatedTotal === 0 || notNegatedTotal === 0) continue;
+
+      const negatedWinRate = Math.round((negatedWins / negatedTotal) * 1000) / 10;
+      const notNegatedWinRate = Math.round((notNegatedWins / notNegatedTotal) * 1000) / 10;
+      const negateEffectiveness = Math.round((notNegatedWinRate - negatedWinRate) * 10) / 10;
+      const sampleSize = negatedTotal + notNegatedTotal;
+
+      entries.push({ cardId, negatedWinRate, notNegatedWinRate, negateEffectiveness, sampleSize });
+    }
+
+    console.log(`[Sync] Fetched real negate data for ${entries.length} cards from untapped.gg`);
+    return entries.length > 0 ? entries : null;
+  } catch (err: any) {
+    if (err.response?.status === 401) {
+      console.warn('[Sync] 401 from card_impact_analysis — invalidating token, will retry with refresh next run');
+      invalidateToken();
+    } else if (err.response?.status === 403) {
+      console.warn('[Sync] 403 from card_impact_analysis — feature flag uc.ygom-card-impact-stats may not be enabled on this account');
+    } else {
+      console.warn('[Sync] card_impact_analysis request failed:', err.message);
+    }
+    return null;
+  }
+}
+
+/**
+ * Syncs card negate effectiveness. Tries the Untapped.gg companion API first
+ * (real per-card negate tracking data). Falls back to local computation from
+ * archetype win rates if the companion is unavailable or the feature flag is off.
+ */
 export async function syncCardNegateEffectiveness(): Promise<number> {
   const db = getDb();
-  const data = await untapped.scrapeCardNegateEffectiveness();
 
+  // Attempt to use real per-card data from the Untapped Companion API
+  const realData = await fetchRealNegateData();
+  if (realData) {
+    let updated = 0;
+    for (const entry of realData) {
+      const stmt = db.prepare(
+        `UPDATE cards SET
+          negate_effectiveness = ?,
+          negated_win_rate = ?,
+          not_negated_win_rate = ?,
+          negate_sample_size = ?
+        WHERE id = ?`
+      );
+      stmt.run([entry.negateEffectiveness, entry.negatedWinRate, entry.notNegatedWinRate, entry.sampleSize, entry.cardId]);
+      stmt.free();
+      updated++;
+    }
+    if (updated > 0) saveDb();
+    console.log(`[Sync] Updated ${updated} cards with real negate data from untapped.gg`);
+    return updated;
+  }
+
+  console.log('[Sync] Falling back to local negate computation from archetype win rates');
+
+  // Get all deck types with untapped win rate data
+  const deckTypes = queryAll(db,
+    `SELECT name, win_rate, sample_size FROM deck_types WHERE win_rate IS NOT NULL AND sample_size IS NOT NULL AND sample_size > 0`
+  ) as Array<{ name: string; win_rate: number; sample_size: number }>;
+
+  if (deckTypes.length === 0) {
+    console.log('[Sync] No deck type win rate data available — skipping card negate computation');
+    return 0;
+  }
+
+  // Build a map of archetype name -> { winRate, sampleSize }
+  const archMap = new Map<string, { winRate: number; sampleSize: number }>();
+  let totalWeightedWr = 0;
+  let totalSamples = 0;
+  for (const dt of deckTypes) {
+    archMap.set(dt.name.toLowerCase(), { winRate: dt.win_rate, sampleSize: dt.sample_size });
+    totalWeightedWr += dt.win_rate * dt.sample_size;
+    totalSamples += dt.sample_size;
+  }
+  const overallAvgWr = totalSamples > 0 ? totalWeightedWr / totalSamples : 50;
+
+  // Get all top decks with their card lists
+  const topDecks = queryAll(db,
+    `SELECT deck_type_name, main_deck_json, extra_deck_json FROM top_decks WHERE main_deck_json IS NOT NULL`
+  ) as Array<{ deck_type_name: string; main_deck_json: string; extra_deck_json: string | null }>;
+
+  // For each card, accumulate weighted win rate data across archetypes
+  const cardStats = new Map<string, { weightedWr: number; totalSamples: number; archetypes: Set<string> }>();
+
+  // Helper: find best matching archetype for a deck type name
+  // e.g. "Vanquish Soul K9" should match "Vanquish Soul"
+  const resolveArch = (deckTypeName: string): { winRate: number; sampleSize: number } | undefined => {
+    const lower = deckTypeName.toLowerCase();
+    // Exact match first
+    const exact = archMap.get(lower);
+    if (exact) return exact;
+    // Try finding a deck_type whose name is contained in the deck_type_name
+    let bestMatch: { winRate: number; sampleSize: number } | undefined;
+    let bestLen = 0;
+    for (const [name, data] of archMap) {
+      if (lower.includes(name) && name.length > bestLen) {
+        bestMatch = data;
+        bestLen = name.length;
+      }
+    }
+    return bestMatch;
+  };
+
+  for (const deck of topDecks) {
+    const archName = deck.deck_type_name?.toLowerCase();
+    if (!archName) continue;
+    const archData = resolveArch(deck.deck_type_name);
+    if (!archData) continue;
+
+    // Parse card lists from main + extra deck
+    const cardNames = new Set<string>();
+    for (const json of [deck.main_deck_json, deck.extra_deck_json]) {
+      if (!json) continue;
+      try {
+        const cards = JSON.parse(json) as Array<{ cardName: string; amount: number }>;
+        for (const c of cards) {
+          if (c.cardName) cardNames.add(c.cardName.toLowerCase());
+        }
+      } catch { /* skip malformed json */ }
+    }
+
+    for (const cardName of cardNames) {
+      let stats = cardStats.get(cardName);
+      if (!stats) {
+        stats = { weightedWr: 0, totalSamples: 0, archetypes: new Set() };
+        cardStats.set(cardName, stats);
+      }
+      // Only count each archetype once per card (not per deck)
+      if (!stats.archetypes.has(archName)) {
+        stats.archetypes.add(archName);
+        stats.weightedWr += archData.winRate * archData.sampleSize;
+        stats.totalSamples += archData.sampleSize;
+      }
+    }
+  }
+
+  // Update cards with computed negate effectiveness
   let updated = 0;
-  for (const { cardName, negateEffectiveness } of data) {
+  for (const [cardName, stats] of cardStats) {
+    if (stats.totalSamples < 100) continue; // skip very low sample sizes
+
+    const cardAvgWr = stats.weightedWr / stats.totalSamples;
+    const impact = Math.round((cardAvgWr - overallAvgWr) * 10) / 10;
+
+    // not_negated_win_rate: win rate of decks using this card
+    const notNegatedWr = Math.round(cardAvgWr * 10) / 10;
+    // negated_win_rate: estimate as overall average (what happens when the card is neutralized)
+    const negatedWr = Math.round(overallAvgWr * 10) / 10;
+
     const stmt = db.prepare(
-      `UPDATE cards SET negate_effectiveness = ? WHERE LOWER(name) = LOWER(?)`
+      `UPDATE cards SET
+        negate_effectiveness = ?,
+        negated_win_rate = ?,
+        not_negated_win_rate = ?,
+        negate_sample_size = ?
+      WHERE LOWER(name) = LOWER(?)`
     );
-    stmt.run([negateEffectiveness, cardName]);
+    stmt.run([impact, negatedWr, notNegatedWr, stats.totalSamples, cardName]);
     stmt.free();
     updated++;
   }
 
-  if (data.length > 0) saveDb();
-  console.log(`[Sync] Updated ${updated} cards with negate effectiveness data`);
+  if (updated > 0) saveDb();
+  console.log(`[Sync] Computed negate effectiveness for ${updated} cards (overall avg WR: ${overallAvgWr.toFixed(1)}%)`);
   return updated;
 }
 

@@ -59,12 +59,11 @@ router.get('/matrix', async (req: Request, res: Response) => {
       for (const b of decks) {
         if (a === b) continue;
 
-        const sourceRow  = rows.find((r) => r.deck_a === a && r.deck_b === b && r.source === 'untapped');
-        const tournRow   = rows.find((r) => r.deck_a === a && r.deck_b === b && r.source === 'tournament');
+        const al = a.toLowerCase(), bl = b.toLowerCase();
+        const sourceRow  = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'untapped');
+        const tournRow   = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'tournament');
         // Legacy MDM data is stored as 0-100 percentage — normalise to 0-1
-        const legacyRow  = legacyRows.find((r) =>
-          r.deck_a.toLowerCase() === a.toLowerCase() && r.deck_b.toLowerCase() === b.toLowerCase()
-        );
+        const legacyRow  = legacyRows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl);
 
         const untappedData = sourceRow
           ? { rate: sourceRow.win_rate, n: sourceRow.sample_size ?? 0 }
@@ -141,8 +140,9 @@ router.get('/advisor', async (req: Request, res: Response) => {
       .filter(([name]) => name.toLowerCase() !== (deck as string).toLowerCase())
       .map(([name, count]) => {
         const fieldPct = count / total;
-        const untapRow = matchupRows.find((r) => r.deck_b === name && r.source === 'untapped');
-        const tournRow = matchupRows.find((r) => r.deck_b === name && r.source === 'tournament');
+        const nl = name.toLowerCase();
+        const untapRow = matchupRows.find((r) => r.deck_b.toLowerCase() === nl && r.source === 'untapped');
+        const tournRow = matchupRows.find((r) => r.deck_b.toLowerCase() === nl && r.source === 'tournament');
         const legacyRow = legacyMatchups.find((r) => r.deck_b.toLowerCase() === name.toLowerCase());
 
         const untappedData = untapRow
