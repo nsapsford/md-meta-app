@@ -6,6 +6,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import SearchInput from '../components/common/SearchInput';
 import Pagination from '../components/common/Pagination';
 import CardImage from '../components/common/CardImage';
+import NegateImpact from '../components/common/NegateImpact';
+import ErrorBanner from '../components/common/ErrorBanner';
 
 const CARD_TYPES = ['Effect Monster', 'Normal Monster', 'Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster', 'Ritual Monster', 'Spell Card', 'Trap Card'];
 const ATTRIBUTES = ['DARK', 'LIGHT', 'WATER', 'FIRE', 'EARTH', 'WIND', 'DIVINE'];
@@ -27,18 +29,20 @@ export default function CardSearch() {
   const [result, setResult] = useState<CardSearchResult | null>(null);
   const [archetypes, setArchetypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   const debouncedQuery = useDebounce(query, 300);
 
   useEffect(() => {
-    getArchetypes().then(setArchetypes).catch(() => {});
+    getArchetypes().then(setArchetypes).catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => { setPage(1); }, [debouncedQuery, type, attribute, archetype, sort]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const params: Record<string, string> = { page: String(page), limit: '30', sort };
     if (debouncedQuery) params.q = debouncedQuery;
     if (type) params.type = type;
@@ -46,10 +50,12 @@ export default function CardSearch() {
     if (archetype) params.archetype = archetype;
 
     setLoading(true);
-    searchCards(params)
+    searchCards(params, controller.signal)
       .then(setResult)
-      .catch(() => {})
+      .catch((e) => { if (e.name !== 'CanceledError') setError(e.message); })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [debouncedQuery, type, attribute, archetype, sort, page]);
 
   return (
@@ -78,6 +84,8 @@ export default function CardSearch() {
           </select>
         </div>
       </div>
+
+      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
 
       {/* Results */}
       {loading ? (
@@ -135,8 +143,8 @@ export default function CardSearch() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex gap-6">
-              <CardImage src={selectedCard.image_url} alt={selectedCard.name} size="lg" className="w-44 h-auto flex-shrink-0 rounded-lg shadow-card" />
-              <div className="flex-1 space-y-3">
+              <CardImage src={selectedCard.image_url} alt={selectedCard.name} size="lg" className="w-80 h-220 flex-shrink-0 rounded-lg shadow-card" />
+              <div className="flex-1 space-y-1">
                 <h3 className="text-xl font-bold tracking-tight">{selectedCard.name}</h3>
                 <div className="flex flex-wrap gap-1.5">
                   <span className="px-2 py-0.5 bg-md-surfaceAlt rounded-md text-xs text-md-textSecondary border border-md-border/50">{selectedCard.type}</span>
@@ -163,15 +171,7 @@ export default function CardSearch() {
                     </span>
                   )}
                 </div>
-                {selectedCard.negate_effectiveness != null && selectedCard.negate_effectiveness > 2 && (
-                  <div className="text-sm flex items-center gap-2 pt-1">
-                    <span className="text-md-textMuted">Negate Impact</span>
-                    <span className={`font-semibold ${selectedCard.negate_effectiveness > 8 ? 'text-md-red' : selectedCard.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
-                      +{selectedCard.negate_effectiveness.toFixed(1)}%
-                    </span>
-                    <span className="text-[10px] text-md-textMuted">win rate delta</span>
-                  </div>
-                )}
+                <NegateImpact card={selectedCard} />
               </div>
             </div>
             <button
