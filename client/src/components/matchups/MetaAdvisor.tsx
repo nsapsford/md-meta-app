@@ -26,13 +26,13 @@ export default function MetaAdvisor({ decks }: Props) {
 
   useEffect(() => {
     if (decks.length > 0 && !selectedDeck) setSelectedDeck(decks[0]);
-  }, [decks]);
+  }, [decks, selectedDeck]);
 
   useEffect(() => {
     if (!selectedDeck) return;
     const controller = new AbortController();
     setLoading(true);
-    getMatchupAdvisor(selectedDeck)
+    getMatchupAdvisor(selectedDeck, controller.signal)
       .then(setResult)
       .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));

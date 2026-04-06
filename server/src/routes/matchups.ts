@@ -26,8 +26,8 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     res.json(queryAll(db, 'SELECT * FROM matchups ORDER BY deck_a, deck_b'));
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -93,8 +93,8 @@ router.get('/matrix', async (req: Request, res: Response) => {
     }
 
     res.json({ decks, matrix });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -161,8 +161,8 @@ router.get('/advisor', async (req: Request, res: Response) => {
     const weightedWinRate = opponents.reduce((s, o) => s + o.win_rate * o.field_pct, 0) / totalWeight;
 
     res.json({ deck, opponents, weighted_win_rate: weightedWinRate });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 

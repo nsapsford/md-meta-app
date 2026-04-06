@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { getMatchups, getMatchupMatrix, type MatchupMatrix } from '../api/matchups';
 import { getDecks } from '../api/meta';
 import { getSyncStatus, type SyncRecord } from '../api/sync';
@@ -45,20 +46,24 @@ export default function Matchups() {
 
   useEffect(() => {
     if (tab !== 'matrix') return;
+    const controller = new AbortController();
     setLoading(true);
-    getMatchupMatrix(matrixSource)
+    getMatchupMatrix(matrixSource, controller.signal)
       .then(setMatrix)
-      .catch((e) => setError(e.message))
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [tab, matrixSource]);
 
   useEffect(() => {
     if (tab !== 'list' || !selectedDeck) return;
+    const controller = new AbortController();
     setLoading(true);
     getMatchups(selectedDeck)
       .then(setMatchups)
-      .catch((e) => setError(e.message))
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [tab, selectedDeck]);
 
   const tabClass = (t: string) => clsx(
@@ -181,7 +186,7 @@ export default function Matchups() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-md-border">
-                  {matchups
+                  {[...matchups]
                     .sort((a, b) => b.win_rate_a - a.win_rate_a)
                     .map((m) => (
                       <tr key={m.deck_b} className="hover:bg-md-surfaceHover transition-colors">

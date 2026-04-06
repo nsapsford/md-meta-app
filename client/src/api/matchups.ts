@@ -31,12 +31,12 @@ export async function getMatchups(deck?: string): Promise<Matchup[]> {
   return res.data;
 }
 
-export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended'): Promise<MatchupMatrix> {
-  const res = await api.get('/matchups/matrix', { params: { source } });
+export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended', signal?: AbortSignal): Promise<MatchupMatrix> {
+  const res = await api.get('/matchups/matrix', { params: { source }, signal });
   return res.data;
 }
 
-export async function getMatchupAdvisor(deck: string): Promise<AdvisorResult> {
-  const res = await api.get('/matchups/advisor', { params: { deck } });
+export async function getMatchupAdvisor(deck: string, signal?: AbortSignal): Promise<AdvisorResult> {
+  const res = await api.get('/matchups/advisor', { params: { deck }, signal });
   return res.data;
 }
