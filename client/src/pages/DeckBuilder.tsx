@@ -3,6 +3,7 @@ import { searchCards } from '../api/cards';
 import { scoreDeck, validateDeck } from '../api/meta';
 import { useDebounce } from '../hooks/useDebounce';
 import SearchInput from '../components/common/SearchInput';
+import ErrorBanner from '../components/common/ErrorBanner';
 import type { Card } from '../types/card';
 
 interface DeckCard {
@@ -24,6 +25,7 @@ export default function DeckBuilder() {
   const [score, setScore] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState('');
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -32,7 +34,7 @@ export default function DeckBuilder() {
     setSearching(true);
     searchCards({ q: debouncedQuery, limit: '20' })
       .then((r) => setSearchResults(r.cards))
-      .catch(() => {})
+      .catch((e) => setError(e.message))
       .finally(() => setSearching(false));
   }, [debouncedQuery]);
 
@@ -70,8 +72,8 @@ export default function DeckBuilder() {
     if (mainNames.length === 0) { setScore(null); return; }
 
     const timer = setTimeout(() => {
-      scoreDeck(mainNames, extraNames).then(setScore).catch(() => {});
-      validateDeck(mainNames, extraNames, []).then(setValidation).catch(() => {});
+      scoreDeck(mainNames, extraNames).then(setScore).catch((e) => setError(e.message));
+      validateDeck(mainNames, extraNames, []).then(setValidation).catch((e) => setError(e.message));
     }, 500);
     return () => clearTimeout(timer);
   }, [mainDeck, extraDeck]);
@@ -103,6 +105,8 @@ export default function DeckBuilder() {
 
       {/* Deck Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+
         {/* Score & Validation */}
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
