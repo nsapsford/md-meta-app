@@ -14,7 +14,7 @@ export default function SyncFreshnessBadge({ records, sources }: Props) {
 
   const hasFailed = relevant.some((r) => r.status === 'failed');
   const hasPartial = relevant.some((r) => r.status === 'partial');
-  const oldestSyncedAt = Math.min(...relevant.map((r) => r.synced_at));
+  const oldestSyncedAt = Math.min(...relevant.map((r) => r.synced_at)) || 0;
   const ageHrs = (Date.now() / 1000 - oldestSyncedAt) / 3600;
 
   let label: string;
@@ -28,7 +28,7 @@ export default function SyncFreshnessBadge({ records, sources }: Props) {
     label = ageHrs < 1 ? `● ${mins}m ago` : `● ${Math.floor(ageHrs)}h ago`;
     classes = 'bg-md-orange/10 border-md-orange/20 text-md-orange';
   } else {
-    const mins = Math.round(ageHrs * 60);
+    const mins = Math.floor(ageHrs * 60);
     label = mins < 60 ? `● ${mins}m ago` : `● ${Math.floor(ageHrs)}h ago`;
     classes = 'bg-md-green/10 border-md-green/20 text-md-green';
   }
