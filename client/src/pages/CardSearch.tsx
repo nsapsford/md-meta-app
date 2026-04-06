@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { searchCards, getArchetypes } from '../api/cards';
 import type { Card, CardSearchResult } from '../types/card';
 import { useDebounce } from '../hooks/useDebounce';
@@ -52,7 +53,7 @@ export default function CardSearch() {
     setLoading(true);
     searchCards(params, controller.signal)
       .then(setResult)
-      .catch((e) => { if (e.name !== 'CanceledError') setError(e.message); })
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));
 
     return () => controller.abort();

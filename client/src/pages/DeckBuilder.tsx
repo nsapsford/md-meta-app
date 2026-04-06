@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { searchCards } from '../api/cards';
 import { scoreDeck, validateDeck } from '../api/meta';
 import { useDebounce } from '../hooks/useDebounce';
@@ -31,11 +32,13 @@ export default function DeckBuilder() {
 
   useEffect(() => {
     if (!debouncedQuery) { setSearchResults([]); return; }
+    const controller = new AbortController();
     setSearching(true);
-    searchCards({ q: debouncedQuery, limit: '20' })
+    searchCards({ q: debouncedQuery, limit: '20' }, controller.signal)
       .then((r) => setSearchResults(r.cards))
-      .catch((e) => setError(e.message))
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setSearching(false));
+    return () => controller.abort();
   }, [debouncedQuery]);
 
   const addCard = useCallback((card: Card) => {
