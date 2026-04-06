@@ -4,6 +4,8 @@ import type { Matchup } from '../types/meta';
 import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
+import { getSyncStatus, type SyncRecord } from '../api/sync';
+import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 
 function getWinRateColor(rate: number): string {
   if (rate >= 60) return 'bg-md-green/30 text-md-green';
@@ -19,6 +21,7 @@ export default function Matchups() {
   const [matchups, setMatchups] = useState<Matchup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
 
   useEffect(() => {
     getDecks()
@@ -30,6 +33,8 @@ export default function Matchups() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { getSyncStatus().then(setSyncRecords).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!selectedDeck) return;
@@ -44,7 +49,10 @@ export default function Matchups() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
+        <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} />
+      </div>
 
       <div className="bg-md-surface border border-md-border rounded-lg p-4">
         <label className="text-sm text-md-textMuted block mb-2">Select Deck</label>
