@@ -69,18 +69,25 @@ router.post('/negate', async (_req: Request, res: Response) => {
 });
 
 router.post('/all', async (_req: Request, res: Response) => {
+  let step = 'init';
   try {
     clearCache('mdm');
+    step = 'syncCards';
     const cardCount = await syncCards();
     await syncArchetypes();
     recordSync('ygoprodeck', 'success');
+    step = 'syncDeckTypes';
     const dtCount = await syncDeckTypes();
+    step = 'syncTopDecks';
     const tdCount = await syncTopDecks();
     recordSync('mdm_deck_types', 'success');
+    step = 'syncTournaments';
     const tCount = await syncTournaments();
     recordSync('mdm_tournaments', 'success');
+    step = 'syncUntapped';
     const uCount = await syncUntapped();
     recordSync('untapped', 'success');
+    step = 'syncNegate';
     const nCount = await syncCardNegateEffectiveness();
     res.json({
       message: 'Full sync complete',
@@ -88,6 +95,11 @@ router.post('/all', async (_req: Request, res: Response) => {
       tournaments: tCount, untappedArchetypes: uCount, cardNegateEffectiveness: nCount,
     });
   } catch (err: any) {
+    const source: SyncSource =
+      step === 'syncTournaments' ? 'mdm_tournaments' :
+      step === 'syncUntapped'    ? 'untapped'        :
+      (step === 'syncDeckTypes' || step === 'syncTopDecks') ? 'mdm_deck_types' : 'ygoprodeck';
+    recordSync(source, 'failed', String(err?.message || err));
     res.status(500).json({ error: err.message });
   }
 });

@@ -22,5 +22,5 @@ export function recordSync(source: SyncSource, status: SyncStatus, detail: strin
 
 export function getSyncStatus(): SyncRecord[] {
   const db = getDb();
-  return queryAll(db, 'SELECT source, status, detail, synced_at FROM sync_log') as SyncRecord[];
+  return queryAll(db, 'SELECT source, status, detail, synced_at FROM sync_log ORDER BY source ASC') as SyncRecord[];
 }
