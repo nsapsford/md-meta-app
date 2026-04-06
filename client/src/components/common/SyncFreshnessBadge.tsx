@@ -23,7 +23,10 @@ export default function SyncFreshnessBadge({ records, sources }: Props) {
   if (hasFailed) {
     label = '● Sync failed';
     classes = 'bg-md-red/10 border-md-red/20 text-md-red';
-  } else if (hasPartial || ageHrs > 12) {
+  } else if (ageHrs > 12) {
+    label = `● ${Math.floor(ageHrs)}h ago`;
+    classes = 'bg-md-red/10 border-md-red/20 text-md-red';
+  } else if (hasPartial || ageHrs > 2) {
     const mins = Math.floor(ageHrs * 60);
     label = ageHrs < 1 ? `● ${mins}m ago` : `● ${Math.floor(ageHrs)}h ago`;
     classes = 'bg-md-orange/10 border-md-orange/20 text-md-orange';

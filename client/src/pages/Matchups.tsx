@@ -59,7 +59,7 @@ export default function Matchups() {
     if (tab !== 'list' || !selectedDeck) return;
     const controller = new AbortController();
     setLoading(true);
-    getMatchups(selectedDeck)
+    getMatchups(selectedDeck, controller.signal)
       .then(setMatchups)
       .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));

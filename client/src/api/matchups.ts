@@ -26,8 +26,8 @@ export interface AdvisorResult {
   weighted_win_rate: number;
 }
 
-export async function getMatchups(deck?: string): Promise<Matchup[]> {
-  const res = await api.get('/matchups', { params: deck ? { deck } : {} });
+export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<Matchup[]> {
+  const res = await api.get('/matchups', { params: deck ? { deck } : {}, signal });
   return res.data;
 }
 
