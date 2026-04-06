@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS cards (
   ban_status_md TEXT,
   md_rarity TEXT,
   negate_effectiveness REAL,
+  negated_win_rate REAL,
+  not_negated_win_rate REAL,
+  negate_sample_size INTEGER,
   updated_at INTEGER DEFAULT (strftime('%s','now'))
 );
 
@@ -102,4 +105,21 @@ CREATE TABLE IF NOT EXISTS api_cache (
   cache_key TEXT PRIMARY KEY,
   data TEXT,
   expires_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS sync_log (
+  source TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  detail TEXT,
+  synced_at INTEGER DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE IF NOT EXISTS matchup_sources (
+  deck_a TEXT NOT NULL,
+  deck_b TEXT NOT NULL,
+  source TEXT NOT NULL,
+  win_rate REAL NOT NULL,
+  sample_size INTEGER,
+  updated_at INTEGER DEFAULT (strftime('%s','now')),
+  PRIMARY KEY (deck_a, deck_b, source)
 );
