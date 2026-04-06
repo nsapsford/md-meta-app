@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTournaments, getRecentTournamentResults } from '../api/meta';
+import { getTournaments, getRecentTournamentResults } from '../api/tournaments';
 import type { Tournament, TournamentResult } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getMatchups, getDecks } from '../api/meta';
+import { getMatchups } from '../api/matchups';
+import { getDecks } from '../api/meta';
 import type { Matchup } from '../types/meta';
 import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
