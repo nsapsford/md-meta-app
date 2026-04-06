@@ -5,7 +5,7 @@ export async function searchCards(
   params: Record<string, string>,
   signal?: AbortSignal
 ): Promise<CardSearchResult> {
-  const res = await api.get('/cards', { params, signal });
+  const res = await api.get('/cards/search', { params, signal });
   return res.data;
 }
 
