@@ -59,6 +59,9 @@ export interface EnrichedDeckCard extends DeckCard {
   frameType?: string | null;
   archetype?: string | null;
   negate_effectiveness?: number | null;
+  negated_win_rate?: number | null;
+  not_negated_win_rate?: number | null;
+  negate_sample_size?: number | null;
 }
 
 export interface DeckProfile extends DeckType {

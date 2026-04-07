@@ -19,6 +19,9 @@ export interface Card {
   ban_status_md: string | null;
   md_rarity: string | null;
   negate_effectiveness: number | null;
+  negated_win_rate: number | null;
+  not_negated_win_rate: number | null;
+  negate_sample_size: number | null;
 }
 
 export interface CardSearchResult {

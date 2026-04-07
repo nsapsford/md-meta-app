@@ -1,5 +1,5 @@
 import api from './client';
-import type { Matchup } from '../types/meta';
+import type { Matchup, EcosystemAnalysis, DeckEcosystemResponse } from '../types/meta';
 
 export interface MatchupMatrixCell {
   rate: number;
@@ -38,5 +38,15 @@ export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournam
 
 export async function getMatchupAdvisor(deck: string, signal?: AbortSignal): Promise<AdvisorResult> {
   const res = await api.get('/matchups/advisor', { params: { deck }, signal });
+  return res.data;
+}
+
+export async function getEcosystemAnalysis(signal?: AbortSignal): Promise<EcosystemAnalysis> {
+  const res = await api.get('/matchups/ecosystem', { signal });
+  return res.data;
+}
+
+export async function getDeckEcosystem(deck: string, signal?: AbortSignal): Promise<DeckEcosystemResponse> {
+  const res = await api.get('/matchups/ecosystem', { params: { deck }, signal });
   return res.data;
 }

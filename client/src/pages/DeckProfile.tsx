@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getDeckProfile } from '../api/meta';
 import type { DeckProfile as DeckProfileType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -58,6 +58,7 @@ function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
 
 export default function DeckProfile() {
   const { name } = useParams<{ name: string }>();
+  const navigate = useNavigate();
   const [deck, setDeck] = useState<DeckProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -85,7 +86,7 @@ export default function DeckProfile() {
 
   return (
     <div className="space-y-6">
-      <Link to="/" className="text-md-blue text-sm hover:underline">&larr; Back to Dashboard</Link>
+      <button onClick={() => navigate(-1)} className="text-md-blue text-sm hover:underline">&larr; Back</button>
 
       {/* Header */}
       <div className="bg-md-surface border border-md-border rounded-lg p-6">
@@ -217,7 +218,15 @@ export default function DeckProfile() {
                       <div className="flex items-center gap-3 text-xs text-md-textMuted">
                         {td.tournament_name && <span>{td.tournament_name}</span>}
                         {td.tournament_placement && <span>#{td.tournament_placement}</span>}
-                        {td.ranked_type && <span>{td.ranked_type}</span>}
+                        {td.ranked_type && (() => {
+                          try {
+                            const parsed = JSON.parse(td.ranked_type);
+                            const label = parsed.shortName || parsed.name;
+                            return label ? <span>{label}</span> : null;
+                          } catch {
+                            return <span>{td.ranked_type}</span>;
+                          }
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

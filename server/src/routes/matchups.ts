@@ -2,7 +2,8 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { queryAll, run } from '../utils/dbHelpers.js';
 import * as mdm from '../services/mdmService.js';
-import { blendMatchupRates } from '../services/matchupBlendService.js';
+import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendService.js';
+import { computeEcosystemAnalysis } from '../services/ecosystemAnalysisService.js';
 
 const router = Router();
 
@@ -36,62 +37,36 @@ router.get('/matrix', async (req: Request, res: Response) => {
   try {
     const source = (req.query.source as string) || 'blended';
     const db = getDb();
+    res.json(buildFullMatrix(db, source));
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
 
-    const decks = (queryAll(db,
-      'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
-    ) as { name: string }[]).map((d) => d.name);
+// New: ecosystem analysis with predator/prey dynamics
+router.get('/ecosystem', async (req: Request, res: Response) => {
+  try {
+    const source = (req.query.source as string) || 'blended';
+    const deckFilter = req.query.deck as string | undefined;
+    const db = getDb();
+    const analysis = computeEcosystemAnalysis(db, source);
 
-    const rows = queryAll(db, 'SELECT * FROM matchup_sources') as {
-      deck_a: string; deck_b: string; source: string; win_rate: number; sample_size: number;
-    }[];
-
-    // Also pull from legacy matchups table (MDM-scraped data stored as percentages 0-100)
-    const legacyRows = queryAll(db, 'SELECT deck_a, deck_b, win_rate_a, sample_size FROM matchups') as {
-      deck_a: string; deck_b: string; win_rate_a: number; sample_size: number;
-    }[];
-
-    const matrix: Record<string, Record<string, {
-      rate: number; n_untapped: number; n_tournament: number; confidence: string;
-    }>> = {};
-
-    for (const a of decks) {
-      matrix[a] = {};
-      for (const b of decks) {
-        if (a === b) continue;
-
-        const al = a.toLowerCase(), bl = b.toLowerCase();
-        const sourceRow  = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'untapped');
-        const tournRow   = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'tournament');
-        // Legacy MDM data is stored as 0-100 percentage — normalise to 0-1
-        const legacyRow  = legacyRows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl);
-
-        const untappedData = sourceRow
-          ? { rate: sourceRow.win_rate, n: sourceRow.sample_size ?? 0 }
-          : legacyRow
-          ? { rate: legacyRow.win_rate_a / 100, n: legacyRow.sample_size ?? 0 }
-          : null;
-        const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
-
-        if (!untappedData && !tournData) continue;
-        if (source === 'tournament' && !tournData) continue;
-        if (source === 'untapped' && !untappedData) continue;
-
-        const blend = source === 'tournament'
-          ? blendMatchupRates(null, tournData)
-          : source === 'untapped'
-          ? blendMatchupRates(untappedData, null)
-          : blendMatchupRates(untappedData, tournData);
-
-        matrix[a][b] = {
-          rate: blend.rate,
-          n_untapped: untappedData?.n ?? 0,
-          n_tournament: tournData?.n ?? 0,
-          confidence: blend.confidence,
-        };
-      }
+    if (deckFilter) {
+      const profile = analysis.profiles.find(
+        (p) => p.deck.toLowerCase() === deckFilter.toLowerCase()
+      );
+      const relatedCycles = analysis.cycles.filter(
+        (c) => c.decks.some((d) => d.toLowerCase() === deckFilter.toLowerCase())
+      );
+      return res.json({
+        profile: profile || null,
+        related_cycles: relatedCycles,
+        meta_health_index: analysis.meta_health_index,
+        computed_at: analysis.computed_at,
+      });
     }
 
-    res.json({ decks, matrix });
+    res.json(analysis);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }

@@ -1,0 +1,40 @@
+<h2>Three approaches to improving the app</h2>
+<p class="subtitle">Pick the one that feels right — I'll recommend my favourite below.</p>
+
+<div class="options">
+  <div class="option" data-choice="foundation" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Foundation First ⭐ Recommended</h3>
+      <p>Fix data transparency (sync status + last-refreshed indicators) and code quality (error handling, API layer) first. Then build matchup intelligence on top of a solid, reliable base. Slower to get new features but everything works properly when you get there.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Pros</h4><ul><li>No silent failures</li><li>Trustworthy data before showing analysis</li><li>Easier to debug matchup feature later</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Matchup feature comes later</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="feature-led" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Feature-Led</h3>
+      <p>Build the matchup matrix and tournament meta advisor first — it's the highest-value new capability. UX polish and code quality improvements come afterwards.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Pros</h4><ul><li>Most exciting feature ships sooner</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Risk of matchup data being stale/wrong with no visibility</li><li>Building on shaky ground</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="parallel" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Parallel Streams</h3>
+      <p>Quick UX wins (sync status banner, last-refreshed timestamps) ship immediately. Matchup feature is built alongside ongoing code quality improvements woven into each area as it's touched.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Pros</h4><ul><li>Visible progress fast</li><li>Data transparency arrives before matchup feature</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More context-switching</li><li>Code quality improvements are piecemeal</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

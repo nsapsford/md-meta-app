@@ -81,10 +81,25 @@ router.get('/featured', async (_req: Request, res: Response) => {
       }
 
       // Sort by frequency, take top 5
-      const topCardNames = [...freq.entries()]
+      let topCardNames = [...freq.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([name]) => name);
+
+      // Fallback for engine decks with no tournament data: use archetype cards directly
+      if (topCardNames.length === 0 && deckArchetypeNames.size > 0) {
+        const placeholders = [...deckArchetypeNames].map(() => '?').join(',');
+        const archetypeCardRows = queryAll(db,
+          `SELECT name, image_small_url, image_cropped_url FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE AND (image_small_url IS NOT NULL OR image_cropped_url IS NOT NULL) LIMIT 5`,
+          [...deckArchetypeNames]
+        );
+        const cards = archetypeCardRows.map((c: any) => ({
+          name: c.name,
+          image: c.image_cropped_url || c.image_small_url,
+        }));
+        result.push({ ...deck, cards });
+        continue;
+      }
 
       // Fetch card images
       const cards = [];
@@ -171,7 +186,7 @@ router.get('/:name', async (req: Request, res: Response) => {
       const names = Array.from(allNames);
       const placeholders = names.map(() => '?').join(',');
       const cardRows = queryAll(db,
-        `SELECT name, type, frame_type, archetype, image_small_url, negate_effectiveness FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
+        `SELECT name, type, frame_type, archetype, image_small_url, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
         names);
       for (const row of cardRows) {
         cardInfoMap.set(row.name.toLowerCase(), row);
@@ -187,6 +202,9 @@ router.get('/:name', async (req: Request, res: Response) => {
         frameType: info?.frame_type || null,
         archetype: info?.archetype || null,
         negate_effectiveness: info?.negate_effectiveness ?? null,
+        negated_win_rate: info?.negated_win_rate ?? null,
+        not_negated_win_rate: info?.not_negated_win_rate ?? null,
+        negate_sample_size: info?.negate_sample_size ?? null,
       };
     };
 

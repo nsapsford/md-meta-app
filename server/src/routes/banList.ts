@@ -12,7 +12,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     const enrichCard = (card: mdm.MDMBanCard) => {
       const local = queryOne(db,
-        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1',
+        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1',
         [card.name]
       );
       return {
@@ -22,6 +22,9 @@ router.get('/', async (_req: Request, res: Response) => {
         image_cropped_url: local?.image_cropped_url ?? null,
         rarity: card.rarity ?? local?.md_rarity ?? null,
         negate_effectiveness: local?.negate_effectiveness ?? null,
+        negated_win_rate: local?.negated_win_rate ?? null,
+        not_negated_win_rate: local?.not_negated_win_rate ?? null,
+        negate_sample_size: local?.negate_sample_size ?? null,
       };
     };
 

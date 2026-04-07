@@ -61,6 +61,30 @@ export default function MetaAdvisor({ decks }: Props) {
 
       {loading ? <LoadingSpinner /> : result && result.opponents.length > 0 ? (
         <>
+          {/* Vulnerability banner */}
+          {(() => {
+            const dangerousOpponents = result.opponents.filter((o) => o.win_rate < 0.48 && o.field_pct >= 0.05);
+            const totalDangerPct = dangerousOpponents.reduce((s, o) => s + o.field_pct, 0);
+            if (dangerousOpponents.length === 0) return (
+              <div className="bg-md-green/5 border border-md-green/20 rounded-lg p-3 text-sm">
+                <span className="font-semibold text-md-green">Safe</span>
+                <span className="text-md-textMuted ml-2">No major threats in the current tournament field.</span>
+              </div>
+            );
+            return (
+              <div className="bg-md-orange/5 border border-md-orange/20 rounded-lg p-3 text-sm">
+                <span className="font-semibold text-md-orange">
+                  {totalDangerPct >= 0.2 ? 'Exposed' : 'Moderate'}
+                </span>
+                <span className="text-md-textMuted ml-2">
+                  {dangerousOpponents.length} predator{dangerousOpponents.length > 1 ? 's' : ''} in the field
+                  ({(totalDangerPct * 100).toFixed(0)}% combined):
+                  {' '}{dangerousOpponents.map((o) => o.opponent).join(', ')}
+                </span>
+              </div>
+            );
+          })()}
+
           <div className="divide-y divide-md-border">
             {result.opponents.map((o: AdvisorOpponent) => (
               <div key={o.opponent} className="flex items-center justify-between py-2.5">

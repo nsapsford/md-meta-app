@@ -1,0 +1,103 @@
+<h2>Section 3 — Matchup Intelligence</h2>
+<p class="subtitle">Built on the reliable foundation from sections 1 & 2.</p>
+
+<div class="section">
+  <h3>3a · Matchup Matrix (heatmap)</h3>
+  <p>The existing <code>/matchups</code> page gets a full deck-vs-deck heatmap. Green = favourable, red = unfavourable, grey = insufficient data. Hover a cell to see the sample size and source breakdown.</p>
+  <div class="mockup" style="margin-top:10px">
+    <div class="mockup-header">Matchup Matrix — /matchups</div>
+    <div class="mockup-body" style="padding:16px;overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:11px;width:100%">
+        <thead>
+          <tr>
+            <th style="padding:4px 8px;text-align:left;color:#9ca3af">vs →</th>
+            <th style="padding:4px 8px;color:#9ca3af">Snake-Eye</th>
+            <th style="padding:4px 8px;color:#9ca3af">Yubel</th>
+            <th style="padding:4px 8px;color:#9ca3af">Tenpai</th>
+            <th style="padding:4px 8px;color:#9ca3af">Branded</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:4px 8px;font-weight:600">Snake-Eye</td>
+            <td style="padding:4px 8px;background:#374151;text-align:center;border-radius:4px">—</td>
+            <td style="padding:4px 8px;background:#166534;color:#bbf7d0;text-align:center;border-radius:4px">58%</td>
+            <td style="padding:4px 8px;background:#7f1d1d;color:#fecaca;text-align:center;border-radius:4px">43%</td>
+            <td style="padding:4px 8px;background:#166534;color:#bbf7d0;text-align:center;border-radius:4px">61%</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px;font-weight:600">Yubel</td>
+            <td style="padding:4px 8px;background:#7f1d1d;color:#fecaca;text-align:center;border-radius:4px">42%</td>
+            <td style="padding:4px 8px;background:#374151;text-align:center;border-radius:4px">—</td>
+            <td style="padding:4px 8px;background:#166534;color:#bbf7d0;text-align:center;border-radius:4px">55%</td>
+            <td style="padding:4px 8px;background:#713f12;color:#fef08a;text-align:center;border-radius:4px">50%</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px;font-weight:600">Tenpai</td>
+            <td style="padding:4px 8px;background:#166534;color:#bbf7d0;text-align:center;border-radius:4px">57%</td>
+            <td style="padding:4px 8px;background:#7f1d1d;color:#fecaca;text-align:center;border-radius:4px">45%</td>
+            <td style="padding:4px 8px;background:#374151;text-align:center;border-radius:4px">—</td>
+            <td style="padding:4px 8px;background:#166534;color:#bbf7d0;text-align:center;border-radius:4px">63%</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px;font-weight:600">Branded</td>
+            <td style="padding:4px 8px;background:#7f1d1d;color:#fecaca;text-align:center;border-radius:4px">39%</td>
+            <td style="padding:4px 8px;background:#713f12;color:#fef08a;text-align:center;border-radius:4px">50%</td>
+            <td style="padding:4px 8px;background:#7f1d1d;color:#fecaca;text-align:center;border-radius:4px">37%</td>
+            <td style="padding:4px 8px;background:#374151;text-align:center;border-radius:4px">—</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:#6b7280;margin-top:8px">Hover a cell to see: Untapped sample (n=1,240) · Tournament sample (n=87) · Confidence</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3b · Tournament Meta Advisor</h3>
+  <p>A new panel (on the matchups page or dashboard) where you select your deck and see a breakdown of the expected field based on recent tournament top cuts — plus your predicted win rate against each expected opponent.</p>
+  <div class="mockup" style="margin-top:10px">
+    <div class="mockup-header">Meta Advisor panel</div>
+    <div class="mockup-body" style="padding:14px 16px;font-size:13px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="color:#9ca3af">I'm playing:</span>
+        <span style="background:#1e3a5f;color:#93c5fd;padding:4px 12px;border-radius:8px;font-weight:600">Snake-Eye ▾</span>
+        <span style="color:#9ca3af;font-size:11px">based on last 3 tournaments</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#1f2937;border-radius:6px">
+          <span>Tenpai Dragon <span style="color:#9ca3af;font-size:11px">(28% of field)</span></span>
+          <span style="color:#fca5a5;font-weight:600">43% win rate ⚠</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#1f2937;border-radius:6px">
+          <span>Yubel <span style="color:#9ca3af;font-size:11px">(22% of field)</span></span>
+          <span style="color:#86efac;font-weight:600">58% win rate ✓</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#1f2937;border-radius:6px">
+          <span>Branded <span style="color:#9ca3af;font-size:11px">(18% of field)</span></span>
+          <span style="color:#86efac;font-weight:600">61% win rate ✓</span>
+        </div>
+        <div style="margin-top:8px;padding:8px 10px;background:#172554;border-radius:6px;border-left:3px solid #3b82f6;font-size:12px">
+          <strong>Expected weighted win rate: 54%</strong> — favourable field. Watch out for Tenpai (nearly 1-in-3 matches).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3c · Blended Data Toggle</h3>
+  <p>A toggle on the matrix lets you switch between three views: <strong>Untapped only</strong> (large sample, all levels of play), <strong>Tournament only</strong> (competitive top-cut data), and <strong>Blended</strong> (weighted average, default). Each cell shows the confidence level based on available sample size.</p>
+</div>
+
+<div class="section">
+  <h3>Backend work required</h3>
+  <ul style="padding-left:20px;line-height:1.9;font-size:13px">
+    <li>New <code>matchup_results</code> table storing per-pairing win counts from tournament data</li>
+    <li><code>GET /api/matchups/matrix</code> — returns full NxN matrix with both source values</li>
+    <li><code>GET /api/matchups/advisor?deck=snake-eye</code> — returns field composition + matchup rates</li>
+    <li>Blending logic: weighted average (70% Untapped / 30% tournament by default, adjustable)</li>
+  </ul>
+</div>
+
+<p style="margin-top:12px">Does this section look right?</p>

@@ -94,42 +94,38 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-1 h-4 rounded-full bg-md-gold" />
-        <h3 className="text-xs font-semibold text-md-textMuted uppercase tracking-widest">Top Archetypes</h3>
-      </div>
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {featured.map((deck, idx) => {
           const tierColor = tierColors[deck.tier ?? 4];
           return (
             <Link
               key={deck.id}
               to={`/decks/${encodeURIComponent(deck.name)}`}
-              className="group relative featured-card rounded-xl overflow-hidden card-hover"
+              className="group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
             >
               {/* Tier-colored top accent line */}
               <div
-                className="absolute top-0 inset-x-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${tierColor}60, transparent)` }}
+                className="absolute top-0 inset-x-0 h-1"
+                style={{ background: `linear-gradient(90deg, transparent, ${tierColor}80, transparent)` }}
               />
 
               {/* Ambient glow — fades in on hover */}
               <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse at 50% 0%, ${tierColor}18 0%, transparent 68%)` }}
+                className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse at 50% 0%, ${tierColor}40 0%, transparent 68%)` }}
               />
 
-              <div className="relative p-5">
+              <div className="relative p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-xs font-bold text-md-textSecondary">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-md-surface/80 to-md-surface border border-md-border flex items-center justify-center text-sm font-bold text-md-textSecondary">
                       {idx + 1}
                     </span>
-                    <TierBadge tier={deck.tier} size="sm" />
+                    <TierBadge tier={deck.tier} size="md" />
                   </div>
                   {typeof deck.power === 'number' && (
-                    <span className="text-xs font-mono text-md-textMuted bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-mono text-md-textMuted bg-md-surface/60 border border-md-border/50 px-2.5 py-1 rounded-lg">
                       {deck.power.toFixed(1)} PWR
                     </span>
                   )}
@@ -139,21 +135,21 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
                 <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} />
 
                 {/* Name + stats */}
-                <div className="mt-4 text-center">
-                  <p className="font-semibold text-md-text group-hover:text-md-gold transition-colors duration-300 truncate text-[15px]">
+                <div className="mt-5 text-center">
+                  <p className="font-bold text-md-text group-hover:text-md-gold transition-colors duration-300 truncate text-lg">
                     {deck.name}
                   </p>
-                  <div className="flex items-center justify-center gap-4 mt-2 text-xs tabular-nums">
+                  <div className="flex items-center justify-center gap-4 mt-3 text-sm tabular-nums">
                     {typeof deck.win_rate === 'number' && (
-                      <span className="text-md-winRate font-medium">
+                      <span className="text-md-winRate font-semibold">
                         {deck.win_rate.toFixed(1)}% WR
                       </span>
                     )}
                     {typeof deck.play_rate === 'number' && (
-                      <span className="text-md-playRate">{deck.play_rate.toFixed(1)}% PR</span>
+                      <span className="text-md-playRate font-medium">{deck.play_rate.toFixed(1)}% PR</span>
                     )}
                     {typeof deck.power_trend === 'number' && deck.power_trend !== 0 && (
-                      <span className={`font-medium ${deck.power_trend > 0 ? 'text-md-winRate' : 'text-md-red'}`}>
+                      <span className={`font-semibold ${deck.power_trend > 0 ? 'text-md-winRate' : 'text-md-red'}`}>
                         {deck.power_trend > 0 ? '+' : ''}{deck.power_trend.toFixed(1)}
                       </span>
                     )}

@@ -3,15 +3,16 @@
   "configurations": [
     {
       "name": "server",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["tsx", "src/index.ts"],
-      "port": 3001,
-      "cwd": "server"
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "C:\\Users\\Niall\\Code\\md-meta-app\\server",
+      "port": 3001
     },
     {
       "name": "client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "client"],
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "C:\\Users\\Niall\\Code\\md-meta-app\\client",
       "port": 5173
     }
   ]

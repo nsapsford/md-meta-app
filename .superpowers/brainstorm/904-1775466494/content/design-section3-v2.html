@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Section 3 — Matchup Intelligence</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #09090b;
+    color: #eceef4;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    padding: 32px;
+    background-image:
+      radial-gradient(at 15% 30%, rgba(74,142,255,0.03) 0%, transparent 40%),
+      radial-gradient(at 85% 80%, rgba(212,175,55,0.03) 0%, transparent 40%);
+  }
+
+  h2 { font-size: 20px; font-weight: 700; color: #eceef4; margin-bottom: 4px; }
+  .subtitle { color: #71717a; font-size: 13px; margin-bottom: 28px; }
+  h3 { font-size: 13px; font-weight: 600; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+  .section { margin-bottom: 28px; }
+
+  /* Surface cards */
+  .surface {
+    background: #111113;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  }
+  .surface-alt {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  /* Toggle buttons */
+  .toggle-group { display: flex; gap: 4px; margin-bottom: 16px; }
+  .toggle-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #27272a;
+    background: transparent;
+    color: #71717a;
+  }
+  .toggle-btn.active {
+    background: rgba(74,142,255,0.15);
+    border-color: rgba(74,142,255,0.4);
+    color: #6ba3ff;
+  }
+
+  /* Matrix table */
+  .matrix-wrap { overflow-x: auto; }
+  table { border-collapse: separate; border-spacing: 3px; width: 100%; }
+  th { font-size: 11px; color: #71717a; font-weight: 500; padding: 4px 8px; text-align: center; }
+  th.row-label { text-align: left; }
+  td { padding: 6px 10px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 600; min-width: 60px; }
+  td.deck-label { text-align: left; font-size: 12px; font-weight: 500; color: #a1a1aa; padding-left: 0; background: transparent !important; }
+  .cell-neutral { background: #18181b; color: #3f3f46; }
+  .cell-win     { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .cell-loss    { background: rgba(255,77,94,0.15);  color: #ff4d5e; border: 1px solid rgba(255,77,94,0.2); }
+  .cell-even    { background: rgba(255,145,71,0.12); color: #ff9147; border: 1px solid rgba(255,145,71,0.2); }
+  .cell-hint { font-size: 10px; color: #71717a; margin-top: 8px; }
+
+  /* Advisor */
+  .deck-select {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(74,142,255,0.1); border: 1px solid rgba(74,142,255,0.25);
+    color: #6ba3ff; border-radius: 8px; padding: 6px 14px;
+    font-weight: 600; font-size: 13px; cursor: pointer; margin-bottom: 16px;
+  }
+  .matchup-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: #18181b; border: 1px solid #27272a;
+    border-radius: 8px; margin-bottom: 6px;
+  }
+  .matchup-row:hover { border-color: #3f3f46; }
+  .deck-name { font-weight: 500; font-size: 13px; }
+  .field-pct { font-size: 11px; color: #71717a; margin-left: 6px; }
+  .win-rate-good { color: #34d399; font-weight: 700; font-size: 13px; }
+  .win-rate-bad  { color: #ff4d5e; font-weight: 700; font-size: 13px; }
+  .win-rate-even { color: #ff9147; font-weight: 700; font-size: 13px; }
+
+  .summary-box {
+    background: rgba(74,142,255,0.07);
+    border: 1px solid rgba(74,142,255,0.2);
+    border-radius: 8px; padding: 12px 14px;
+    margin-top: 10px; font-size: 13px;
+  }
+  .summary-box strong { color: #6ba3ff; }
+
+  /* Sync freshness badge */
+  .badge-fresh {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2);
+    color: #34d399; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 500;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block; }
+
+  .label { font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* Section separator */
+  .sep { border: none; border-top: 1px solid #27272a; margin: 28px 0; }
+</style>
+</head>
+<body>
+
+<h2>Section 3 — Matchup Intelligence</h2>
+<p class="subtitle">Built on the reliable foundation from sections 1 &amp; 2. All mockups use the app's actual colour system.</p>
+
+<!-- MATRIX -->
+<div class="section">
+  <h3>3a · Matchup Matrix</h3>
+  <div class="surface">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-weight:600;font-size:15px">Deck Matchup Matrix</span>
+      <span class="badge-fresh"><span class="dot"></span> Synced 14 min ago</span>
+    </div>
+
+    <div class="toggle-group">
+      <button class="toggle-btn active">Blended</button>
+      <button class="toggle-btn">Untapped.gg</button>
+      <button class="toggle-btn">Tournament</button>
+    </div>
+
+    <div class="matrix-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="row-label">vs →</th>
+            <th>Snake-Eye</th>
+            <th>Yubel</th>
+            <th>Tenpai</th>
+            <th>Branded</th>
+            <th>Fiendsmith</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="deck-label">Snake-Eye</td>
+            <td class="cell-neutral">—</td>
+            <td class="cell-win">58%</td>
+            <td class="cell-loss">43%</td>
+            <td class="cell-win">61%</td>
+            <td class="cell-win">55%</td>
+          </tr>
+          <tr>
+            <td class="deck-label">Yubel</td>
+            <td class="cell-loss">42%</td>
+            <td class="cell-neutral">—</td>
+            <td class="cell-win">55%</td>
+            <td class="cell-even">50%</td>
+            <td class="cell-loss">44%</td>
+          </tr>
+          <tr>
+            <td class="deck-label">Tenpai</td>
+            <td class="cell-win">57%</td>
+            <td class="cell-loss">45%</td>
+            <td class="cell-neutral">—</td>
+            <td class="cell-win">63%</td>
+            <td class="cell-win">59%</td>
+          </tr>
+          <tr>
+            <td class="deck-label">Branded</td>
+            <td class="cell-loss">39%</td>
+            <td class="cell-even">50%</td>
+            <td class="cell-loss">37%</td>
+            <td class="cell-neutral">—</td>
+            <td class="cell-loss">46%</td>
+          </tr>
+          <tr>
+            <td class="deck-label">Fiendsmith</td>
+            <td class="cell-loss">45%</td>
+            <td class="cell-win">56%</td>
+            <td class="cell-loss">41%</td>
+            <td class="cell-win">54%</td>
+            <td class="cell-neutral">—</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="cell-hint">Hover a cell to see sample sizes and per-source breakdown. Grey cells = insufficient data.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- META ADVISOR -->
+<div class="section">
+  <h3>3b · Tournament Meta Advisor</h3>
+  <div class="surface">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-weight:600;font-size:15px">Meta Advisor</span>
+      <span class="label">Based on last 3 tournaments</span>
+    </div>
+    <p style="color:#71717a;font-size:12px;margin-bottom:16px">Select your deck to see how you fare against the expected field.</p>
+
+    <div class="deck-select">Snake-Eye Fire King ▾</div>
+
+    <div class="matchup-row">
+      <span><span class="deck-name">Tenpai Dragon</span><span class="field-pct">28% of field</span></span>
+      <span class="win-rate-bad">43% ⚠</span>
+    </div>
+    <div class="matchup-row">
+      <span><span class="deck-name">Yubel</span><span class="field-pct">22% of field</span></span>
+      <span class="win-rate-good">58% ✓</span>
+    </div>
+    <div class="matchup-row">
+      <span><span class="deck-name">Branded Despia</span><span class="field-pct">18% of field</span></span>
+      <span class="win-rate-good">61% ✓</span>
+    </div>
+    <div class="matchup-row">
+      <span><span class="deck-name">Fiendsmith</span><span class="field-pct">15% of field</span></span>
+      <span class="win-rate-good">55% ✓</span>
+    </div>
+    <div class="matchup-row">
+      <span><span class="deck-name">Labrynth</span><span class="field-pct">10% of field</span></span>
+      <span class="win-rate-even">50% ~</span>
+    </div>
+
+    <div class="summary-box">
+      <strong>Expected weighted win rate: 54%</strong> — favourable field overall.<br>
+      <span style="color:#a1a1aa;font-size:12px">Watch out for Tenpai (nearly 1 in 3 matches). Consider side deck tech.</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

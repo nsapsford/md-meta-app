@@ -23,7 +23,13 @@ router.get('/search', async (req: Request, res: Response) => {
     const params: any[] = [];
 
     if (q) { conditions.push('name LIKE ?'); params.push(`%${q}%`); }
-    if (type) { conditions.push('type = ?'); params.push(type); }
+    if (type) {
+      if (type === 'Ritual Monster') {
+        conditions.push('type LIKE ?'); params.push('%Ritual%');
+      } else {
+        conditions.push('type = ?'); params.push(type);
+      }
+    }
     if (attribute) { conditions.push('attribute = ?'); params.push(attribute); }
     if (archetype) { conditions.push('archetype = ?'); params.push(archetype); }
     if (banStatus) { conditions.push('ban_status_md = ?'); params.push(banStatus); }

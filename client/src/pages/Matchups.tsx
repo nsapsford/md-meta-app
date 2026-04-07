@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
+import EcosystemView from '../components/matchups/EcosystemView';
 import clsx from 'clsx';
 
 type MatrixSource = 'blended' | 'untapped' | 'tournament';
@@ -21,8 +22,24 @@ function getWinRateColor(rate: number): string {
   return 'bg-md-red/30 text-md-red';
 }
 
+function getRelationshipLabel(rate: number): string {
+  if (rate >= 0.60) return 'Hard Counter';
+  if (rate >= 0.55) return 'Soft Counter';
+  if (rate >= 0.48) return 'Neutral';
+  if (rate >= 0.40) return 'Unfavoured';
+  return 'Hard Countered';
+}
+
+function getRelationshipIcon(rate: number): string {
+  if (rate >= 0.60) return '\u{1F480}'; // skull
+  if (rate >= 0.55) return '\u{1F6E1}'; // shield
+  if (rate >= 0.48) return '\u2014';    // dash
+  if (rate >= 0.40) return '\u26A0';    // warning
+  return '\u{1F480}';                   // skull (you're the prey)
+}
+
 export default function Matchups() {
-  const [tab, setTab] = useState<'list' | 'matrix' | 'advisor'>('matrix');
+  const [tab, setTab] = useState<'list' | 'matrix' | 'advisor' | 'ecosystem'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [selectedDeck, setSelectedDeck] = useState('');
   const [matchups, setMatchups] = useState<Matchup[]>([]);
@@ -82,6 +99,7 @@ export default function Matchups() {
 
       <div className="flex gap-2">
         <button className={tabClass('matrix')} onClick={() => setTab('matrix')}>Matrix</button>
+        <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
         <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
         <button className={tabClass('list')} onClick={() => setTab('list')}>By Deck</button>
       </div>
@@ -136,7 +154,7 @@ export default function Matchups() {
                         return (
                           <td
                             key={colDeck}
-                            title={`MDM/Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament} confidence=${cell.confidence}`}
+                            title={`${getRelationshipLabel(cell.rate)} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament} (${cell.confidence} confidence)`}
                             className={`px-2 py-1 text-center rounded font-semibold cursor-default ${getWinRateColor(cell.rate)}`}
                           >
                             {pct}%
@@ -155,6 +173,10 @@ export default function Matchups() {
             </p>
           )}
         </div>
+      )}
+
+      {tab === 'ecosystem' && (
+        <EcosystemView deckNames={decks.map((d) => d.name)} />
       )}
 
       {tab === 'advisor' && (
@@ -179,8 +201,10 @@ export default function Matchups() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-md-border">
+                    <th className="text-center px-2 py-3 text-sm font-medium text-md-textMuted w-8"></th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-md-textMuted">Opponent</th>
                     <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Win Rate</th>
+                    <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Matchup</th>
                     <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Sample Size</th>
                     <th className="px-4 py-3 text-sm font-medium text-md-textMuted">Visual</th>
                   </tr>
@@ -190,11 +214,17 @@ export default function Matchups() {
                     .sort((a, b) => b.win_rate_a - a.win_rate_a)
                     .map((m) => (
                       <tr key={m.deck_b} className="hover:bg-md-surfaceHover transition-colors">
+                        <td className="px-2 py-3 text-center" title={getRelationshipLabel(m.win_rate_a / 100)}>
+                          {getRelationshipIcon(m.win_rate_a / 100)}
+                        </td>
                         <td className="px-4 py-3 text-sm font-medium">{m.deck_b}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`px-2 py-1 rounded text-sm font-semibold ${getWinRateColor(m.win_rate_a / 100)}`}>
                             {m.win_rate_a.toFixed(1)}%
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-xs text-md-textMuted">{getRelationshipLabel(m.win_rate_a / 100)}</span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-md-textMuted">{m.sample_size}</td>
                         <td className="px-4 py-3">

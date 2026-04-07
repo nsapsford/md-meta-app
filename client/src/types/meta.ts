@@ -66,10 +66,63 @@ export interface BanCard {
   image_small_url: string | null;
   image_cropped_url: string | null;
   negate_effectiveness: number | null;
+  negated_win_rate: number | null;
+  not_negated_win_rate: number | null;
+  negate_sample_size: number | null;
 }
 
 export interface BanListData {
   forbidden: BanCard[];
   limited: BanCard[];
   semiLimited: BanCard[];
+}
+
+// ── Ecosystem / Predator-Prey types ──
+
+export interface PredatorPreyRelationship {
+  predator: string;
+  prey: string;
+  win_rate: number;
+  strength: 'hard_counter' | 'soft_counter' | 'slight_edge';
+  meta_impact: number;
+  confidence: 'high' | 'medium' | 'low';
+  sample_size: number;
+  mechanism: 'direct' | 'inferred';
+}
+
+export interface DeckEcosystemProfile {
+  deck: string;
+  tier: number | null;
+  power: number | null;
+  win_rate: number | null;
+  play_rate: number | null;
+  predators: PredatorPreyRelationship[];
+  prey: PredatorPreyRelationship[];
+  neutral: string[];
+  polarization_index: number;
+  suppression_score: number;
+  vulnerability_score: number;
+  meta_fitness: number;
+  matchup_spread: number;
+}
+
+export interface RockPaperScissorsCycle {
+  decks: string[];
+  cycle_strength: number;
+  meta_relevance: number;
+}
+
+export interface EcosystemAnalysis {
+  profiles: DeckEcosystemProfile[];
+  cycles: RockPaperScissorsCycle[];
+  food_chain: PredatorPreyRelationship[];
+  meta_health_index: number;
+  computed_at: string;
+}
+
+export interface DeckEcosystemResponse {
+  profile: DeckEcosystemProfile | null;
+  related_cycles: RockPaperScissorsCycle[];
+  meta_health_index: number;
+  computed_at: string;
 }

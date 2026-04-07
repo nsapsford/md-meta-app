@@ -1,0 +1,38 @@
+<h2>Section 2 — Code Quality Foundations</h2>
+<p class="subtitle">Targeted fixes that make the app more reliable and easier to build on — not a full rewrite.</p>
+
+<div class="section">
+  <h3>2a · Replace Silent Error Catches</h3>
+  <p>Several components currently have <code>.catch(() => {})</code> — errors disappear silently. Replace with proper error state that surfaces a message to the user via the existing <code>ErrorBanner</code> component.</p>
+  <div class="mockup" style="margin-top:8px">
+    <div class="mockup-header">Before → After</div>
+    <div class="mockup-body" style="padding:12px 16px;font-size:12px;font-family:monospace">
+      <div style="color:#f87171">// Before<br>fetchDecks().catch(() => {})</div>
+      <div style="margin-top:8px;color:#86efac">// After<br>fetchDecks().catch((err) => setError(err.message))<br>// + &lt;ErrorBanner&gt; rendered when error state is set</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2b · API Service Layer</h3>
+  <p>Components currently call Axios directly. Extract calls into the existing <code>api/</code> directory pattern (like <code>api/cards.ts</code> and <code>api/meta.ts</code>) so components stay thin and API shape changes only need fixing in one place.</p>
+  <p style="margin-top:6px">Files to add: <code>api/matchups.ts</code>, <code>api/sync.ts</code>, <code>api/tournaments.ts</code></p>
+</div>
+
+<div class="section">
+  <h3>2c · Request Cancellation</h3>
+  <p>Add <code>AbortController</code> to <code>useEffect</code> data-fetch hooks so in-flight requests are cancelled when a component unmounts. Prevents state updates on unmounted components (a common React warning in this codebase).</p>
+</div>
+
+<div class="section">
+  <h3>2d · Targeted Tests for Critical Paths</h3>
+  <p>No tests currently exist. Rather than broad coverage, focus on the highest-value areas:</p>
+  <ul style="margin-top:6px;padding-left:20px;line-height:1.8">
+    <li>Sync status logic (is data fresh? partial failure detection)</li>
+    <li>Matchup blending calculation (Untapped + tournament merge)</li>
+    <li>Fuzzy deck matching utility (already complex, already in the codebase)</li>
+  </ul>
+  <p style="margin-top:6px">Using Vitest — already compatible with the Vite setup, zero extra config needed.</p>
+</div>
+
+<p style="margin-top:16px">Does this section look right?</p>

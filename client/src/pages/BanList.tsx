@@ -20,10 +20,16 @@ const RARITY_LABEL: Record<string, string> = {
 
 function BanCardCell({ card }: { card: BanCard }) {
   const [imgError, setImgError] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const rarityBorder = card.rarity ? (RARITY_BORDER[card.rarity] ?? '') : '';
+  const hasNegate = card.negate_effectiveness != null && card.negate_effectiveness > 0;
 
   return (
-    <div className={`group cursor-default ${rarityBorder}`}>
+    <div
+      className={`group cursor-default relative ${rarityBorder}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div className="relative w-full aspect-[7/10] rounded-md overflow-hidden bg-md-surfaceAlt shadow-card">
         {card.image_small_url && !imgError ? (
           <img
@@ -43,13 +49,28 @@ function BanCardCell({ card }: { card: BanCard }) {
             {card.rarity}
           </span>
         )}
-        {card.negate_effectiveness != null && card.negate_effectiveness > 2 && (
-          <span className="absolute bottom-0.5 left-0.5 text-[8px] font-bold px-1 rounded bg-black/70 text-md-orange">
-            ⛔+{card.negate_effectiveness.toFixed(1)}%
+        {hasNegate && (
+          <span className={`absolute bottom-0.5 left-0.5 text-[8px] font-bold px-1 rounded bg-black/70 ${card.negate_effectiveness! > 8 ? 'text-md-red' : card.negate_effectiveness! > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+            +{card.negate_effectiveness!.toFixed(1)}%
           </span>
         )}
       </div>
       <p className="text-[10px] mt-1 truncate text-md-textSecondary leading-tight" title={card.name}>{card.name}</p>
+      {hovered && hasNegate && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1 bg-md-surface border border-md-border rounded-lg p-2 shadow-lg whitespace-nowrap pointer-events-none">
+          <p className={`text-xs font-semibold ${card.negate_effectiveness! > 8 ? 'text-md-red' : card.negate_effectiveness! > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+            Negate Impact: +{card.negate_effectiveness!.toFixed(1)}%
+          </p>
+          {card.not_negated_win_rate != null && card.negated_win_rate != null && (
+            <p className="text-[10px] text-md-textMuted mt-0.5">
+              WR: <span className="text-md-green">{card.not_negated_win_rate.toFixed(1)}%</span> / Negated: <span className="text-md-red">{card.negated_win_rate.toFixed(1)}%</span>
+            </p>
+          )}
+          {card.negate_sample_size != null && card.negate_sample_size > 0 && (
+            <p className="text-[9px] text-md-textMuted mt-0.5">{card.negate_sample_size.toLocaleString()} games</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -99,10 +99,17 @@ function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
         >
           <img src={largeUrl} alt={card.cardName} className="w-full rounded" />
           <p className="text-sm text-center text-md-text mt-1.5 font-medium truncate px-2">{card.cardName}</p>
-          {card.negate_effectiveness != null && card.negate_effectiveness > 2 && (
-            <p className={`text-xs text-center mt-0.5 font-semibold ${card.negate_effectiveness > 8 ? 'text-md-red' : card.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
-              ⛔ Negate Impact: +{card.negate_effectiveness.toFixed(1)}%
-            </p>
+          {card.negate_effectiveness != null && card.negate_effectiveness > 0 && (
+            <div className="mt-1 px-2 space-y-0.5">
+              <p className={`text-xs text-center font-semibold ${card.negate_effectiveness > 8 ? 'text-md-red' : card.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+                Negate Impact: +{card.negate_effectiveness.toFixed(1)}%
+              </p>
+              {card.not_negated_win_rate != null && card.negated_win_rate != null && (
+                <p className="text-[10px] text-center text-md-textMuted">
+                  WR: <span className="text-md-green">{card.not_negated_win_rate.toFixed(1)}%</span> / Negated: <span className="text-md-red">{card.negated_win_rate.toFixed(1)}%</span>
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

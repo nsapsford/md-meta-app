@@ -1,0 +1,53 @@
+<h2>Section 1 — Data Transparency & Sync Status</h2>
+<p class="subtitle">Every page should answer: <em>how fresh is this data, and did it load cleanly?</em></p>
+
+<div class="section">
+  <h3>1a · Global Sync Status Bar</h3>
+  <p>A persistent indicator in the sidebar or header shows the last successful sync time and a colour-coded health dot for each data source.</p>
+  <div class="mockup" style="margin-top:10px">
+    <div class="mockup-header">Sidebar — bottom section</div>
+    <div class="mockup-body" style="font-size:13px;padding:12px 16px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+          <span><strong>Untapped.gg</strong> — synced 14 min ago</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+          <span><strong>YGOProDeck</strong> — synced 2 hrs ago</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
+          <span><strong>MDM Tournaments</strong> — partial (3/5 events loaded)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>1b · Per-Page Staleness Indicator</h3>
+  <p>Each data-heavy page shows a small timestamp + freshness badge near the title. Goes amber if data is &gt;2 hrs old, red if &gt;12 hrs.</p>
+  <div class="mockup" style="margin-top:10px">
+    <div class="mockup-header">Dashboard — page header</div>
+    <div class="mockup-body" style="padding:12px 16px;display:flex;align-items:center;gap:16px">
+      <span style="font-size:18px;font-weight:600">Meta Dashboard</span>
+      <span style="font-size:11px;background:#166534;color:#bbf7d0;padding:3px 8px;border-radius:12px">● Fresh — 14 min ago</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>1c · Partial-Failure Banner</h3>
+  <p>When a sync completes but one source failed or returned incomplete data, a dismissible warning appears at the top of the page — not a full error, just a notice.</p>
+  <div class="mockup" style="margin-top:10px">
+    <div class="mockup-header">Page-level warning banner</div>
+    <div class="mockup-body" style="padding:10px 16px;background:#451a03;color:#fed7aa;font-size:13px;border-left:3px solid #f59e0b">
+      ⚠ MDM tournament data is incomplete — 3 of 5 recent events loaded. Some matchup stats may not reflect the full picture. <span style="text-decoration:underline;cursor:pointer">Retry sync</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px"><strong>Backend change needed:</strong> the sync service will track per-source status (success / partial / failed) and timestamps in the database, exposed via a new <code>GET /api/sync/status</code> endpoint the frontend polls on mount.</p>
+
+<p style="margin-top:8px">Does this section look right so far?</p>
