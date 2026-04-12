@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS meta_snapshots (
   deck_type_name TEXT NOT NULL,
   tier INTEGER,
   power REAL,
-  pop_rank INTEGER,
+  pop_rank REAL,
   snapshot_date TEXT NOT NULL,
   UNIQUE(deck_type_name, snapshot_date)
 );

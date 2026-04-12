@@ -10,20 +10,42 @@ export async function syncCards(): Promise<number> {
   const pool = getPool();
   const cards = await ygopd.getAllCards();
 
-  for (const c of cards) {
-    const img = c.card_images?.[0];
-    const banMd = c.banlist_info?.ban_masterduel || null;
-    const mdRarity = c.misc_info?.[0]?.md_rarity || null;
+  const BATCH_SIZE = 200;
+  const PARAMS_PER_ROW = 19; // 19 parameterized + 1 expression (extract...)
+
+  for (let i = 0; i < cards.length; i += BATCH_SIZE) {
+    const batch = cards.slice(i, i + BATCH_SIZE);
+    const params: any[] = [];
+    const valueSets: string[] = [];
+
+    for (let j = 0; j < batch.length; j++) {
+      const c = batch[j];
+      const img = c.card_images?.[0];
+      const banMd = c.banlist_info?.ban_masterduel || null;
+      const mdRarity = c.misc_info?.[0]?.md_rarity || null;
+      const offset = j * PARAMS_PER_ROW;
+
+      valueSets.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, $${offset+13}, $${offset+14}, $${offset+15}, $${offset+16}, $${offset+17}, $${offset+18}, $${offset+19}, extract(epoch from now())::bigint)`);
+
+      params.push(
+        c.id, c.name, c.type, c.frameType, c.desc,
+        c.atk ?? null, c.def ?? null, c.level ?? null,
+        c.race, c.attribute ?? null, c.archetype ?? null,
+        c.linkval ?? null, c.linkmarkers ? JSON.stringify(c.linkmarkers) : null,
+        c.scale ?? null,
+        img?.image_url ?? null, img?.image_url_small ?? null, img?.image_url_cropped ?? null,
+        banMd, mdRarity
+      );
+    }
+
     await run(pool, `INSERT INTO cards (id, name, type, frame_type, description, atk, def, level, race, attribute, archetype, link_val, link_markers, scale, image_url, image_small_url, image_cropped_url, ban_status_md, md_rarity, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, extract(epoch from now())::bigint)
+      VALUES ${valueSets.join(', ')}
       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, frame_type = EXCLUDED.frame_type, description = EXCLUDED.description, atk = EXCLUDED.atk, def = EXCLUDED.def, level = EXCLUDED.level, race = EXCLUDED.race, attribute = EXCLUDED.attribute, archetype = EXCLUDED.archetype, link_val = EXCLUDED.link_val, link_markers = EXCLUDED.link_markers, scale = EXCLUDED.scale, image_url = EXCLUDED.image_url, image_small_url = EXCLUDED.image_small_url, image_cropped_url = EXCLUDED.image_cropped_url, ban_status_md = EXCLUDED.ban_status_md, md_rarity = EXCLUDED.md_rarity, updated_at = EXCLUDED.updated_at`,
-      [c.id, c.name, c.type, c.frameType, c.desc,
-       c.atk ?? null, c.def ?? null, c.level ?? null,
-       c.race, c.attribute ?? null, c.archetype ?? null,
-       c.linkval ?? null, c.linkmarkers ? JSON.stringify(c.linkmarkers) : null,
-       c.scale ?? null,
-       img?.image_url ?? null, img?.image_url_small ?? null, img?.image_url_cropped ?? null,
-       banMd, mdRarity]);
+      params);
+
+    if ((i + BATCH_SIZE) % 2000 === 0 || i + BATCH_SIZE >= cards.length) {
+      console.log(`[Sync] Cards progress: ${Math.min(i + BATCH_SIZE, cards.length)}/${cards.length}`);
+    }
   }
 
   console.log(`[Sync] Synced ${cards.length} cards`);
@@ -33,9 +55,19 @@ export async function syncCards(): Promise<number> {
 export async function syncArchetypes(): Promise<number> {
   const pool = getPool();
   const archetypes = await ygopd.getArchetypes();
-  for (const name of archetypes) {
-    await run(pool, 'INSERT INTO archetypes (name) VALUES ($1) ON CONFLICT DO NOTHING', [name]);
+
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < archetypes.length; i += BATCH_SIZE) {
+    const batch = archetypes.slice(i, i + BATCH_SIZE);
+    const params: any[] = [];
+    const valueSets: string[] = [];
+    for (let j = 0; j < batch.length; j++) {
+      valueSets.push(`($${j + 1})`);
+      params.push(batch[j]);
+    }
+    await run(pool, `INSERT INTO archetypes (name) VALUES ${valueSets.join(', ')} ON CONFLICT DO NOTHING`, params);
   }
+
   return archetypes.length;
 }
 
@@ -45,6 +77,7 @@ export async function syncDeckTypes(): Promise<number> {
 
   const toStr = (v: any) => v == null ? null : typeof v === 'object' ? JSON.stringify(v) : String(v);
   const toNum = (v: any) => v == null ? null : typeof v === 'number' ? v : Number(v) || null;
+  const toInt = (v: any) => { const n = toNum(v); return n == null ? null : Math.round(n); };
 
   // Reset tier/power for all decks — the loop below will restore values for active decks.
   // This ensures stale decks from old metas don't pollute the tier list.
@@ -72,7 +105,7 @@ export async function syncDeckTypes(): Promise<number> {
         avg_sr_price = $10, breakdown_json = $11, updated_at = extract(epoch from now())::bigint
       WHERE id = $12`,
       [d.name, tier, power, powerTrend,
-       d.popRank ?? null, d.masterPopRank ?? null, overview,
+       toInt(d.popRank), toInt(d.masterPopRank), overview,
        thumbnailImage, avgUrPrice, avgSrPrice,
        breakdown ? JSON.stringify(breakdown) : null, d._id]);
 
@@ -80,20 +113,20 @@ export async function syncDeckTypes(): Promise<number> {
       await run(pool, `INSERT INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
         VALUES ($1, $2, $3, $4, CURRENT_DATE)
         ON CONFLICT (deck_type_name, snapshot_date) DO UPDATE SET tier = EXCLUDED.tier, power = EXCLUDED.power, pop_rank = EXCLUDED.pop_rank`,
-        [d.name, tier, power, d.masterPopRank ?? null]);
+        [d.name, tier, power, toInt(d.masterPopRank)]);
     }
   }
 
   // Remove duplicate deck_types: for each name, keep the MDM entry (has power/tier)
   // and delete slug-based duplicates created by old scraper or untapped sync
   const dupes = await queryAll(pool,
-    `SELECT name FROM deck_types GROUP BY LOWER(name) HAVING COUNT(*) > 1`
+    `SELECT LOWER(name) as lname FROM deck_types GROUP BY LOWER(name) HAVING COUNT(*) > 1`
   );
   for (const d of dupes) {
     // Keep the entry with highest power, or the one with a non-slug ID (MDM IDs are hex ObjectIds)
     const entries = await queryAll(pool,
-      `SELECT id, power FROM deck_types WHERE LOWER(name) = LOWER($1) ORDER BY power DESC NULLS LAST`,
-      [d.name]
+      `SELECT id, power FROM deck_types WHERE LOWER(name) = $1 ORDER BY power DESC NULLS LAST`,
+      [d.lname]
     );
     if (entries.length > 1) {
       // Keep the first (best) entry, delete the rest
@@ -160,6 +193,7 @@ export async function syncTopDecks(): Promise<number> {
     try {
       const toStr = (v: any) => v == null ? null : typeof v === 'object' ? JSON.stringify(v) : String(v);
       const toNum = (v: any) => v == null ? null : typeof v === 'number' ? v : Number(v) || null;
+      const toInt = (v: any) => { const n = toNum(v); return n == null ? null : Math.round(n); };
 
       const deckTypeName = typeof d.deckType === 'object' ? d.deckType?.name : d.deckType;
       const authorName = typeof d.author === 'object' ? d.author?.username : d.author;
@@ -185,7 +219,7 @@ export async function syncTopDecks(): Promise<number> {
          sideDeck ? JSON.stringify(normalizeDeck(sideDeck)) : null,
          toStr(d.tournamentName), toStr(d.tournamentPlacement),
          toStr(d.rankedType), toStr(d.created || d.createdAt),
-         toNum(d.gemsPrice), toNum(d.urPrice), toNum(d.srPrice),
+         toInt(d.gemsPrice), toInt(d.urPrice), toInt(d.srPrice),
          toStr(d.url)]);
     } catch (e) {
       // Skip individual decks that fail

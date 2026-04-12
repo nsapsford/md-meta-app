@@ -478,7 +478,7 @@ async function inferFromTournamentCorrelation(
 
   // Get last 14+ days of snapshots
   const snapshots = await queryAll(pool,
-    "SELECT deck_type_name, power, snapshot_date FROM meta_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY snapshot_date"
+    "SELECT deck_type_name, power, snapshot_date FROM meta_snapshots WHERE snapshot_date::date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY snapshot_date"
   ) as { deck_type_name: string; power: number; snapshot_date: string }[];
 
   if (snapshots.length < 10) return inferred;
