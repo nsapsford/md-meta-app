@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 import { syncDeckTypes } from '../services/syncService.js';
 
@@ -25,17 +25,17 @@ const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
-    let deckTypes = queryAll(db, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
+    const pool = getPool();
+    let deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
 
     if (deckTypes.length === 0) {
       await syncDeckTypes();
-      deckTypes = queryAll(db, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
+      deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
     }
 
     // Build archetype → card-names map (same logic as /decks/featured)
     const archetypeCards = new Map<string, Set<string>>();
-    const allArchCards = queryAll(db,
+    const allArchCards = await queryAll(pool,
       `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
     );
     for (const c of allArchCards) {
@@ -71,9 +71,9 @@ router.get('/', async (_req: Request, res: Response) => {
       }
 
       // Step 2: Get recent top decks for card frequency
-      const topDecks = queryAll(db,
+      const topDecks = await queryAll(pool,
         `SELECT main_deck_json FROM top_decks
-         WHERE deck_type_name = ? COLLATE NOCASE
+         WHERE LOWER(deck_type_name) = LOWER($1)
          ORDER BY created_at DESC LIMIT 20`,
         [d.name]
       );
@@ -115,8 +115,8 @@ router.get('/', async (_req: Request, res: Response) => {
 
       const cards: Array<{ name: string; image: string | null }> = [];
       for (const cardName of topCardNames) {
-        const card = queryOne(db,
-          `SELECT name, image_cropped_url, image_small_url FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1`,
+        const card = await queryOne(pool,
+          `SELECT name, image_cropped_url, image_small_url FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1`,
           [cardName]
         );
         if (card) {
@@ -129,12 +129,14 @@ router.get('/', async (_req: Request, res: Response) => {
 
       // Step 5: If no top_decks data but archetype cards were found, use archetype cards directly
       if (cards.length === 0 && deckArchetypeNames.size > 0) {
-        const archCards = queryAll(db,
+        const archNames = [...deckArchetypeNames].slice(0, 50);
+        const placeholders = archNames.map((_, i) => `$${i + 1}`).join(',');
+        const archCards = await queryAll(pool,
           `SELECT name, image_cropped_url, image_small_url FROM cards
-           WHERE name IN (${[...deckArchetypeNames].slice(0, 50).map(() => '?').join(',')})
+           WHERE LOWER(name) IN (${placeholders})
              AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
            LIMIT 3`,
-          [...deckArchetypeNames].slice(0, 50)
+          archNames.map(n => n.toLowerCase())
         );
         for (const card of archCards) {
           cards.push({
@@ -158,9 +160,9 @@ router.get('/', async (_req: Request, res: Response) => {
           const matchedCardNames = [...archetypeCards.get(bestMatch)!];
           for (const cardName of matchedCardNames) {
             if (cards.length >= 3) break;
-            const card = queryOne(db,
+            const card = await queryOne(pool,
               `SELECT name, image_cropped_url, image_small_url FROM cards
-               WHERE name = ? COLLATE NOCASE AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
+               WHERE LOWER(name) = LOWER($1) AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
                LIMIT 1`,
               [cardName]
             );

@@ -1,18 +1,18 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
+    const pool = getPool();
     const { tier } = req.query;
     let decks;
     if (tier != null) {
-      decks = queryAll(db, 'SELECT * FROM deck_types WHERE tier = ? ORDER BY power DESC', [parseInt(tier as string)]);
+      decks = await queryAll(pool, 'SELECT * FROM deck_types WHERE tier = $1 ORDER BY power DESC', [parseInt(tier as string)]);
     } else {
-      decks = queryAll(db, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
+      decks = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
     }
     res.json(decks.map((d: any) => ({
       ...d,
@@ -26,8 +26,8 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/decks/featured — top 3 archetypes with most-used card images for dashboard
 router.get('/featured', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const top3 = queryAll(db,
+    const pool = getPool();
+    const top3 = await queryAll(pool,
       `SELECT id, name, tier, power, power_trend, thumbnail_image, win_rate, play_rate
        FROM deck_types
        WHERE power IS NOT NULL AND power > 0
@@ -37,7 +37,7 @@ router.get('/featured', async (_req: Request, res: Response) => {
 
     // Build a set of archetype card names from the cards table for filtering
     const archetypeCards = new Map<string, Set<string>>();
-    const allArchCards = queryAll(db,
+    const allArchCards = await queryAll(pool,
       `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
     );
     for (const c of allArchCards) {
@@ -49,7 +49,6 @@ router.get('/featured', async (_req: Request, res: Response) => {
     const result = [];
     for (const deck of top3) {
       // Determine which archetypes belong to this deck
-      // Deck names often combine archetypes e.g. "Ryzeal Mitsurugi" → check "ryzeal", "mitsurugi"
       const deckNameLower = (deck.name as string).toLowerCase();
       const deckArchetypeNames = new Set<string>();
       for (const [archKey, cardSet] of archetypeCards) {
@@ -59,9 +58,9 @@ router.get('/featured', async (_req: Request, res: Response) => {
       }
 
       // Get recent top decks for this archetype
-      const topDecks = queryAll(db,
+      const topDecks = await queryAll(pool,
         `SELECT main_deck_json FROM top_decks
-         WHERE deck_type_name = ? COLLATE NOCASE
+         WHERE LOWER(deck_type_name) = LOWER($1)
          ORDER BY created_at DESC LIMIT 20`,
         [deck.name]
       );
@@ -88,10 +87,11 @@ router.get('/featured', async (_req: Request, res: Response) => {
 
       // Fallback for engine decks with no tournament data: use archetype cards directly
       if (topCardNames.length === 0 && deckArchetypeNames.size > 0) {
-        const placeholders = [...deckArchetypeNames].map(() => '?').join(',');
-        const archetypeCardRows = queryAll(db,
-          `SELECT name, image_small_url, image_cropped_url FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE AND (image_small_url IS NOT NULL OR image_cropped_url IS NOT NULL) LIMIT 5`,
-          [...deckArchetypeNames]
+        const names = [...deckArchetypeNames];
+        const placeholders = names.map((_, i) => `$${i + 1}`).join(',');
+        const archetypeCardRows = await queryAll(pool,
+          `SELECT name, image_small_url, image_cropped_url FROM cards WHERE LOWER(name) IN (${placeholders}) AND (image_small_url IS NOT NULL OR image_cropped_url IS NOT NULL) LIMIT 5`,
+          names.map(n => n.toLowerCase())
         );
         const cards = archetypeCardRows.map((c: any) => ({
           name: c.name,
@@ -104,8 +104,8 @@ router.get('/featured', async (_req: Request, res: Response) => {
       // Fetch card images
       const cards = [];
       for (const cardName of topCardNames) {
-        const card = queryOne(db,
-          `SELECT name, image_small_url, image_cropped_url FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1`,
+        const card = await queryOne(pool,
+          `SELECT name, image_small_url, image_cropped_url FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1`,
           [cardName]
         );
         if (card) {
@@ -127,21 +127,21 @@ router.get('/featured', async (_req: Request, res: Response) => {
 
 router.get('/:name', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const deck = queryOne(db, 'SELECT * FROM deck_types WHERE name = ? COLLATE NOCASE', [req.params.name]);
+    const pool = getPool();
+    const deck = await queryOne(pool, 'SELECT * FROM deck_types WHERE LOWER(name) = LOWER($1)', [req.params.name]);
     if (!deck) return res.status(404).json({ error: 'Deck not found' });
 
-    let topDecks = queryAll(db,
-      'SELECT * FROM top_decks WHERE deck_type_name = ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 10',
+    let topDecks = await queryAll(pool,
+      'SELECT * FROM top_decks WHERE LOWER(deck_type_name) = LOWER($1) ORDER BY created_at DESC LIMIT 10',
       [req.params.name]);
 
     // Fuzzy fallback: if no exact match, try LIKE-based matching (e.g. "Snake-Eye" → "Snake-Eye Fire King")
     if (topDecks.length === 0) {
       const words = req.params.name.split(/[\s\-]+/).filter((w: string) => w.length >= 3);
       if (words.length > 0) {
-        const likeClause = words.map(() => 'LOWER(deck_type_name) LIKE ?').join(' AND ');
+        const likeClause = words.map((_, i) => `LOWER(deck_type_name) LIKE $${i + 1}`).join(' AND ');
         const likeParams = words.map((w: string) => `%${w.toLowerCase()}%`);
-        topDecks = queryAll(db,
+        topDecks = await queryAll(pool,
           `SELECT * FROM top_decks WHERE ${likeClause} ORDER BY created_at DESC LIMIT 10`,
           likeParams);
       }
@@ -184,10 +184,10 @@ router.get('/:name', async (req: Request, res: Response) => {
     const cardInfoMap = new Map<string, any>();
     if (allNames.size > 0) {
       const names = Array.from(allNames);
-      const placeholders = names.map(() => '?').join(',');
-      const cardRows = queryAll(db,
-        `SELECT name, type, frame_type, archetype, image_small_url, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE name IN (${placeholders}) COLLATE NOCASE`,
-        names);
+      const placeholders = names.map((_, i) => `$${i + 1}`).join(',');
+      const cardRows = await queryAll(pool,
+        `SELECT name, type, frame_type, archetype, image_small_url, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE LOWER(name) IN (${placeholders})`,
+        names.map(n => n.toLowerCase()));
       for (const row of cardRows) {
         cardInfoMap.set(row.name.toLowerCase(), row);
       }
@@ -225,9 +225,9 @@ router.get('/:name', async (req: Request, res: Response) => {
 
 router.get('/:name/top-lists', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const topDecks = queryAll(db,
-      'SELECT * FROM top_decks WHERE deck_type_name = ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 20',
+    const pool = getPool();
+    const topDecks = await queryAll(pool,
+      'SELECT * FROM top_decks WHERE LOWER(deck_type_name) = LOWER($1) ORDER BY created_at DESC LIMIT 20',
       [req.params.name]);
 
     res.json(topDecks.map((d: any) => ({

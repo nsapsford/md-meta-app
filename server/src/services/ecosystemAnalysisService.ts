@@ -1,4 +1,4 @@
-import type { Database } from 'sql.js';
+import type { Pool } from '@neondatabase/serverless';
 import { queryAll } from '../utils/dbHelpers.js';
 import { buildFullMatrix, type MatrixCell } from './matchupBlendService.js';
 
@@ -15,6 +15,23 @@ export interface PredatorPreyRelationship {
   mechanism: 'direct' | 'inferred';
 }
 
+export interface GameTheoryProfile {
+  expected_payoff: number;         // expected WR against current field distribution
+  nash_deviation: number;          // how far current play rate is from Nash equilibrium (-1 to 1)
+  best_response_to: string | null; // this deck is the optimal counter-pick to which popular deck
+  dominated_by: string[];          // decks that beat this one in EVERY matchup it plays
+  dominates: string[];             // decks this one beats in EVERY matchup they play
+  strategy_type: 'dominant' | 'counter_pick' | 'generalist' | 'niche' | 'dominated';
+}
+
+export interface TournamentFieldEntry {
+  deck: string;
+  field_pct: number;
+  top_cut_pct: number;
+  conversion_rate: number; // top_cut_pct / field_pct — how well it converts
+  appearances: number;
+}
+
 export interface DeckEcosystemProfile {
   deck: string;
   tier: number | null;
@@ -29,6 +46,7 @@ export interface DeckEcosystemProfile {
   vulnerability_score: number;
   meta_fitness: number;
   matchup_spread: number;
+  game_theory: GameTheoryProfile;
 }
 
 export interface RockPaperScissorsCycle {
@@ -42,6 +60,8 @@ export interface EcosystemAnalysis {
   cycles: RockPaperScissorsCycle[];
   food_chain: PredatorPreyRelationship[];
   meta_health_index: number;
+  tournament_field: TournamentFieldEntry[];
+  nash_equilibrium: Record<string, number>; // deck -> optimal play rate
   computed_at: string;
 }
 
@@ -83,15 +103,219 @@ function pearsonCorrelation(xs: number[], ys: number[]): number {
   return den === 0 ? 0 : num / den;
 }
 
+// ── Tournament field composition ──
+
+async function buildTournamentField(pool: Pool, decks: string[]): Promise<TournamentFieldEntry[]> {
+  const tournaments = await queryAll(pool,
+    'SELECT placements_json FROM tournaments ORDER BY updated_at DESC LIMIT 5'
+  ) as { placements_json: string }[];
+
+  const deckCounts: Record<string, { total: number; topCut: number }> = {};
+  let grandTotal = 0;
+
+  for (const t of tournaments) {
+    let placements: any[] = [];
+    try { placements = JSON.parse(t.placements_json || '[]'); } catch { continue; }
+
+    for (let i = 0; i < placements.length; i++) {
+      const p = placements[i];
+      const name: string | undefined = p.deck_type_name || p.deckType || p.deck || p.name;
+      if (!name) continue;
+
+      if (!deckCounts[name]) deckCounts[name] = { total: 0, topCut: 0 };
+      deckCounts[name].total++;
+      // Top cut = top 25% of placements
+      if (i < placements.length * 0.25) deckCounts[name].topCut++;
+      grandTotal++;
+    }
+  }
+
+  if (grandTotal === 0) return [];
+
+  const deckSet = new Set(decks.map((d) => d.toLowerCase()));
+  return Object.entries(deckCounts)
+    .filter(([name]) => deckSet.has(name.toLowerCase()))
+    .map(([deck, counts]) => {
+      const fieldPct = counts.total / grandTotal;
+      const topCutPct = counts.topCut / grandTotal;
+      return {
+        deck,
+        field_pct: fieldPct,
+        top_cut_pct: topCutPct,
+        conversion_rate: fieldPct > 0 ? topCutPct / fieldPct : 0,
+        appearances: counts.total,
+      };
+    })
+    .sort((a, b) => b.field_pct - a.field_pct);
+}
+
+// ── Game Theory: Nash Equilibrium approximation ──
+// Uses fictitious play: iteratively compute best responses until convergence
+
+function computeNashEquilibrium(
+  decks: string[],
+  matrix: Record<string, Record<string, MatrixCell>>,
+): Record<string, number> {
+  const n = decks.length;
+  if (n === 0) return {};
+
+  // Build payoff matrix (row = player's deck, col = opponent's deck, value = win rate)
+  const payoff: number[][] = [];
+  for (let i = 0; i < n; i++) {
+    payoff[i] = [];
+    for (let j = 0; j < n; j++) {
+      if (i === j) { payoff[i][j] = 0.5; continue; }
+      payoff[i][j] = matrix[decks[i]]?.[decks[j]]?.rate ?? 0.5;
+    }
+  }
+
+  // Fictitious play: track cumulative counts of each strategy
+  const counts = new Array(n).fill(1); // start uniform
+  const iterations = 200;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const total = counts.reduce((s: number, v: number) => s + v, 0);
+    const freq = counts.map((c: number) => c / total);
+
+    // Find best response: deck with highest expected payoff against current distribution
+    let bestIdx = 0, bestPayoff = -1;
+    for (let i = 0; i < n; i++) {
+      let ep = 0;
+      for (let j = 0; j < n; j++) {
+        ep += payoff[i][j] * freq[j];
+      }
+      if (ep > bestPayoff) { bestPayoff = ep; bestIdx = i; }
+    }
+    counts[bestIdx]++;
+  }
+
+  const total = counts.reduce((s: number, v: number) => s + v, 0);
+  const result: Record<string, number> = {};
+  for (let i = 0; i < n; i++) {
+    result[decks[i]] = counts[i] / total;
+  }
+  return result;
+}
+
+// ── Game Theory: per-deck strategy classification ──
+
+function computeGameTheoryProfile(
+  deck: string,
+  decks: string[],
+  matrix: Record<string, Record<string, MatrixCell>>,
+  deckMeta: Record<string, DeckMeta>,
+  nashEq: Record<string, number>,
+  tournamentField: TournamentFieldEntry[],
+): GameTheoryProfile {
+  // Expected payoff: weighted average WR against field (use tournament field if available, else play rates)
+  const fieldMap = new Map(tournamentField.map((e) => [e.deck.toLowerCase(), e.field_pct]));
+
+  let totalWeight = 0, weightedPayoff = 0;
+  for (const other of decks) {
+    if (other === deck) continue;
+    const cell = matrix[deck]?.[other];
+    const rate = cell?.rate ?? 0.5;
+    // Prefer tournament field composition, fall back to untapped play rate
+    const weight = fieldMap.get(other.toLowerCase()) ?? (deckMeta[other]?.play_rate ?? 0);
+    if (weight > 0) {
+      weightedPayoff += rate * weight;
+      totalWeight += weight;
+    }
+  }
+  const expectedPayoff = totalWeight > 0 ? weightedPayoff / totalWeight : 0.5;
+
+  // Nash deviation: actual play rate vs Nash equilibrium play rate
+  const actualPlayRate = deckMeta[deck]?.play_rate ?? 0;
+  const nashRate = nashEq[deck] ?? (1 / decks.length);
+  // Positive = overplayed, negative = underplayed relative to equilibrium
+  const nashDeviation = nashRate > 0 ? (actualPlayRate - nashRate) / nashRate : 0;
+
+  // Best response to: which popular deck (>5% play rate) does this deck counter best?
+  let bestResponseTo: string | null = null;
+  let bestResponseRate = 0;
+  for (const other of decks) {
+    if (other === deck) continue;
+    const otherPlayRate = deckMeta[other]?.play_rate ?? 0;
+    if (otherPlayRate < 0.03) continue; // only consider relevant decks
+    const cell = matrix[deck]?.[other];
+    if (cell && cell.rate > bestResponseRate) {
+      bestResponseRate = cell.rate;
+      bestResponseTo = other;
+    }
+  }
+  // Only report if it's actually a counter (>55%)
+  if (bestResponseRate < 0.55) bestResponseTo = null;
+
+  // Dominance: check if any other deck beats this one in every matchup
+  const dominated_by: string[] = [];
+  const dominates: string[] = [];
+
+  for (const other of decks) {
+    if (other === deck) continue;
+    // Does `other` dominate `deck`? (other beats every opponent that deck faces, by a better margin)
+    let otherDominates = true;
+    let thisDominates = true;
+    let comparisonCount = 0;
+
+    for (const opponent of decks) {
+      if (opponent === deck || opponent === other) continue;
+      const myRate = matrix[deck]?.[opponent]?.rate;
+      const theirRate = matrix[other]?.[opponent]?.rate;
+      if (myRate == null || theirRate == null) continue;
+      comparisonCount++;
+      if (theirRate <= myRate) otherDominates = false;
+      if (myRate <= theirRate) thisDominates = false;
+    }
+
+    if (comparisonCount >= 3) {
+      if (otherDominates) dominated_by.push(other);
+      if (thisDominates) dominates.push(other);
+    }
+  }
+
+  // Strategy type classification
+  let strategy_type: GameTheoryProfile['strategy_type'];
+  if (dominated_by.length > 0) {
+    strategy_type = 'dominated';
+  } else if (dominates.length > 0) {
+    strategy_type = 'dominant';
+  } else if (bestResponseTo && bestResponseRate >= 0.58) {
+    strategy_type = 'counter_pick';
+  } else {
+    // Check matchup variance — low variance = generalist, high variance = niche
+    const rates: number[] = [];
+    for (const other of decks) {
+      if (other === deck) continue;
+      const cell = matrix[deck]?.[other];
+      if (cell) rates.push(cell.rate);
+    }
+    const avg = rates.length > 0 ? rates.reduce((s, v) => s + v, 0) / rates.length : 0.5;
+    const variance = rates.length > 1
+      ? rates.reduce((s, v) => s + (v - avg) ** 2, 0) / rates.length
+      : 0;
+    strategy_type = variance < 0.003 ? 'generalist' : 'niche';
+  }
+
+  return {
+    expected_payoff: expectedPayoff,
+    nash_deviation: Math.max(-1, Math.min(1, nashDeviation)),
+    best_response_to: bestResponseTo,
+    dominated_by,
+    dominates,
+    strategy_type,
+  };
+}
+
 // ── Main computation ──
 
-export function computeEcosystemAnalysis(db: Database, source: string = 'blended'): EcosystemAnalysis {
-  const { decks, matrix } = buildFullMatrix(db, source);
+export async function computeEcosystemAnalysis(pool: Pool, source: string = 'blended'): Promise<EcosystemAnalysis> {
+  const { decks, matrix } = await buildFullMatrix(pool, source);
 
   // Load deck metadata
-  const deckMetaRows = queryAll(db,
+  const placeholders = decks.map((_, i) => `$${i + 1}`).join(',');
+  const deckMetaRows = await queryAll(pool,
     'SELECT name, tier, power, win_rate, play_rate FROM deck_types WHERE name IN (' +
-    decks.map(() => '?').join(',') + ')',
+    placeholders + ')',
     decks
   ) as (DeckMeta & { name: string })[];
 
@@ -105,6 +329,12 @@ export function computeEcosystemAnalysis(db: Database, source: string = 'blended
       play_rate: row.play_rate != null ? row.play_rate / 100 : null,
     };
   }
+
+  // Tournament field composition from recent events
+  const tournamentField = await buildTournamentField(pool, decks);
+
+  // Nash equilibrium via fictitious play
+  const nashEq = computeNashEquilibrium(decks, matrix);
 
   // Step 1: Classify all pairwise relationships
   const allRelationships: PredatorPreyRelationship[] = [];
@@ -133,7 +363,7 @@ export function computeEcosystemAnalysis(db: Database, source: string = 'blended
   }
 
   // Step 2: Tournament anti-correlation inference for missing pairs
-  const inferredRelationships = inferFromTournamentCorrelation(db, decks, matrix, deckMeta);
+  const inferredRelationships = await inferFromTournamentCorrelation(pool, decks, matrix, deckMeta);
   allRelationships.push(...inferredRelationships);
 
   // Step 3: Build per-deck profiles
@@ -172,18 +402,23 @@ export function computeEcosystemAnalysis(db: Database, source: string = 'blended
       vulnerabilityScore += (r.win_rate - 0.5) * predatorPlayRate;
     }
 
-    // Meta fitness: weighted win rate against the field (by play rate)
+    // Meta fitness: weighted win rate against the field
+    // Prefer tournament field composition for weighting, fall back to play rates
+    const fieldMap = new Map(tournamentField.map((e) => [e.deck.toLowerCase(), e.field_pct]));
     let totalWeight = 0, weightedWR = 0;
     for (const other of decks) {
       if (other === deck) continue;
       const cell = matrix[deck]?.[other];
-      const otherPlayRate = deckMeta[other]?.play_rate ?? 0;
-      if (cell && otherPlayRate > 0) {
-        weightedWR += cell.rate * otherPlayRate;
-        totalWeight += otherPlayRate;
+      const weight = fieldMap.get(other.toLowerCase()) ?? (deckMeta[other]?.play_rate ?? 0);
+      if (cell && weight > 0) {
+        weightedWR += cell.rate * weight;
+        totalWeight += weight;
       }
     }
     const metaFitness = totalWeight > 0 ? weightedWR / totalWeight : (meta.win_rate ?? 0.5);
+
+    // Game theory profile
+    const gameTheory = computeGameTheoryProfile(deck, decks, matrix, deckMeta, nashEq, tournamentField);
 
     return {
       deck,
@@ -199,6 +434,7 @@ export function computeEcosystemAnalysis(db: Database, source: string = 'blended
       vulnerability_score: vulnerabilityScore,
       meta_fitness: metaFitness,
       matchup_spread: matchupSpread,
+      game_theory: gameTheory,
     };
   });
 
@@ -224,23 +460,25 @@ export function computeEcosystemAnalysis(db: Database, source: string = 'blended
     cycles,
     food_chain: foodChain,
     meta_health_index: metaHealthIndex,
+    tournament_field: tournamentField,
+    nash_equilibrium: nashEq,
     computed_at: new Date().toISOString(),
   };
 }
 
 // ── Inference: Tournament anti-correlation ──
 
-function inferFromTournamentCorrelation(
-  db: Database,
+async function inferFromTournamentCorrelation(
+  pool: Pool,
   decks: string[],
   matrix: Record<string, Record<string, MatrixCell>>,
   deckMeta: Record<string, DeckMeta>,
-): PredatorPreyRelationship[] {
+): Promise<PredatorPreyRelationship[]> {
   const inferred: PredatorPreyRelationship[] = [];
 
   // Get last 14+ days of snapshots
-  const snapshots = queryAll(db,
-    "SELECT deck_type_name, power, snapshot_date FROM meta_snapshots WHERE snapshot_date >= date('now', '-30 days') ORDER BY snapshot_date"
+  const snapshots = await queryAll(pool,
+    "SELECT deck_type_name, power, snapshot_date FROM meta_snapshots WHERE snapshot_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY snapshot_date"
   ) as { deck_type_name: string; power: number; snapshot_date: string }[];
 
   if (snapshots.length < 10) return inferred;

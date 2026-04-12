@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, run } from '../utils/dbHelpers.js';
 import * as mdm from '../services/mdmService.js';
 import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendService.js';
@@ -11,22 +11,22 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { deck } = req.query;
-    const db = getDb();
+    const pool = getPool();
 
     if (deck) {
-      let rows = queryAll(db, 'SELECT * FROM matchups WHERE deck_a = ? COLLATE NOCASE', [deck as string]);
+      let rows = await queryAll(pool, 'SELECT * FROM matchups WHERE LOWER(deck_a) = LOWER($1)', [deck as string]);
       if (rows.length === 0) {
         const scraped = await mdm.scrapeMatchups(deck as string);
         for (const m of scraped) {
-          run(db, "INSERT OR REPLACE INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at) VALUES (?, ?, ?, ?, strftime('%s','now'))",
+          await run(pool, "INSERT INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at) VALUES ($1, $2, $3, $4, EXTRACT(EPOCH FROM NOW())::bigint) ON CONFLICT (deck_a, deck_b) DO UPDATE SET win_rate_a = EXCLUDED.win_rate_a, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at",
             [deck, m.opponent, m.winRate, m.sampleSize]);
         }
-        rows = queryAll(db, 'SELECT * FROM matchups WHERE deck_a = ? COLLATE NOCASE', [deck as string]);
+        rows = await queryAll(pool, 'SELECT * FROM matchups WHERE LOWER(deck_a) = LOWER($1)', [deck as string]);
       }
       return res.json(rows);
     }
 
-    res.json(queryAll(db, 'SELECT * FROM matchups ORDER BY deck_a, deck_b'));
+    res.json(await queryAll(pool, 'SELECT * FROM matchups ORDER BY deck_a, deck_b'));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -36,8 +36,9 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/matrix', async (req: Request, res: Response) => {
   try {
     const source = (req.query.source as string) || 'blended';
-    const db = getDb();
-    res.json(buildFullMatrix(db, source));
+    const infer = req.query.infer === 'true';
+    const pool = getPool();
+    res.json(await buildFullMatrix(pool, source, infer));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -48,8 +49,8 @@ router.get('/ecosystem', async (req: Request, res: Response) => {
   try {
     const source = (req.query.source as string) || 'blended';
     const deckFilter = req.query.deck as string | undefined;
-    const db = getDb();
-    const analysis = computeEcosystemAnalysis(db, source);
+    const pool = getPool();
+    const analysis = await computeEcosystemAnalysis(pool, source);
 
     if (deckFilter) {
       const profile = analysis.profiles.find(
@@ -78,10 +79,10 @@ router.get('/advisor', async (req: Request, res: Response) => {
     const { deck } = req.query;
     if (!deck) return res.status(400).json({ error: 'deck parameter required' });
 
-    const db = getDb();
+    const pool = getPool();
 
     // Field composition from last 3 tournaments
-    const tournaments = queryAll(db,
+    const tournaments = await queryAll(pool,
       'SELECT placements_json FROM tournaments ORDER BY updated_at DESC LIMIT 3'
     ) as { placements_json: string }[];
 
@@ -101,13 +102,13 @@ router.get('/advisor', async (req: Request, res: Response) => {
     }
 
     // Matchup rates: prefer matchup_sources, fall back to legacy matchups table
-    const matchupRows = queryAll(db,
-      'SELECT * FROM matchup_sources WHERE deck_a = ? COLLATE NOCASE',
+    const matchupRows = await queryAll(pool,
+      'SELECT * FROM matchup_sources WHERE LOWER(deck_a) = LOWER($1)',
       [deck as string]
     ) as { deck_b: string; source: string; win_rate: number; sample_size: number }[];
 
-    const legacyMatchups = queryAll(db,
-      'SELECT deck_b, win_rate_a, sample_size FROM matchups WHERE deck_a = ? COLLATE NOCASE',
+    const legacyMatchups = await queryAll(pool,
+      'SELECT deck_b, win_rate_a, sample_size FROM matchups WHERE LOWER(deck_a) = LOWER($1)',
       [deck as string]
     ) as { deck_b: string; win_rate_a: number; sample_size: number }[];
 

@@ -45,6 +45,7 @@ export default function Matchups() {
   const [matchups, setMatchups] = useState<Matchup[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
   const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
+  const [inferGaps, setInferGaps] = useState(true);
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,12 +66,12 @@ export default function Matchups() {
     if (tab !== 'matrix') return;
     const controller = new AbortController();
     setLoading(true);
-    getMatchupMatrix(matrixSource, controller.signal)
+    getMatchupMatrix(matrixSource, inferGaps, controller.signal)
       .then(setMatrix)
       .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [tab, matrixSource]);
+  }, [tab, matrixSource, inferGaps]);
 
   useEffect(() => {
     if (tab !== 'list' || !selectedDeck) return;
@@ -108,7 +109,7 @@ export default function Matchups() {
 
       {tab === 'matrix' && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {(['blended', 'untapped', 'tournament'] as MatrixSource[]).map((s) => (
               <button
                 key={s}
@@ -123,6 +124,20 @@ export default function Matchups() {
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
+            <div className="ml-3 border-l border-md-border pl-3">
+              <button
+                onClick={() => setInferGaps(!inferGaps)}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  inferGaps
+                    ? 'bg-md-purple/15 text-md-purple border-md-purple/30'
+                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                )}
+                title="Fill missing cells using ecosystem inference (inverse matchups, predator/prey, win-rate model)"
+              >
+                Infer Gaps
+              </button>
+            </div>
           </div>
 
           {loading ? <LoadingSpinner /> : matrix && matrix.decks.length > 0 ? (
@@ -151,11 +166,19 @@ export default function Matchups() {
                           return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt/50 rounded text-md-textMuted text-xs">?</td>;
                         }
                         const pct = (cell.rate * 100).toFixed(0);
+                        const inferLabel = cell.inferred
+                          ? ` [${cell.inference_method ?? 'inferred'}]`
+                          : '';
                         return (
                           <td
                             key={colDeck}
-                            title={`${getRelationshipLabel(cell.rate)} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament} (${cell.confidence} confidence)`}
-                            className={`px-2 py-1 text-center rounded font-semibold cursor-default ${getWinRateColor(cell.rate)}`}
+                            title={`${getRelationshipLabel(cell.rate)}${inferLabel} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament} (${cell.confidence} confidence)`}
+                            className={clsx(
+                              'px-2 py-1 text-center rounded cursor-default',
+                              cell.inferred
+                                ? `${getWinRateColor(cell.rate)} opacity-60 italic border border-dashed border-md-border`
+                                : `${getWinRateColor(cell.rate)} font-semibold`
+                            )}
                           >
                             {pct}%
                           </td>
@@ -165,7 +188,13 @@ export default function Matchups() {
                   ))}
                 </tbody>
               </table>
-              <p className="text-xs text-md-textMuted mt-2">Hover a cell to see sample sizes. ? = insufficient data.</p>
+              <p className="text-xs text-md-textMuted mt-2">
+                Hover a cell to see sample sizes.{' '}
+                {inferGaps
+                  ? <><span className="italic opacity-60">Italic/dashed</span> = inferred (inverse, ecosystem, or win-rate model).</>
+                  : <>? = insufficient data. Enable <strong>Infer Gaps</strong> to estimate.</>
+                }
+              </p>
             </div>
           ) : (
             <p className="text-sm text-md-textMuted py-4 text-center">

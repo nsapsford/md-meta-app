@@ -1,63 +1,35 @@
-import initSqlJs, { Database } from 'sql.js';
-import path from 'path';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Required for Node.js environments (Render, local dev)
+neonConfig.webSocketConstructor = ws;
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', '..', 'data.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
-let db: Database | null = null;
-let initPromise: Promise<Database> | null = null;
+let pool: Pool | null = null;
 
-export async function initDb(): Promise<Database> {
-  if (db) return db;
-  if (initPromise) return initPromise;
-
-  initPromise = (async () => {
-    const SQL = await initSqlJs();
-    let buffer: Buffer | null = null;
-    try {
-      buffer = fs.readFileSync(DB_PATH);
-    } catch {}
-
-    db = buffer ? new SQL.Database(buffer) : new SQL.Database();
-    const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-    db.run(schema);
-
-    // Migrate existing deck_types table to add untapped.gg columns
-    const migrations = [
-      'ALTER TABLE deck_types ADD COLUMN win_rate REAL',
-      'ALTER TABLE deck_types ADD COLUMN play_rate REAL',
-      'ALTER TABLE deck_types ADD COLUMN sample_size INTEGER',
-      'ALTER TABLE deck_types ADD COLUMN untapped_tier INTEGER',
-      'ALTER TABLE cards ADD COLUMN negate_effectiveness REAL',
-      'ALTER TABLE cards ADD COLUMN negated_win_rate REAL',
-      'ALTER TABLE cards ADD COLUMN not_negated_win_rate REAL',
-      'ALTER TABLE cards ADD COLUMN negate_sample_size INTEGER',
-    ];
-    for (const sql of migrations) {
-      try { db.run(sql); } catch { /* column already exists */ }
+export function getPool(): Pool {
+  if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is required');
     }
-
-    console.log('[DB] Schema migrated successfully');
-
-    // Auto-save every 30 seconds
-    setInterval(() => saveDb(), 30000);
-
-    return db;
-  })();
-
-  return initPromise;
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  return pool;
 }
 
-export function getDb(): Database {
-  if (!db) throw new Error('Database not initialized. Call initDb() first.');
-  return db;
-}
-
-export function saveDb(): void {
-  if (!db) return;
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+export async function initDb(): Promise<void> {
+  const p = getPool();
+  const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+  await p.query(schema);
+  console.log('[DB] Schema initialized');
 }

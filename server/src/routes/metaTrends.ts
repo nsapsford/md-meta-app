@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll } from '../utils/dbHelpers.js';
 
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const snapshots = queryAll(db, `
+    const pool = getPool();
+    const snapshots = await queryAll(pool, `
       SELECT deck_type_name, tier, power, pop_rank, snapshot_date
       FROM meta_snapshots
       ORDER BY snapshot_date DESC, deck_type_name
@@ -27,10 +27,10 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.get('/:deckName', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const snapshots = queryAll(db, `
+    const pool = getPool();
+    const snapshots = await queryAll(pool, `
       SELECT * FROM meta_snapshots
-      WHERE deck_type_name = ? COLLATE NOCASE
+      WHERE LOWER(deck_type_name) = LOWER($1)
       ORDER BY snapshot_date ASC
     `, [req.params.deckName]);
 

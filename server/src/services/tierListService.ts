@@ -1,4 +1,4 @@
-import { getDb, saveDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, queryOne, run } from '../utils/dbHelpers.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -79,25 +79,26 @@ export async function updateTiersFromScrape(): Promise<number> {
 
   if (entries.length === 0) return 0;
 
-  const db = getDb();
+  const pool = getPool();
   for (const entry of entries) {
     // Update existing deck_types if they exist
-    const existing = queryOne(db, 'SELECT id FROM deck_types WHERE name = ? COLLATE NOCASE', [entry.name]);
+    const existing = await queryOne(pool, 'SELECT id FROM deck_types WHERE LOWER(name) = LOWER($1)', [entry.name]);
     if (existing) {
-      run(db, 'UPDATE deck_types SET tier = ? WHERE name = ? COLLATE NOCASE', [entry.tier, entry.name]);
+      await run(pool, 'UPDATE deck_types SET tier = $1 WHERE LOWER(name) = LOWER($2)', [entry.tier, entry.name]);
     } else {
       // Insert as new deck type
-      run(db, `INSERT OR IGNORE INTO deck_types (id, name, tier, power, updated_at)
-        VALUES (?, ?, ?, ?, strftime('%s','now'))`,
+      await run(pool, `INSERT INTO deck_types (id, name, tier, power, updated_at)
+        VALUES ($1, $2, $3, $4, extract(epoch from now())::bigint)
+        ON CONFLICT (id) DO NOTHING`,
         [entry.name.toLowerCase().replace(/\s+/g, '-'), entry.name, entry.tier, null]);
     }
 
     // Also snapshot
-    run(db, `INSERT OR IGNORE INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
-      VALUES (?, ?, NULL, NULL, date('now'))`, [entry.name, entry.tier]);
+    await run(pool, `INSERT INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
+      VALUES ($1, $2, NULL, NULL, CURRENT_DATE)
+      ON CONFLICT DO NOTHING`, [entry.name, entry.tier]);
   }
 
-  saveDb();
   console.log(`[TierList] Updated ${entries.length} deck tiers from scrape`);
   return entries.length;
 }

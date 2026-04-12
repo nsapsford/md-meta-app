@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS cards (
   negated_win_rate REAL,
   not_negated_win_rate REAL,
   negate_sample_size INTEGER,
-  updated_at INTEGER DEFAULT (strftime('%s','now'))
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
 );
 
 CREATE INDEX IF NOT EXISTS idx_cards_name ON cards(name);
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS deck_types (
   play_rate REAL,
   sample_size INTEGER,
   untapped_tier INTEGER,
-  updated_at INTEGER DEFAULT (strftime('%s','now'))
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
 );
 
 CREATE TABLE IF NOT EXISTS top_decks (
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS top_decks (
   ur_price INTEGER,
   sr_price INTEGER,
   url TEXT,
-  updated_at INTEGER DEFAULT (strftime('%s','now'))
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
 );
 
 CREATE TABLE IF NOT EXISTS tournaments (
@@ -79,11 +79,11 @@ CREATE TABLE IF NOT EXISTS tournaments (
   banner_image TEXT,
   next_date TEXT,
   placements_json TEXT,
-  updated_at INTEGER DEFAULT (strftime('%s','now'))
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
 );
 
 CREATE TABLE IF NOT EXISTS meta_snapshots (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   deck_type_name TEXT NOT NULL,
   tier INTEGER,
   power REAL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS matchups (
   deck_b TEXT,
   win_rate_a REAL,
   sample_size INTEGER,
-  updated_at INTEGER DEFAULT (strftime('%s','now')),
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
   PRIMARY KEY (deck_a, deck_b)
 );
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS sync_log (
   source TEXT PRIMARY KEY,
   status TEXT NOT NULL,
   detail TEXT,
-  synced_at INTEGER DEFAULT (strftime('%s','now'))
+  synced_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
 );
 
 CREATE TABLE IF NOT EXISTS matchup_sources (
@@ -120,6 +120,6 @@ CREATE TABLE IF NOT EXISTS matchup_sources (
   source TEXT NOT NULL,
   win_rate REAL NOT NULL,
   sample_size INTEGER,
-  updated_at INTEGER DEFAULT (strftime('%s','now')),
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
   PRIMARY KEY (deck_a, deck_b, source)
 );

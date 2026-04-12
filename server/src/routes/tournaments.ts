@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const tournaments = queryAll(db, `
+    const pool = getPool();
+    const tournaments = await queryAll(pool, `
       SELECT
         t.id, t.name, t.short_name, t.banner_image, t.next_date, t.placements_json,
         (
@@ -42,8 +42,8 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.get('/recent-results', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const results = queryAll(db,
+    const pool = getPool();
+    const results = await queryAll(pool,
       `SELECT deck_type_name, tournament_placement, author, created_at, url
        FROM top_decks
        WHERE tournament_placement IS NOT NULL
@@ -58,8 +58,8 @@ router.get('/recent-results', async (_req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const tournament = queryOne(db, 'SELECT * FROM tournaments WHERE id = ?', [req.params.id]);
+    const pool = getPool();
+    const tournament = await queryOne(pool, 'SELECT * FROM tournaments WHERE id = $1', [req.params.id]);
     if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
 
     res.json({

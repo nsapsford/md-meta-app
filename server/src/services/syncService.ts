@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getDb, saveDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { run, queryAll } from '../utils/dbHelpers.js';
 import * as ygopd from './ygoprodeckService.js';
 import * as mdm from './mdmService.js';
@@ -7,15 +7,16 @@ import * as untapped from './untappedService.js';
 import { getValidAccessToken, invalidateToken } from './untappedAuthService.js';
 
 export async function syncCards(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const cards = await ygopd.getAllCards();
 
   for (const c of cards) {
     const img = c.card_images?.[0];
     const banMd = c.banlist_info?.ban_masterduel || null;
     const mdRarity = c.misc_info?.[0]?.md_rarity || null;
-    run(db, `INSERT OR REPLACE INTO cards (id, name, type, frame_type, description, atk, def, level, race, attribute, archetype, link_val, link_markers, scale, image_url, image_small_url, image_cropped_url, ban_status_md, md_rarity, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))`,
+    await run(pool, `INSERT INTO cards (id, name, type, frame_type, description, atk, def, level, race, attribute, archetype, link_val, link_markers, scale, image_url, image_small_url, image_cropped_url, ban_status_md, md_rarity, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, extract(epoch from now())::bigint)
+      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, frame_type = EXCLUDED.frame_type, description = EXCLUDED.description, atk = EXCLUDED.atk, def = EXCLUDED.def, level = EXCLUDED.level, race = EXCLUDED.race, attribute = EXCLUDED.attribute, archetype = EXCLUDED.archetype, link_val = EXCLUDED.link_val, link_markers = EXCLUDED.link_markers, scale = EXCLUDED.scale, image_url = EXCLUDED.image_url, image_small_url = EXCLUDED.image_small_url, image_cropped_url = EXCLUDED.image_cropped_url, ban_status_md = EXCLUDED.ban_status_md, md_rarity = EXCLUDED.md_rarity, updated_at = EXCLUDED.updated_at`,
       [c.id, c.name, c.type, c.frameType, c.desc,
        c.atk ?? null, c.def ?? null, c.level ?? null,
        c.race, c.attribute ?? null, c.archetype ?? null,
@@ -25,23 +26,21 @@ export async function syncCards(): Promise<number> {
        banMd, mdRarity]);
   }
 
-  saveDb();
   console.log(`[Sync] Synced ${cards.length} cards`);
   return cards.length;
 }
 
 export async function syncArchetypes(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const archetypes = await ygopd.getArchetypes();
   for (const name of archetypes) {
-    run(db, 'INSERT OR IGNORE INTO archetypes (name) VALUES (?)', [name]);
+    await run(pool, 'INSERT INTO archetypes (name) VALUES ($1) ON CONFLICT DO NOTHING', [name]);
   }
-  saveDb();
   return archetypes.length;
 }
 
 export async function syncDeckTypes(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const deckTypes = await mdm.getDeckTypes();
 
   const toStr = (v: any) => v == null ? null : typeof v === 'object' ? JSON.stringify(v) : String(v);
@@ -49,7 +48,7 @@ export async function syncDeckTypes(): Promise<number> {
 
   // Reset tier/power for all decks — the loop below will restore values for active decks.
   // This ensures stale decks from old metas don't pollute the tier list.
-  run(db, `UPDATE deck_types SET tier = NULL, power = NULL, power_trend = NULL`);
+  await run(pool, `UPDATE deck_types SET tier = NULL, power = NULL, power_trend = NULL`);
 
   for (const d of deckTypes) {
     // Normalize field names — MDM API uses tournamentPower, avgUrPrice, thumbnailImage, parsedOverview
@@ -65,41 +64,42 @@ export async function syncDeckTypes(): Promise<number> {
     // Always derive tier from power — MDM's tier field can be inconsistent
     const tier = deriveTier(power);
 
-    // Use INSERT OR IGNORE + UPDATE to preserve untapped.gg win_rate/play_rate data
-    run(db, `INSERT OR IGNORE INTO deck_types (id, name) VALUES (?, ?)`, [d._id, d.name]);
-    run(db, `UPDATE deck_types SET
-        name = ?, tier = ?, power = ?, power_trend = ?, pop_rank = ?,
-        master_pop_rank = ?, overview = ?, thumbnail_image = ?, avg_ur_price = ?,
-        avg_sr_price = ?, breakdown_json = ?, updated_at = strftime('%s','now')
-      WHERE id = ?`,
+    // Use INSERT ... ON CONFLICT DO NOTHING + UPDATE to preserve untapped.gg win_rate/play_rate data
+    await run(pool, `INSERT INTO deck_types (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [d._id, d.name]);
+    await run(pool, `UPDATE deck_types SET
+        name = $1, tier = $2, power = $3, power_trend = $4, pop_rank = $5,
+        master_pop_rank = $6, overview = $7, thumbnail_image = $8, avg_ur_price = $9,
+        avg_sr_price = $10, breakdown_json = $11, updated_at = extract(epoch from now())::bigint
+      WHERE id = $12`,
       [d.name, tier, power, powerTrend,
        d.popRank ?? null, d.masterPopRank ?? null, overview,
        thumbnailImage, avgUrPrice, avgSrPrice,
        breakdown ? JSON.stringify(breakdown) : null, d._id]);
 
     if (power != null && power > 0) {
-      run(db, `INSERT OR REPLACE INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
-        VALUES (?, ?, ?, ?, date('now'))`,
+      await run(pool, `INSERT INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
+        VALUES ($1, $2, $3, $4, CURRENT_DATE)
+        ON CONFLICT (deck_type_name, snapshot_date) DO UPDATE SET tier = EXCLUDED.tier, power = EXCLUDED.power, pop_rank = EXCLUDED.pop_rank`,
         [d.name, tier, power, d.masterPopRank ?? null]);
     }
   }
 
   // Remove duplicate deck_types: for each name, keep the MDM entry (has power/tier)
   // and delete slug-based duplicates created by old scraper or untapped sync
-  const dupes = queryAll(db,
+  const dupes = await queryAll(pool,
     `SELECT name FROM deck_types GROUP BY LOWER(name) HAVING COUNT(*) > 1`
   );
   for (const d of dupes) {
     // Keep the entry with highest power, or the one with a non-slug ID (MDM IDs are hex ObjectIds)
-    const entries = queryAll(db,
-      `SELECT id, power FROM deck_types WHERE LOWER(name) = LOWER(?) ORDER BY power DESC NULLS LAST`,
+    const entries = await queryAll(pool,
+      `SELECT id, power FROM deck_types WHERE LOWER(name) = LOWER($1) ORDER BY power DESC NULLS LAST`,
       [d.name]
     );
     if (entries.length > 1) {
       // Keep the first (best) entry, delete the rest
       const keepId = entries[0].id;
       for (const e of entries.slice(1)) {
-        run(db, `DELETE FROM deck_types WHERE id = ?`, [e.id]);
+        await run(pool, `DELETE FROM deck_types WHERE id = $1`, [e.id]);
       }
     }
   }
@@ -111,25 +111,26 @@ export async function syncDeckTypes(): Promise<number> {
 
     // Update existing decks with scraped power values (more current than API)
     for (const s of scraped) {
-      const existing = queryAll(db, `SELECT id FROM deck_types WHERE LOWER(name) = LOWER(?)`, [s.name]);
+      const existing = await queryAll(pool, `SELECT id FROM deck_types WHERE LOWER(name) = LOWER($1)`, [s.name]);
       const tier = deriveTier(s.power);
 
       if (existing.length > 0) {
         // Update power/tier to match website
-        run(db, `UPDATE deck_types SET power = ?, tier = ?, updated_at = strftime('%s','now') WHERE LOWER(name) = LOWER(?)`,
+        await run(pool, `UPDATE deck_types SET power = $1, tier = $2, updated_at = extract(epoch from now())::bigint WHERE LOWER(name) = LOWER($3)`,
           [s.power, tier, s.name]);
       } else {
         // Engine deck not in API — create a new entry
         const id = `scraped-${s.name.toLowerCase().replace(/\s+/g, '-')}`;
-        run(db, `INSERT OR IGNORE INTO deck_types (id, name) VALUES (?, ?)`, [id, s.name]);
-        run(db, `UPDATE deck_types SET tier = ?, power = ?, updated_at = strftime('%s','now') WHERE id = ?`,
+        await run(pool, `INSERT INTO deck_types (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [id, s.name]);
+        await run(pool, `UPDATE deck_types SET tier = $1, power = $2, updated_at = extract(epoch from now())::bigint WHERE id = $3`,
           [tier, s.power, id]);
       }
 
       // Snapshot for meta trends
       if (s.power > 0) {
-        run(db, `INSERT OR REPLACE INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
-          VALUES (?, ?, ?, NULL, date('now'))`,
+        await run(pool, `INSERT INTO meta_snapshots (deck_type_name, tier, power, pop_rank, snapshot_date)
+          VALUES ($1, $2, $3, NULL, CURRENT_DATE)
+          ON CONFLICT (deck_type_name, snapshot_date) DO UPDATE SET tier = EXCLUDED.tier, power = EXCLUDED.power, pop_rank = EXCLUDED.pop_rank`,
           [s.name, tier, s.power]);
       }
     }
@@ -142,18 +143,17 @@ export async function syncDeckTypes(): Promise<number> {
   // Clean up stale snapshots:
   // - null/zero power entries
   // - decks no longer in the active tiered meta (must have tier assigned)
-  run(db, `DELETE FROM meta_snapshots WHERE power IS NULL OR power <= 0`);
-  run(db, `DELETE FROM meta_snapshots WHERE deck_type_name NOT IN (
+  await run(pool, `DELETE FROM meta_snapshots WHERE power IS NULL OR power <= 0`);
+  await run(pool, `DELETE FROM meta_snapshots WHERE deck_type_name NOT IN (
     SELECT name FROM deck_types WHERE tier IS NOT NULL
   )`);
 
-  saveDb();
   console.log(`[Sync] Synced ${deckTypes.length} deck types`);
   return deckTypes.length;
 }
 
 export async function syncTopDecks(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const decks = await mdm.getTopDecks();
 
   for (const d of decks as any[]) {
@@ -176,8 +176,9 @@ export async function syncTopDecks(): Promise<number> {
       const extraDeck = d.extra || d.extraDeck;
       const sideDeck = d.side || d.sideDeck;
 
-      run(db, `INSERT OR REPLACE INTO top_decks (id, deck_type_name, author, main_deck_json, extra_deck_json, side_deck_json, tournament_name, tournament_placement, ranked_type, created_at, gems_price, ur_price, sr_price, url, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))`,
+      await run(pool, `INSERT INTO top_decks (id, deck_type_name, author, main_deck_json, extra_deck_json, side_deck_json, tournament_name, tournament_placement, ranked_type, created_at, gems_price, ur_price, sr_price, url, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, extract(epoch from now())::bigint)
+        ON CONFLICT (id) DO UPDATE SET deck_type_name = EXCLUDED.deck_type_name, author = EXCLUDED.author, main_deck_json = EXCLUDED.main_deck_json, extra_deck_json = EXCLUDED.extra_deck_json, side_deck_json = EXCLUDED.side_deck_json, tournament_name = EXCLUDED.tournament_name, tournament_placement = EXCLUDED.tournament_placement, ranked_type = EXCLUDED.ranked_type, created_at = EXCLUDED.created_at, gems_price = EXCLUDED.gems_price, ur_price = EXCLUDED.ur_price, sr_price = EXCLUDED.sr_price, url = EXCLUDED.url, updated_at = EXCLUDED.updated_at`,
         [toStr(d._id), toStr(deckTypeName), toStr(authorName),
          mainDeck ? JSON.stringify(normalizeDeck(mainDeck)) : null,
          extraDeck ? JSON.stringify(normalizeDeck(extraDeck)) : null,
@@ -191,13 +192,12 @@ export async function syncTopDecks(): Promise<number> {
     }
   }
 
-  saveDb();
   console.log(`[Sync] Synced ${decks.length} top decks`);
   return decks.length;
 }
 
 export async function syncTournaments(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const tournaments = await mdm.getTournaments();
 
   for (const t of tournaments) {
@@ -208,8 +208,9 @@ export async function syncTournaments(): Promise<number> {
         ? `https://www.masterduelmeta.com${rawBanner}`
         : rawBanner;
 
-      run(db, `INSERT OR REPLACE INTO tournaments (id, name, short_name, banner_image, next_date, placements_json, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, strftime('%s','now'))`,
+      await run(pool, `INSERT INTO tournaments (id, name, short_name, banner_image, next_date, placements_json, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, extract(epoch from now())::bigint)
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short_name = EXCLUDED.short_name, banner_image = EXCLUDED.banner_image, next_date = EXCLUDED.next_date, placements_json = EXCLUDED.placements_json, updated_at = EXCLUDED.updated_at`,
         [toStr(t._id), toStr(t.name), toStr(t.shortName),
          bannerImage, toStr(t.nextDate),
          t.placements ? JSON.stringify(t.placements) : null]);
@@ -218,12 +219,11 @@ export async function syncTournaments(): Promise<number> {
     }
   }
 
-  saveDb();
   return tournaments.length;
 }
 
 export async function syncUntapped(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
   const [archetypes, matchupPairings] = await Promise.all([
     untapped.scrapeTierList(),
     untapped.getMatchupPairings(),
@@ -232,14 +232,14 @@ export async function syncUntapped(): Promise<number> {
   let updated = 0;
   for (const a of archetypes) {
     if (a.winRate === null && a.playRate === null) continue;
-    run(db,
+    await run(pool,
       `UPDATE deck_types SET
-         win_rate = COALESCE(?, win_rate),
-         play_rate = COALESCE(?, play_rate),
-         sample_size = COALESCE(?, sample_size),
-         untapped_tier = COALESCE(?, untapped_tier),
-         updated_at = strftime('%s','now')
-       WHERE LOWER(name) = LOWER(?)`,
+         win_rate = COALESCE($1, win_rate),
+         play_rate = COALESCE($2, play_rate),
+         sample_size = COALESCE($3, sample_size),
+         untapped_tier = COALESCE($4, untapped_tier),
+         updated_at = extract(epoch from now())::bigint
+       WHERE LOWER(name) = LOWER($5)`,
       [a.winRate, a.playRate, a.sampleSize, a.tier, a.name]
     );
     updated++;
@@ -248,21 +248,22 @@ export async function syncUntapped(): Promise<number> {
   // Store per-matchup win rates in matchup_sources and legacy matchups table
   let matchupsStored = 0;
   for (const p of matchupPairings) {
-    run(db,
-      `INSERT OR REPLACE INTO matchup_sources (deck_a, deck_b, source, win_rate, sample_size, updated_at)
-       VALUES (LOWER(?), LOWER(?), 'untapped', ?, ?, strftime('%s','now'))`,
+    await run(pool,
+      `INSERT INTO matchup_sources (deck_a, deck_b, source, win_rate, sample_size, updated_at)
+       VALUES (LOWER($1), LOWER($2), 'untapped', $3, $4, extract(epoch from now())::bigint)
+       ON CONFLICT (deck_a, deck_b, source) DO UPDATE SET win_rate = EXCLUDED.win_rate, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at`,
       [p.deckA, p.deckB, p.winRate, p.sampleSize]
     );
     // Also populate legacy matchups table (win_rate_a stored as 0-100 percentage)
-    run(db,
-      `INSERT OR REPLACE INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at)
-       VALUES (LOWER(?), LOWER(?), ?, ?, strftime('%s','now'))`,
+    await run(pool,
+      `INSERT INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at)
+       VALUES (LOWER($1), LOWER($2), $3, $4, extract(epoch from now())::bigint)
+       ON CONFLICT (deck_a, deck_b) DO UPDATE SET win_rate_a = EXCLUDED.win_rate_a, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at`,
       [p.deckA, p.deckB, Math.round(p.winRate * 1000) / 10, p.sampleSize]
     );
     matchupsStored++;
   }
 
-  saveDb();
   console.log(`[Sync] Updated ${updated} deck types and ${matchupsStored} matchup pairings with untapped.gg data`);
   return archetypes.length;
 }
@@ -340,26 +341,24 @@ async function fetchRealNegateData(): Promise<RealNegateEntry[] | null> {
  * archetype win rates if the companion is unavailable or the feature flag is off.
  */
 export async function syncCardNegateEffectiveness(): Promise<number> {
-  const db = getDb();
+  const pool = getPool();
 
   // Attempt to use real per-card data from the Untapped Companion API
   const realData = await fetchRealNegateData();
   if (realData) {
     let updated = 0;
     for (const entry of realData) {
-      const stmt = db.prepare(
+      await run(pool,
         `UPDATE cards SET
-          negate_effectiveness = ?,
-          negated_win_rate = ?,
-          not_negated_win_rate = ?,
-          negate_sample_size = ?
-        WHERE id = ?`
+          negate_effectiveness = $1,
+          negated_win_rate = $2,
+          not_negated_win_rate = $3,
+          negate_sample_size = $4
+        WHERE id = $5`,
+        [entry.negateEffectiveness, entry.negatedWinRate, entry.notNegatedWinRate, entry.sampleSize, entry.cardId]
       );
-      stmt.run([entry.negateEffectiveness, entry.negatedWinRate, entry.notNegatedWinRate, entry.sampleSize, entry.cardId]);
-      stmt.free();
       updated++;
     }
-    if (updated > 0) saveDb();
     console.log(`[Sync] Updated ${updated} cards with real negate data from untapped.gg`);
     return updated;
   }
@@ -367,7 +366,7 @@ export async function syncCardNegateEffectiveness(): Promise<number> {
   console.log('[Sync] Falling back to local negate computation from archetype win rates');
 
   // Get all deck types with untapped win rate data
-  const deckTypes = queryAll(db,
+  const deckTypes = await queryAll(pool,
     `SELECT name, win_rate, sample_size FROM deck_types WHERE win_rate IS NOT NULL AND sample_size IS NOT NULL AND sample_size > 0`
   ) as Array<{ name: string; win_rate: number; sample_size: number }>;
 
@@ -388,7 +387,7 @@ export async function syncCardNegateEffectiveness(): Promise<number> {
   const overallAvgWr = totalSamples > 0 ? totalWeightedWr / totalSamples : 50;
 
   // Get all top decks with their card lists
-  const topDecks = queryAll(db,
+  const topDecks = await queryAll(pool,
     `SELECT deck_type_name, main_deck_json, extra_deck_json FROM top_decks WHERE main_deck_json IS NOT NULL`
   ) as Array<{ deck_type_name: string; main_deck_json: string; extra_deck_json: string | null }>;
 
@@ -460,20 +459,18 @@ export async function syncCardNegateEffectiveness(): Promise<number> {
     // negated_win_rate: estimate as overall average (what happens when the card is neutralized)
     const negatedWr = Math.round(overallAvgWr * 10) / 10;
 
-    const stmt = db.prepare(
+    await run(pool,
       `UPDATE cards SET
-        negate_effectiveness = ?,
-        negated_win_rate = ?,
-        not_negated_win_rate = ?,
-        negate_sample_size = ?
-      WHERE LOWER(name) = LOWER(?)`
+        negate_effectiveness = $1,
+        negated_win_rate = $2,
+        not_negated_win_rate = $3,
+        negate_sample_size = $4
+      WHERE LOWER(name) = LOWER($5)`,
+      [impact, negatedWr, notNegatedWr, stats.totalSamples, cardName]
     );
-    stmt.run([impact, negatedWr, notNegatedWr, stats.totalSamples, cardName]);
-    stmt.free();
     updated++;
   }
 
-  if (updated > 0) saveDb();
   console.log(`[Sync] Computed negate effectiveness for ${updated} cards (overall avg WR: ${overallAvgWr.toFixed(1)}%)`);
   return updated;
 }

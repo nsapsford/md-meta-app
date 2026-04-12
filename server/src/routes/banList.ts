@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryOne } from '../utils/dbHelpers.js';
 import * as mdm from '../services/mdmService.js';
 
@@ -7,12 +7,12 @@ const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const db = getDb();
+    const pool = getPool();
     const banList = await mdm.getBanList();
 
-    const enrichCard = (card: mdm.MDMBanCard) => {
-      const local = queryOne(db,
-        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE name = ? COLLATE NOCASE LIMIT 1',
+    const enrichCard = async (card: mdm.MDMBanCard) => {
+      const local = await queryOne(pool,
+        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1',
         [card.name]
       );
       return {
@@ -28,7 +28,7 @@ router.get('/', async (_req: Request, res: Response) => {
       };
     };
 
-    const sortByDate = (cards: ReturnType<typeof enrichCard>[]) =>
+    const sortByDate = (cards: Awaited<ReturnType<typeof enrichCard>>[]) =>
       [...cards].sort((a, b) => {
         if (!a.banListDate && !b.banListDate) return 0;
         if (!a.banListDate) return 1;
@@ -36,9 +36,9 @@ router.get('/', async (_req: Request, res: Response) => {
         return b.banListDate.localeCompare(a.banListDate);
       });
 
-    const forbidden = sortByDate(banList.forbidden.map(enrichCard));
-    const limited = sortByDate(banList.limited.map(enrichCard));
-    const semiLimited = sortByDate(banList.semiLimited.map(enrichCard));
+    const forbidden = sortByDate(await Promise.all(banList.forbidden.map(enrichCard)));
+    const limited = sortByDate(await Promise.all(banList.limited.map(enrichCard)));
+    const semiLimited = sortByDate(await Promise.all(banList.semiLimited.map(enrichCard)));
 
     res.json({ forbidden, limited, semiLimited });
   } catch (err: any) {

@@ -7,10 +7,10 @@ const limiter = new RateLimiter(config.rateLimit.ygoprodeckRps);
 const api = axios.create({ baseURL: config.ygoprodeckBaseUrl });
 
 async function fetchWithCache<T>(cacheKey: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
-  const cached = getCached<T>(cacheKey);
+  const cached = await getCached<T>(cacheKey);
   if (cached) return cached;
   const data = await limiter.wrap(fetcher);
-  setCache(cacheKey, data, ttl);
+  await setCache(cacheKey, data, ttl);
   return data;
 }
 

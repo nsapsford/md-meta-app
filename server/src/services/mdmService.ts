@@ -24,11 +24,11 @@ async function throttle() {
 }
 
 async function fetchWithCache<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
-  const cached = getCached<T>(key);
+  const cached = await getCached<T>(key);
   if (cached) return cached;
   await throttle();
   const data = await fetcher();
-  setCache(key, data, ttl);
+  await setCache(key, data, ttl);
   return data;
 }
 

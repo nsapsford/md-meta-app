@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../db/connection.js';
+import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 
 const router = Router();
@@ -8,9 +8,9 @@ router.post('/score', async (req: Request, res: Response) => {
   try {
     const { main = [], extra = [] } = req.body as { main: string[]; extra: string[] };
     const allCards = [...main, ...extra];
-    const db = getDb();
+    const pool = getPool();
 
-    const deckTypes = queryAll(db, 'SELECT name, tier, power, breakdown_json FROM deck_types WHERE tier IS NOT NULL ORDER BY tier ASC');
+    const deckTypes = await queryAll(pool, 'SELECT name, tier, power, breakdown_json FROM deck_types WHERE tier IS NOT NULL ORDER BY tier ASC');
 
     let totalScore = 0;
     const cardScores: Record<string, { score: number; decks: string[] }> = {};
@@ -59,7 +59,7 @@ router.post('/validate', async (req: Request, res: Response) => {
     if (extra.length > 15) errors.push(`Extra deck too large: ${extra.length}/15 maximum`);
     if (side.length > 15) errors.push(`Side deck too large: ${side.length}/15 maximum`);
 
-    const db = getDb();
+    const pool = getPool();
     const allCards = [...main, ...extra, ...side];
     const cardCounts: Record<string, number> = {};
     for (const c of allCards) {
@@ -67,7 +67,7 @@ router.post('/validate', async (req: Request, res: Response) => {
     }
 
     for (const [name, count] of Object.entries(cardCounts)) {
-      const card = queryOne(db, "SELECT ban_status_md FROM cards WHERE name = ? COLLATE NOCASE", [name]);
+      const card = await queryOne(pool, "SELECT ban_status_md FROM cards WHERE LOWER(name) = LOWER($1)", [name]);
       if (card?.ban_status_md === 'Banned') {
         errors.push(`${name} is Forbidden`);
       } else if (card?.ban_status_md === 'Limited' && count > 1) {

@@ -6,6 +6,8 @@ export interface MatchupMatrixCell {
   n_untapped: number;
   n_tournament: number;
   confidence: 'high' | 'medium' | 'low';
+  inferred?: boolean;
+  inference_method?: string;
 }
 
 export interface MatchupMatrix {
@@ -31,8 +33,8 @@ export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<
   return res.data;
 }
 
-export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended', signal?: AbortSignal): Promise<MatchupMatrix> {
-  const res = await api.get('/matchups/matrix', { params: { source }, signal });
+export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended', infer: boolean = false, signal?: AbortSignal): Promise<MatchupMatrix> {
+  const res = await api.get('/matchups/matrix', { params: { source, ...(infer ? { infer: 'true' } : {}) }, signal });
   return res.data;
 }
 

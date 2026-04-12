@@ -90,6 +90,23 @@ export interface PredatorPreyRelationship {
   mechanism: 'direct' | 'inferred';
 }
 
+export interface GameTheoryProfile {
+  expected_payoff: number;
+  nash_deviation: number;
+  best_response_to: string | null;
+  dominated_by: string[];
+  dominates: string[];
+  strategy_type: 'dominant' | 'counter_pick' | 'generalist' | 'niche' | 'dominated';
+}
+
+export interface TournamentFieldEntry {
+  deck: string;
+  field_pct: number;
+  top_cut_pct: number;
+  conversion_rate: number;
+  appearances: number;
+}
+
 export interface DeckEcosystemProfile {
   deck: string;
   tier: number | null;
@@ -104,6 +121,7 @@ export interface DeckEcosystemProfile {
   vulnerability_score: number;
   meta_fitness: number;
   matchup_spread: number;
+  game_theory: GameTheoryProfile;
 }
 
 export interface RockPaperScissorsCycle {
@@ -117,6 +135,8 @@ export interface EcosystemAnalysis {
   cycles: RockPaperScissorsCycle[];
   food_chain: PredatorPreyRelationship[];
   meta_health_index: number;
+  tournament_field: TournamentFieldEntry[];
+  nash_equilibrium: Record<string, number>;
   computed_at: string;
 }
 

@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cron from 'node-cron';
 import { config } from './config.js';
-import { initDb, getDb } from './db/connection.js';
+import 'dotenv/config';
+import { initDb, getPool } from './db/connection.js';
 import { queryOne } from './utils/dbHelpers.js';
 import cardsRouter from './routes/cards.js';
 import tierListRouter from './routes/tierList.js';
@@ -24,7 +25,12 @@ async function main() {
   const app = express();
 
   app.use(helmet({ crossOriginResourcePolicy: false }));
-  app.use(cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
+
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+  app.use(cors({ origin: allowedOrigins }));
+
   app.use(express.json());
 
   // Routes
@@ -46,8 +52,8 @@ async function main() {
   // Initial data sync on startup (non-blocking)
   (async () => {
     try {
-      const db = getDb();
-      const cardCount = queryOne(db, 'SELECT COUNT(*) as c FROM cards');
+      const pool = getPool();
+      const cardCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM cards');
       if (!cardCount || cardCount.c === 0) {
         console.log('[Startup] No cards found, running initial sync...');
         await syncCards();
@@ -55,7 +61,7 @@ async function main() {
         console.log('[Startup] Card sync complete');
       }
 
-      const dtCount = queryOne(db, 'SELECT COUNT(*) as c FROM deck_types');
+      const dtCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM deck_types');
       if (!dtCount || dtCount.c === 0) {
         console.log('[Startup] No deck types found, syncing meta data...');
         await syncDeckTypes();

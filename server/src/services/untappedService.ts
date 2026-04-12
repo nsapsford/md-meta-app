@@ -46,7 +46,7 @@ export interface UntappedMatchupPairing {
 
 async function fetchRawStats(): Promise<RawUntappedData> {
   const cacheKey = 'untapped:raw-stats';
-  const cached = getCached<RawUntappedData>(cacheKey);
+  const cached = await getCached<RawUntappedData>(cacheKey);
   if (cached) return cached;
 
   const [statsRes, manifestRes] = await Promise.all([
@@ -61,7 +61,7 @@ async function fetchRawStats(): Promise<RawUntappedData> {
     manifestData: manifestRes.data?.data || {},
   };
 
-  setCache(cacheKey, result, config.cache.untappedTtl);
+  await setCache(cacheKey, result, config.cache.untappedTtl);
   return result;
 }
 
@@ -71,7 +71,7 @@ async function fetchRawStats(): Promise<RawUntappedData> {
  */
 export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
   const cacheKey = 'untapped:matchup-pairings';
-  const cached = getCached<UntappedMatchupPairing[]>(cacheKey);
+  const cached = await getCached<UntappedMatchupPairing[]>(cacheKey);
   if (cached) return cached;
 
   try {
@@ -100,7 +100,7 @@ export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
       }
     }
 
-    setCache(cacheKey, pairings, config.cache.untappedTtl);
+    await setCache(cacheKey, pairings, config.cache.untappedTtl);
     console.log(`[Untapped] Got ${pairings.length} matchup pairings`);
     return pairings;
   } catch (err) {
@@ -115,7 +115,7 @@ export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
  */
 export async function scrapeTierList(): Promise<UntappedArchetype[]> {
   const cacheKey = 'untapped:tier-list';
-  const cached = getCached<UntappedArchetype[]>(cacheKey);
+  const cached = await getCached<UntappedArchetype[]>(cacheKey);
   if (cached) return cached;
 
   console.log('[Untapped] Fetching archetype stats from API...');
@@ -165,7 +165,7 @@ export async function scrapeTierList(): Promise<UntappedArchetype[]> {
     // Sort by play rate descending
     results.sort((a, b) => (b.playRate ?? 0) - (a.playRate ?? 0));
 
-    setCache(cacheKey, results, config.cache.untappedTtl);
+    await setCache(cacheKey, results, config.cache.untappedTtl);
     console.log(`[Untapped] Got ${results.length} archetypes from API`);
 
     const sample = results.slice(0, 5).map(r =>
@@ -201,7 +201,7 @@ export interface CardNegateData {
  */
 export async function scrapeCardNegateEffectiveness(): Promise<CardNegateData[]> {
   const cacheKey = 'untapped:card-negate';
-  const cached = getCached<CardNegateData[]>(cacheKey);
+  const cached = await getCached<CardNegateData[]>(cacheKey);
   if (cached) return cached;
 
   console.log('[Untapped] Fetching card negate effectiveness...');
@@ -226,7 +226,7 @@ export async function scrapeCardNegateEffectiveness(): Promise<CardNegateData[]>
         console.log(`[Untapped] Found card negate data at query: ${queryName}`);
         const results = parseCardNegateResponse(data);
         if (results.length > 0) {
-          setCache(cacheKey, results, config.cache.untappedTtl);
+          await setCache(cacheKey, results, config.cache.untappedTtl);
           return results;
         }
       }
@@ -240,7 +240,7 @@ export async function scrapeCardNegateEffectiveness(): Promise<CardNegateData[]>
   try {
     const puppeteerResults = await scrapeViaPuppeteer();
     if (puppeteerResults.length > 0) {
-      setCache(cacheKey, puppeteerResults, config.cache.untappedTtl);
+      await setCache(cacheKey, puppeteerResults, config.cache.untappedTtl);
       return puppeteerResults;
     }
   } catch (err) {
@@ -375,7 +375,7 @@ export async function scrapeArchetypeStats(
   slug: string
 ): Promise<Omit<UntappedArchetype, 'name' | 'tier'> | null> {
   const cacheKey = `untapped:archetype:${slug}`;
-  const cached = getCached<Omit<UntappedArchetype, 'name' | 'tier'>>(cacheKey);
+  const cached = await getCached<Omit<UntappedArchetype, 'name' | 'tier'>>(cacheKey);
   if (cached) return cached;
 
   // Get from the main tier list data
@@ -393,6 +393,6 @@ export async function scrapeArchetypeStats(
     sampleSize: match.sampleSize,
   };
 
-  setCache(cacheKey, result, config.cache.untappedTtl);
+  await setCache(cacheKey, result, config.cache.untappedTtl);
   return result;
 }
