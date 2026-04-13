@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -11,13 +12,21 @@ import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
 
 export default function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-md-bg">
-        <Header />
+        <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
         <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6 overflow-x-hidden bg-hero-glow">
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <main className="flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow">
             <div className="max-w-[1400px] mx-auto animate-fade-in">
               <Routes>
                 <Route path="/" element={<Dashboard />} />

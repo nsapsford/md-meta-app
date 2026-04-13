@@ -98,7 +98,7 @@ export default function Matchups() {
         <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button className={tabClass('matrix')} onClick={() => setTab('matrix')}>Matrix</button>
         <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
         <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
@@ -109,7 +109,7 @@ export default function Matchups() {
 
       {tab === 'matrix' && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             {(['blended', 'untapped', 'tournament'] as MatrixSource[]).map((s) => (
               <button
                 key={s}
@@ -124,7 +124,7 @@ export default function Matchups() {
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
-            <div className="ml-3 border-l border-md-border pl-3">
+            <div className="sm:ml-3 sm:border-l sm:border-md-border sm:pl-3">
               <button
                 onClick={() => setInferGaps(!inferGaps)}
                 className={clsx(
@@ -226,8 +226,8 @@ export default function Matchups() {
           </div>
 
           {loading ? <LoadingSpinner /> : matchups.length > 0 ? (
-            <div className="bg-md-surface border border-md-border rounded-lg overflow-hidden">
-              <table className="w-full">
+            <div className="bg-md-surface border border-md-border rounded-lg overflow-x-auto">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-md-border">
                     <th className="text-center px-2 py-3 text-sm font-medium text-md-textMuted w-8"></th>

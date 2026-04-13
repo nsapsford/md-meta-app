@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { getTierList, getFeaturedDecks } from '../api/meta';
 import type { TierList } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -8,6 +8,11 @@ import TierListView from '../components/dashboard/TierListView';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
+
+const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null;
+const subscribe = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
+const getSnapshot = () => smallQuery?.matches ?? false;
+function useIsSmall() { return useSyncExternalStore(subscribe, getSnapshot); }
 
 interface FeaturedDeck {
   id: string;
@@ -22,6 +27,7 @@ interface FeaturedDeck {
 }
 
 export default function Dashboard() {
+  const isSmall = useIsSmall();
   const [tierList, setTierList] = useState<TierList | null>(null);
   const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,10 +81,10 @@ export default function Dashboard() {
       <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMCIvPjxwYXRoIGQ9Ik0wIDBINzAgTDIwIDEwMFoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAxKSIgc3Ryb2tlLXdpZHRoPSIxcHgiLz48L3N2Zz4=')] opacity-5"></div>
         <div className="relative">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
             Meta Dashboard
           </h1>
-          <p className="text-md-textSecondary text-base mt-2 max-w-2xl">
+          <p className="text-md-textSecondary text-sm sm:text-base mt-2 max-w-2xl">
             Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
           </p>
         </div>
@@ -176,16 +182,17 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-md-text">Power Rankings</h3>
             <span className="text-xs text-md-textMuted ml-auto">Top 12 decks</span>
           </div>
-          <div className="h-80">
+          <div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={popularityData} layout="vertical" margin={{ left: 120, right: 20 }}>
+              <BarChart data={popularityData} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
                 <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis
                   type="category"
                   dataKey="name"
                   stroke="#a1a1aa"
                   fontSize={12}
-                  width={110}
+                  width={isSmall ? 0 : 110}
+                  hide={isSmall}
                   tickLine={false}
                   axisLine={false}
                   tick={{ fill: '#eceef4' }}

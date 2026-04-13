@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { syncAll, syncUntapped } from '../../api/meta';
 import { useState } from 'react';
 
-export default function Header() {
+export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [syncingUntapped, setSyncingUntapped] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
@@ -37,7 +37,12 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
-      <div className="flex items-center justify-between px-6 h-16">
+      <div className="flex items-center justify-between px-4 md:px-6 h-16">
+        <button onClick={onToggleSidebar} className="md:hidden p-2 -ml-2 mr-1 text-md-textSecondary hover:text-md-text rounded-lg">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
         <Link to="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold group-hover:from-md-gold/40 group-hover:to-md-gold/20 group-hover:shadow-glow-gold transition-all duration-300 transform group-hover:scale-105">
             <span className="text-md-gold font-extrabold text-lg tracking-tighter">MD</span>
@@ -46,12 +51,12 @@ export default function Header() {
             <h1 className="text-xl font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent">
               MD Meta
             </h1>
-            <p className="text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
+            <p className="hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
               Master Duel Analysis
             </p>
           </div>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-3">
           {syncMsg && (
             <span className="text-xs text-md-green/90 max-w-[280px] truncate animate-fade-in font-semibold px-3 py-1.5 rounded-lg bg-md-green/10 border border-md-green/20">
               {syncMsg}

@@ -94,7 +94,7 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {featured.map((deck, idx) => {
           const tierColor = tierColors[deck.tier ?? 4];
           return (

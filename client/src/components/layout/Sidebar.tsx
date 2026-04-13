@@ -37,7 +37,7 @@ function dotColor(record: SyncRecord): string {
   return 'bg-md-green animate-pulse';
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
 
   useEffect(() => {
@@ -45,7 +45,12 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <nav className="w-56 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-5 px-3 flex flex-col gap-1 shadow-lg shadow-black/5">
+    <nav className={clsx(
+      'w-56 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-5 px-3 flex flex-col gap-1 shadow-lg shadow-black/5',
+      'fixed top-[4rem] left-0 z-50 overflow-y-auto transition-transform duration-300 ease-in-out',
+      'md:static md:translate-x-0',
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    )}>
       <div className="mb-2 px-2">
         <h3 className="text-xs font-bold text-md-textMuted uppercase tracking-widest">Navigation</h3>
       </div>
@@ -55,6 +60,7 @@ export default function Sidebar() {
           key={item.to}
           to={item.to}
           end={item.to === '/'}
+          onClick={onClose}
           className={({ isActive }) =>
             clsx(
               'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 group',
