@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   return (
     <nav className={clsx(
-      'w-56 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-5 px-3 flex flex-col gap-1 shadow-lg shadow-black/5',
+      'w-40 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-4 px-2 flex flex-col gap-0.5 shadow-lg shadow-black/5',
       'fixed top-[4rem] left-0 z-50 overflow-y-auto transition-transform duration-300 ease-in-out',
       'md:static md:translate-x-0',
       isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -63,14 +63,14 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
           onClick={onClose}
           className={({ isActive }) =>
             clsx(
-              'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 group',
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group',
               isActive
                 ? 'bg-gradient-to-r from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/20 shadow-md shadow-md-blue/10 nav-active'
                 : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/40'
             )
           }
         >
-          <svg className="w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={item.icon} />
           </svg>
           <span className="group-hover:translate-x-1 transition-transform">{item.label}</span>
