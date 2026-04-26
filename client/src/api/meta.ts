@@ -82,6 +82,29 @@ export async function getFeaturedDecks(): Promise<Array<{
   return res.data;
 }
 
+export interface MoverEntry {
+  deck_type_name: string;
+  tier: number | null;
+  thumbnail_image: string | null;
+  power_now: number;
+  power_then: number;
+  power_delta: number;
+  date_now: string;
+  date_then: string;
+}
+
+export interface MoversResult {
+  risers: MoverEntry[];
+  fallers: MoverEntry[];
+  post_banlist: boolean;
+  window_days: number;
+}
+
+export async function getMetaMovers(window: 7 | 14 = 7): Promise<MoversResult> {
+  const res = await api.get('/meta-trends/movers', { params: { window } });
+  return res.data;
+}
+
 export async function syncAll() {
   const res = await api.post('/sync/all');
   return res.data;

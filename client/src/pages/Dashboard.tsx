@@ -1,10 +1,15 @@
 import { useState, useEffect, useSyncExternalStore } from 'react';
-import { getTierList, getFeaturedDecks } from '../api/meta';
+import { getTierList, getFeaturedDecks, getDecks } from '../api/meta';
+import { getSyncStatus, type SyncRecord } from '../api/sync';
+import { logGame } from '../api/personalGames';
 import type { TierList } from '../types/meta';
+import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
+import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
 import TierListView from '../components/dashboard/TierListView';
+import MoversWidget from '../components/dashboard/MoversWidget';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
@@ -30,16 +35,33 @@ export default function Dashboard() {
   const isSmall = useIsSmall();
   const [tierList, setTierList] = useState<TierList | null>(null);
   const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
+  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
+  const [deckNames, setDeckNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Quick-entry form state
+  const [logDeck, setLogDeck] = useState('');
+  const [logOpponent, setLogOpponent] = useState('');
+  const [logResult, setLogResult] = useState<'win' | 'loss' | 'draw'>('win');
+  const [logFirst, setLogFirst] = useState<boolean | null>(null);
+  const [logSaving, setLogSaving] = useState(false);
+  const [logFlash, setLogFlash] = useState('');
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const [data, feat] = await Promise.all([getTierList(), getFeaturedDecks()]);
+      const [data, feat, sync, decks] = await Promise.all([
+        getTierList(), getFeaturedDecks(), getSyncStatus(),
+        getDecks().catch(() => [] as DeckType[]),
+      ]);
       setTierList(data);
       setFeatured(feat);
+      setSyncRecords(sync);
+      const names = decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name);
+      setDeckNames(names);
+      if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
     } catch (e: any) {
       setError(e.message || 'Failed to load tier list');
     } finally {
@@ -48,6 +70,21 @@ export default function Dashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleLogGame = async () => {
+    if (!logDeck || !logOpponent) return;
+    setLogSaving(true);
+    try {
+      await logGame({ deck_played: logDeck, opponent_deck: logOpponent, result: logResult, went_first: logFirst, notes: null });
+      setLogFlash(`✓ ${logResult.toUpperCase()} vs ${logOpponent} logged`);
+      setTimeout(() => setLogFlash(''), 3000);
+    } catch {
+      setLogFlash('Failed to log game');
+      setTimeout(() => setLogFlash(''), 3000);
+    } finally {
+      setLogSaving(false);
+    }
+  };
 
   if (loading) return (
     <div className="flex justify-center items-center py-20">
@@ -80,15 +117,75 @@ export default function Dashboard() {
       {/* Hero header with gradient */}
       <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMCIvPjxwYXRoIGQ9Ik0wIDBINzAgTDIwIDEwMFoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAxKSIgc3Ryb2tlLXdpZHRoPSIxcHgiLz48L3N2Zz4=')] opacity-5"></div>
-        <div className="relative">
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
-            Meta Dashboard
-          </h1>
-          <p className="text-md-textSecondary text-sm sm:text-base mt-2 max-w-2xl">
-            Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
-          </p>
+        <div className="relative flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
+              Meta Dashboard
+            </h1>
+            <p className="text-md-textSecondary text-sm sm:text-base mt-2 max-w-2xl">
+              Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
+            </p>
+          </div>
+          <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments', 'untapped']} />
         </div>
       </div>
+
+      {/* Quick Game Log */}
+      {deckNames.length > 0 && (
+        <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-4 border border-md-border/40">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-md-purple to-md-blue"></div>
+            <h3 className="text-sm font-bold text-md-text">Log a Game</h3>
+            {logFlash && <span className="text-xs text-md-green ml-2">{logFlash}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-md-textMuted">I played</label>
+              <select value={logDeck} onChange={(e) => setLogDeck(e.target.value)}
+                className="bg-md-bg border border-md-border rounded-lg px-2.5 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue min-w-[140px]">
+                {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-md-textMuted">vs</label>
+              <select value={logOpponent} onChange={(e) => setLogOpponent(e.target.value)}
+                className="bg-md-bg border border-md-border rounded-lg px-2.5 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue min-w-[140px]">
+                {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-1">
+              {(['win', 'loss', 'draw'] as const).map((r) => (
+                <button key={r} onClick={() => setLogResult(r)}
+                  className={`px-3 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                    logResult === r
+                      ? r === 'win' ? 'bg-md-green/20 text-md-green border-md-green/30'
+                        : r === 'loss' ? 'bg-md-red/20 text-md-red border-md-red/30'
+                        : 'bg-md-textMuted/20 text-md-textMuted border-md-border'
+                      : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                  }`}>
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {([true, false, null] as const).map((v) => (
+                <button key={String(v)} onClick={() => setLogFirst(logFirst === v ? null : v)}
+                  className={`px-2.5 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                    logFirst === v && v !== null
+                      ? 'bg-md-blue/15 text-md-blue border-md-blue/30'
+                      : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                  }`}>
+                  {v === true ? '1st' : v === false ? '2nd' : '?'}
+                </button>
+              ))}
+            </div>
+            <button onClick={handleLogGame} disabled={logSaving}
+              className="px-4 py-2 text-sm font-bold rounded-lg bg-md-blue/15 text-md-blue border border-md-blue/30 hover:bg-md-blue/25 transition-colors disabled:opacity-50">
+              {logSaving ? '...' : 'Log'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Featured Decks Section */}
       <div className="space-y-6">
@@ -132,6 +229,9 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* What's Moving widget */}
+      <MoversWidget />
 
       {/* Data sources */}
       <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-5 border border-md-border/40">

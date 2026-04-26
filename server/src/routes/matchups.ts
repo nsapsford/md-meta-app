@@ -4,6 +4,7 @@ import { queryAll, run } from '../utils/dbHelpers.js';
 import * as mdm from '../services/mdmService.js';
 import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendService.js';
 import { computeEcosystemAnalysis } from '../services/ecosystemAnalysisService.js';
+import { computeLadderEv } from '../services/ladderEvService.js';
 
 const router = Router();
 
@@ -37,8 +38,9 @@ router.get('/matrix', async (req: Request, res: Response) => {
   try {
     const source = (req.query.source as string) || 'blended';
     const infer = req.query.infer === 'true';
+    const includePersonal = req.query.include_personal === 'true';
     const pool = getPool();
-    res.json(await buildFullMatrix(pool, source, infer));
+    res.json(await buildFullMatrix(pool, source, infer, includePersonal));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -77,6 +79,7 @@ router.get('/ecosystem', async (req: Request, res: Response) => {
 router.get('/advisor', async (req: Request, res: Response) => {
   try {
     const { deck } = req.query;
+    const includePersonal = req.query.include_personal === 'true';
     if (!deck) return res.status(400).json({ error: 'deck parameter required' });
 
     const pool = getPool();
@@ -112,6 +115,25 @@ router.get('/advisor', async (req: Request, res: Response) => {
       [deck as string]
     ) as { deck_b: string; win_rate_a: number; sample_size: number }[];
 
+    // Personal game spread (keyed by opponent name lowercase)
+    const personalSpread = new Map<string, { rate: number; n: number }>();
+    if (includePersonal) {
+      const personalRows = await queryAll(pool,
+        `SELECT opponent_deck,
+           SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END)::INTEGER AS wins,
+           COUNT(*)::INTEGER AS total
+         FROM personal_games
+         WHERE LOWER(deck_played) = LOWER($1)
+         GROUP BY opponent_deck`,
+        [deck as string]
+      ) as { opponent_deck: string; wins: number; total: number }[];
+      for (const r of personalRows) {
+        if (r.total > 0) {
+          personalSpread.set(r.opponent_deck.toLowerCase(), { rate: r.wins / r.total, n: r.total });
+        }
+      }
+    }
+
     const opponents = Object.entries(deckCounts)
       .filter(([name]) => name.toLowerCase() !== (deck as string).toLowerCase())
       .map(([name, count]) => {
@@ -127,7 +149,8 @@ router.get('/advisor', async (req: Request, res: Response) => {
           ? { rate: legacyRow.win_rate_a / 100, n: legacyRow.sample_size ?? 0 }
           : null;
         const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
-        const blend = blendMatchupRates(untappedData, tournData);
+        const personalData = includePersonal ? personalSpread.get(nl) ?? null : null;
+        const blend = blendMatchupRates(untappedData, tournData, personalData);
 
         return { opponent: name, field_pct: fieldPct, win_rate: blend.rate, confidence: blend.confidence };
       })
@@ -137,6 +160,20 @@ router.get('/advisor', async (req: Request, res: Response) => {
     const weightedWinRate = opponents.reduce((s, o) => s + o.win_rate * o.field_pct, 0) / totalWeight;
 
     res.json({ deck, opponents, weighted_win_rate: weightedWinRate });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// Ladder EV ranking
+router.get('/ladder-ev', async (req: Request, res: Response) => {
+  try {
+    const source = (req.query.source as string) || 'blended';
+    const infer = req.query.infer !== 'false'; // default true
+    const includePersonal = req.query.include_personal === 'true';
+    const pool = getPool();
+    const results = await computeLadderEv(pool, source, infer, includePersonal);
+    res.json(results);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }

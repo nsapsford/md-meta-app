@@ -5,6 +5,8 @@ import {
 } from '../services/syncService.js';
 import { recordSync, getSyncStatus, SyncSource } from '../services/syncStatusService.js';
 import { clearCache } from '../services/cacheService.js';
+import { config } from '../config.js';
+import { updateTiersFromScrape } from '../services/tierListService.js';
 
 const router = Router();
 
@@ -108,6 +110,46 @@ router.get('/status', async (_req: Request, res: Response) => {
   try {
     res.json(await getSyncStatus());
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/run/:source', async (req: Request, res: Response) => {
+  const token = (req.headers.authorization ?? '').replace('Bearer ', '');
+  if (!config.adminToken || token !== config.adminToken) {
+    return void res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const source = req.params.source as SyncSource;
+  try {
+    switch (source) {
+      case 'ygoprodeck':
+        await syncCards();
+        await syncArchetypes();
+        await recordSync('ygoprodeck', 'success');
+        break;
+      case 'mdm_deck_types':
+        await clearCache('mdm');
+        await syncDeckTypes();
+        await syncTopDecks();
+        await updateTiersFromScrape();
+        await recordSync('mdm_deck_types', 'success');
+        break;
+      case 'mdm_tournaments':
+        await syncTournaments();
+        await recordSync('mdm_tournaments', 'success');
+        break;
+      case 'untapped':
+        await clearCache('untapped');
+        await syncUntapped();
+        await recordSync('untapped', 'success');
+        break;
+      default:
+        return void res.status(400).json({ error: `Unknown source: ${source}` });
+    }
+    res.json({ ok: true, source });
+  } catch (err: any) {
+    await recordSync(source, 'failed', String(err?.message || err));
     res.status(500).json({ error: err.message });
   }
 });

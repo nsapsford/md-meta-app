@@ -10,6 +10,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
+import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
 import clsx from 'clsx';
 
 type MatrixSource = 'blended' | 'untapped' | 'tournament';
@@ -39,13 +40,14 @@ function getRelationshipIcon(rate: number): string {
 }
 
 export default function Matchups() {
-  const [tab, setTab] = useState<'list' | 'matrix' | 'advisor' | 'ecosystem'>('matrix');
+  const [tab, setTab] = useState<'list' | 'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [selectedDeck, setSelectedDeck] = useState('');
   const [matchups, setMatchups] = useState<Matchup[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
   const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
   const [inferGaps, setInferGaps] = useState(true);
+  const [includePersonal, setIncludePersonal] = useState(false);
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,12 +68,12 @@ export default function Matchups() {
     if (tab !== 'matrix') return;
     const controller = new AbortController();
     setLoading(true);
-    getMatchupMatrix(matrixSource, inferGaps, controller.signal)
+    getMatchupMatrix(matrixSource, inferGaps, controller.signal, includePersonal)
       .then(setMatrix)
       .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [tab, matrixSource, inferGaps]);
+  }, [tab, matrixSource, inferGaps, includePersonal]);
 
   useEffect(() => {
     if (tab !== 'list' || !selectedDeck) return;
@@ -103,6 +105,7 @@ export default function Matchups() {
         <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
         <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
         <button className={tabClass('list')} onClick={() => setTab('list')}>By Deck</button>
+        <button className={tabClass('my-spread')} onClick={() => setTab('my-spread')}>My Spread</button>
       </div>
 
       {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
@@ -124,7 +127,7 @@ export default function Matchups() {
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
-            <div className="sm:ml-3 sm:border-l sm:border-md-border sm:pl-3">
+            <div className="sm:ml-3 sm:border-l sm:border-md-border sm:pl-3 flex gap-2">
               <button
                 onClick={() => setInferGaps(!inferGaps)}
                 className={clsx(
@@ -136,6 +139,18 @@ export default function Matchups() {
                 title="Fill missing cells using ecosystem inference (inverse matchups, predator/prey, win-rate model)"
               >
                 Infer Gaps
+              </button>
+              <button
+                onClick={() => setIncludePersonal(!includePersonal)}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  includePersonal
+                    ? 'bg-md-gold/15 text-md-gold border-md-gold/30'
+                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                )}
+                title="Blend your personal game results into matchup rates (requires 10+ games per matchup)"
+              >
+                My Games
               </button>
             </div>
           </div>
@@ -209,7 +224,11 @@ export default function Matchups() {
       )}
 
       {tab === 'advisor' && (
-        <MetaAdvisor decks={decks.map((d) => d.name)} />
+        <MetaAdvisor decks={decks.map((d) => d.name)} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
+      )}
+
+      {tab === 'my-spread' && (
+        <MyMatchupSpread deckNames={decks.map((d) => d.name)} />
       )}
 
       {tab === 'list' && (

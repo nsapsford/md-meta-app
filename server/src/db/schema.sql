@@ -123,3 +123,16 @@ CREATE TABLE IF NOT EXISTS matchup_sources (
   updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
   PRIMARY KEY (deck_a, deck_b, source)
 );
+
+CREATE TABLE IF NOT EXISTS personal_games (
+  id SERIAL PRIMARY KEY,
+  deck_played TEXT NOT NULL,
+  opponent_deck TEXT NOT NULL,
+  result TEXT NOT NULL CHECK (result IN ('win', 'loss', 'draw')),
+  went_first BOOLEAN,
+  notes TEXT,
+  played_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
+);
+
+CREATE INDEX IF NOT EXISTS idx_personal_games_played_at ON personal_games(played_at);
+CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_played, opponent_deck);

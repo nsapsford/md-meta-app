@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
+import SyncStatusBanner from './components/common/SyncStatusBanner';
 import Dashboard from './pages/Dashboard';
 import DeckProfile from './pages/DeckProfile';
 import CardSearch from './pages/CardSearch';
@@ -10,6 +11,7 @@ import BanList from './pages/BanList';
 import MetaTrends from './pages/MetaTrends';
 import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
+import Admin from './pages/Admin';
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,6 +20,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-md-bg">
         <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
+        <SyncStatusBanner />
         <div className="flex">
           {sidebarOpen && (
             <div
@@ -37,6 +40,7 @@ export default function App() {
                 <Route path="/trends" element={<MetaTrends />} />
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/deck-builder" element={<DeckBuilder />} />
+                <Route path="/admin" element={<Admin />} />
               </Routes>
             </div>
           </main>

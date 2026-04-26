@@ -15,8 +15,10 @@ import metaTrendsRouter from './routes/metaTrends.js';
 import tournamentsRouter from './routes/tournaments.js';
 import deckBuilderRouter from './routes/deckBuilder.js';
 import syncRouter from './routes/sync.js';
+import personalGamesRouter from './routes/personalGames.js';
 import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped } from './services/syncService.js';
 import { updateTiersFromScrape } from './services/tierListService.js';
+import { recordSync } from './services/syncStatusService.js';
 
 async function main() {
   // Init DB first
@@ -43,6 +45,7 @@ async function main() {
   app.use('/api/tournaments', tournamentsRouter);
   app.use('/api/deck-builder', deckBuilderRouter);
   app.use('/api/sync', syncRouter);
+  app.use('/api/personal-games', personalGamesRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -75,17 +78,39 @@ async function main() {
     }
   })();
 
-  // Scheduled syncs
+  // Scheduled syncs — per-source schedules
   cron.schedule('0 */6 * * *', async () => {
-    console.log('[Cron] Running meta sync...');
+    console.log('[Cron] Running deck-type sync...');
     try {
       await syncDeckTypes();
       await syncTopDecks();
-      await syncTournaments();
       await updateTiersFromScrape();
+      await recordSync('mdm_deck_types', 'success');
+    } catch (err: any) {
+      await recordSync('mdm_deck_types', 'failed', String(err?.message || err));
+      console.error('[Cron] Deck-type sync failed:', err);
+    }
+  });
+
+  cron.schedule('0 */2 * * *', async () => {
+    console.log('[Cron] Running tournament sync...');
+    try {
+      await syncTournaments();
+      await recordSync('mdm_tournaments', 'success');
+    } catch (err: any) {
+      await recordSync('mdm_tournaments', 'failed', String(err?.message || err));
+      console.error('[Cron] Tournament sync failed:', err);
+    }
+  });
+
+  cron.schedule('0 */3 * * *', async () => {
+    console.log('[Cron] Running untapped sync...');
+    try {
       await syncUntapped();
-    } catch (err) {
-      console.error('[Cron] Meta sync failed:', err);
+      await recordSync('untapped', 'success');
+    } catch (err: any) {
+      await recordSync('untapped', 'failed', String(err?.message || err));
+      console.error('[Cron] Untapped sync failed:', err);
     }
   });
 
@@ -94,7 +119,9 @@ async function main() {
     try {
       await syncCards();
       await syncArchetypes();
-    } catch (err) {
+      await recordSync('ygoprodeck', 'success');
+    } catch (err: any) {
+      await recordSync('ygoprodeck', 'failed', String(err?.message || err));
       console.error('[Cron] Card sync failed:', err);
     }
   });

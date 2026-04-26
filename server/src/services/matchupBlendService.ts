@@ -29,8 +29,35 @@ export interface FullMatrix {
 export function blendMatchupRates(
   untapped: MatchupSource | null,
   tournament: MatchupSource | null,
+  personal: MatchupSource | null = null,
   weights = { untapped: 0.7, tournament: 0.3 }
 ): BlendResult {
+  // When personal has enough data, blend it in with weight 0.4
+  if (personal && personal.n >= 10) {
+    const personalWeight = 0.4;
+    const baseWeight = 1 - personalWeight;
+    let baseRate: number;
+    let baseConfidence: 'high' | 'medium' | 'low';
+    if (untapped && tournament) {
+      const uFrac = weights.untapped / (weights.untapped + weights.tournament);
+      const tFrac = 1 - uFrac;
+      baseRate = untapped.rate * uFrac + tournament.rate * tFrac;
+      baseConfidence = 'high';
+    } else if (untapped) {
+      baseRate = untapped.rate;
+      baseConfidence = untapped.n >= 100 ? 'high' : 'medium';
+    } else if (tournament) {
+      baseRate = tournament.rate;
+      baseConfidence = tournament.n >= 30 ? 'medium' : 'low';
+    } else {
+      baseRate = 0.5;
+      baseConfidence = 'low';
+    }
+    const rate = baseRate * baseWeight + personal.rate * personalWeight;
+    const confidence = baseConfidence === 'low' ? 'medium' : baseConfidence;
+    return { rate, confidence };
+  }
+
   if (!untapped && !tournament) return { rate: 0.5, confidence: 'low' };
   if (!untapped) return { rate: tournament!.rate, confidence: tournament!.n >= 30 ? 'medium' : 'low' };
   if (!tournament) return { rate: untapped.rate, confidence: untapped.n >= 100 ? 'high' : 'medium' };
@@ -43,7 +70,12 @@ export function blendMatchupRates(
  * When infer=true, fills gaps using ecosystem analysis (predator/prey relationships,
  * inverse matchups, and win-rate estimation).
  */
-export async function buildFullMatrix(pool: Pool, source: string = 'blended', infer: boolean = false): Promise<FullMatrix> {
+export async function buildFullMatrix(
+  pool: Pool,
+  source: string = 'blended',
+  infer: boolean = false,
+  includePersonal: boolean = false
+): Promise<FullMatrix> {
   const decks = (await queryAll(pool,
     'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
   ) as { name: string }[]).map((d) => d.name);
@@ -55,6 +87,18 @@ export async function buildFullMatrix(pool: Pool, source: string = 'blended', in
   const legacyRows = await queryAll(pool, 'SELECT deck_a, deck_b, win_rate_a, sample_size FROM matchups') as {
     deck_a: string; deck_b: string; win_rate_a: number; sample_size: number;
   }[];
+
+  // Load personal spread if requested
+  type PersonalSpreadRow = { deck_played: string; opponent_deck: string; wins: number; total: number };
+  const personalRows: PersonalSpreadRow[] = includePersonal
+    ? await queryAll(pool, `
+        SELECT deck_played, opponent_deck,
+          SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END)::INTEGER AS wins,
+          COUNT(*)::INTEGER AS total
+        FROM personal_games
+        GROUP BY deck_played, opponent_deck
+      `)
+    : [];
 
   const matrix: Record<string, Record<string, MatrixCell>> = {};
 
@@ -75,15 +119,22 @@ export async function buildFullMatrix(pool: Pool, source: string = 'blended', in
         : null;
       const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
 
-      if (!untappedData && !tournData) continue;
+      const personalRow = personalRows.find(
+        (r) => r.deck_played.toLowerCase() === al && r.opponent_deck.toLowerCase() === bl
+      );
+      const personalData = personalRow && personalRow.total > 0
+        ? { rate: personalRow.wins / personalRow.total, n: personalRow.total }
+        : null;
+
+      if (!untappedData && !tournData && !personalData) continue;
       if (source === 'tournament' && !tournData) continue;
       if (source === 'untapped' && !untappedData) continue;
 
       const blend = source === 'tournament'
-        ? blendMatchupRates(null, tournData)
+        ? blendMatchupRates(null, tournData, personalData)
         : source === 'untapped'
-        ? blendMatchupRates(untappedData, null)
-        : blendMatchupRates(untappedData, tournData);
+        ? blendMatchupRates(untappedData, null, personalData)
+        : blendMatchupRates(untappedData, tournData, personalData);
 
       matrix[a][b] = {
         rate: blend.rate,

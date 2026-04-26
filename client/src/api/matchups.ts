@@ -33,13 +33,52 @@ export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<
   return res.data;
 }
 
-export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended', infer: boolean = false, signal?: AbortSignal): Promise<MatchupMatrix> {
-  const res = await api.get('/matchups/matrix', { params: { source, ...(infer ? { infer: 'true' } : {}) }, signal });
+export async function getMatchupMatrix(
+  source: 'blended' | 'untapped' | 'tournament' = 'blended',
+  infer: boolean = false,
+  signal?: AbortSignal,
+  includePersonal: boolean = false
+): Promise<MatchupMatrix> {
+  const params: Record<string, string> = { source };
+  if (infer) params.infer = 'true';
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/matrix', { params, signal });
   return res.data;
 }
 
-export async function getMatchupAdvisor(deck: string, signal?: AbortSignal): Promise<AdvisorResult> {
-  const res = await api.get('/matchups/advisor', { params: { deck }, signal });
+export async function getMatchupAdvisor(deck: string, signal?: AbortSignal, includePersonal: boolean = false): Promise<AdvisorResult> {
+  const params: Record<string, string> = { deck };
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/advisor', { params, signal });
+  return res.data;
+}
+
+export interface LadderEvMatchup {
+  opponent: string;
+  win_rate: number;
+  play_rate: number;
+  confidence: 'high' | 'medium' | 'low';
+  inferred: boolean;
+}
+
+export interface LadderEvResult {
+  deck: string;
+  tier: number | null;
+  ev: number;
+  n_effective: number;
+  low_confidence_fraction: number;
+  top_good_matchups: LadderEvMatchup[];
+  top_bad_matchups: LadderEvMatchup[];
+  coverage: number;
+}
+
+export async function getLadderEv(
+  signal?: AbortSignal,
+  includePersonal: boolean = false
+): Promise<LadderEvResult[]> {
+  const params: Record<string, string> = {};
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/ladder-ev', { params, signal });
   return res.data;
 }
 

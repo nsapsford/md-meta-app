@@ -1,5 +1,18 @@
+// Known MD Forbidden & Limited list dates (YYYY-MM-DD). Used to badge movers that
+// crossed a banlist boundary in the requested window.
+export const MD_BANLIST_DATES: string[] = [
+  '2024-01-09',
+  '2024-04-09',
+  '2024-07-09',
+  '2024-10-08',
+  '2025-01-07',
+  '2025-04-08',
+  '2025-07-08',
+];
+
 export const config = {
   port: parseInt(process.env.PORT || '3001'),
+  adminToken: process.env.ADMIN_TOKEN || '',
   ygoprodeckBaseUrl: 'https://db.ygoprodeck.com/api/v7',
   mdmBaseUrl: 'https://www.masterduelmeta.com/api/v1',
   mdmSiteUrl: 'https://www.masterduelmeta.com',
