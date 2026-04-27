@@ -55,7 +55,7 @@ export default function MoversWidget() {
   }, [windowDays]);
 
   // Only render if we have meaningful data
-  if (!loading && (!data || (data.risers.length === 0 && data.fallers.length === 0))) {
+  if (!loading && (!data || ((data.risers?.length ?? 0) === 0 && (data.fallers?.length ?? 0) === 0))) {
     return null;
   }
 
