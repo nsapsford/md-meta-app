@@ -79,9 +79,14 @@ export async function buildFullMatrix(
   infer: boolean = false,
   includePersonal: boolean = false
 ): Promise<FullMatrix> {
-  const decks = (await queryAll(pool,
+  const tier13 = (await queryAll(pool,
     'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
   ) as { name: string }[]).map((d) => d.name);
+  const ROGUE = 'Rogue';
+  const ROGUE_LOWER = ROGUE.toLowerCase();
+  const tier13Set = new Set(tier13.map((n) => n.toLowerCase()));
+  const decks = [...tier13, ROGUE];
+  const isRogueKey = (k: string) => k === ROGUE_LOWER || !tier13Set.has(k);
 
   const rows = await queryAll(pool, 'SELECT * FROM matchup_sources') as {
     deck_a: string; deck_b: string; source: string; win_rate: number; sample_size: number;
@@ -103,6 +108,22 @@ export async function buildFullMatrix(
       `)
     : [];
 
+  // Sample-weighted aggregator over a list of {rate, n} so Rogue cells can fold in
+  // every off-meta opponent into one bucket.
+  const aggregate = (items: { rate: number; n: number }[]): MatchupSource | null => {
+    let totalN = 0, weighted = 0;
+    for (const it of items) { totalN += it.n; weighted += it.rate * it.n; }
+    if (totalN === 0) return null;
+    return { rate: weighted / totalN, n: totalN };
+  };
+
+  const matchRow = (rowA: string, rowB: string, al: string, bl: string): boolean => {
+    const ra = rowA.toLowerCase(), rb = rowB.toLowerCase();
+    const aMatch = al === ROGUE_LOWER ? isRogueKey(ra) : ra === al;
+    const bMatch = bl === ROGUE_LOWER ? isRogueKey(rb) : rb === bl;
+    return aMatch && bMatch;
+  };
+
   const matrix: Record<string, Record<string, MatrixCell>> = {};
 
   for (const a of decks) {
@@ -111,23 +132,24 @@ export async function buildFullMatrix(
       if (a === b) continue;
 
       const al = a.toLowerCase(), bl = b.toLowerCase();
-      const sourceRow  = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'untapped');
-      const tournRow   = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'tournament');
-      const legacyRow  = legacyRows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl);
 
-      const untappedData = sourceRow
-        ? { rate: sourceRow.win_rate, n: sourceRow.sample_size ?? 0 }
-        : legacyRow
-        ? { rate: legacyRow.win_rate_a / 100, n: legacyRow.sample_size ?? 0 }
-        : null;
-      const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
+      const untappedItems = rows
+        .filter((r) => r.source === 'untapped' && matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate, n: r.sample_size ?? 0 }));
+      const legacyItems = legacyRows
+        .filter((r) => matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate_a / 100, n: r.sample_size ?? 0 }));
+      const untappedData = aggregate(untappedItems) ?? aggregate(legacyItems);
 
-      const personalRow = personalRows.find(
-        (r) => r.deck_played.toLowerCase() === al && r.opponent_deck.toLowerCase() === bl
-      );
-      const personalData = personalRow && personalRow.total > 0
-        ? { rate: personalRow.wins / personalRow.total, n: personalRow.total }
-        : null;
+      const tournItems = rows
+        .filter((r) => r.source === 'tournament' && matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate, n: r.sample_size ?? 0 }));
+      const tournData = aggregate(tournItems);
+
+      const personalItems = personalRows
+        .filter((r) => matchRow(r.deck_played, r.opponent_deck, al, bl))
+        .map((r) => ({ rate: r.wins / r.total, n: r.total }));
+      const personalData = aggregate(personalItems);
 
       if (!untappedData && !tournData && !personalData) continue;
       if (source === 'tournament' && !tournData) continue;

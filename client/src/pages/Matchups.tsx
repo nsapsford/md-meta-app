@@ -208,11 +208,11 @@ export default function Matchups() {
       )}
 
       {tab === 'advisor' && (
-        <MetaAdvisor decks={decks.map((d) => d.name)} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
+        <MetaAdvisor decks={[...decks.map((d) => d.name), 'Rogue']} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
       )}
 
       {tab === 'my-spread' && (
-        <MyMatchupSpread deckNames={decks.map((d) => d.name)} />
+        <MyMatchupSpread deckNames={[...decks.map((d) => d.name), 'Rogue']} />
       )}
     </div>
   );
