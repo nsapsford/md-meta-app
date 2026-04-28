@@ -5,6 +5,7 @@ export interface MatchupMatrixCell {
   rate: number;
   n_untapped: number;
   n_tournament: number;
+  n_personal?: number;
   confidence: 'high' | 'medium' | 'low';
   inferred?: boolean;
   inference_method?: string;

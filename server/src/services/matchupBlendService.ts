@@ -16,6 +16,7 @@ export interface MatrixCell {
   rate: number;
   n_untapped: number;
   n_tournament: number;
+  n_personal?: number;
   confidence: 'high' | 'medium' | 'low';
   inferred?: boolean;
   inference_method?: string;
@@ -32,9 +33,11 @@ export function blendMatchupRates(
   personal: MatchupSource | null = null,
   weights = { untapped: 0.7, tournament: 0.3 }
 ): BlendResult {
-  // When personal has enough data, blend it in with weight 0.4
-  if (personal && personal.n >= 10) {
-    const personalWeight = 0.4;
+  // Blend in personal data whenever any games are logged. Weight scales with sample
+  // size up to a 0.4 cap at n=10, so a single game has small influence (n=1 → 0.04)
+  // while a well-sampled matchup carries the full weight.
+  if (personal && personal.n >= 1) {
+    const personalWeight = Math.min(0.4, personal.n * 0.04);
     const baseWeight = 1 - personalWeight;
     let baseRate: number;
     let baseConfidence: 'high' | 'medium' | 'low';
@@ -140,6 +143,7 @@ export async function buildFullMatrix(
         rate: blend.rate,
         n_untapped: untappedData?.n ?? 0,
         n_tournament: tournData?.n ?? 0,
+        n_personal: personalData?.n ?? 0,
         confidence: blend.confidence,
       };
     }
