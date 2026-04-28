@@ -78,9 +78,11 @@ export default function Dashboard() {
       await logGame({ deck_played: logDeck, opponent_deck: logOpponent, result: logResult, went_first: logFirst, notes: null });
       setLogFlash(`✓ ${logResult.toUpperCase()} vs ${logOpponent} logged`);
       setTimeout(() => setLogFlash(''), 3000);
-    } catch {
-      setLogFlash('Failed to log game');
-      setTimeout(() => setLogFlash(''), 3000);
+    } catch (e: any) {
+      console.error('logGame failed:', e?.response?.status, e?.response?.data, e);
+      const msg = e?.response?.data?.error || e?.message || 'unknown error';
+      setLogFlash(`Failed: ${msg}`);
+      setTimeout(() => setLogFlash(''), 5000);
     } finally {
       setLogSaving(false);
     }
