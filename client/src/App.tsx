@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import SyncStatusBanner from './components/common/SyncStatusBanner';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import DeckProfile from './pages/DeckProfile';
 import CardSearch from './pages/CardSearch';
@@ -31,17 +32,19 @@ export default function App() {
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <main className="flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow">
             <div className="max-w-[1400px] mx-auto animate-fade-in">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/decks/:name" element={<DeckProfile />} />
-                <Route path="/cards" element={<CardSearch />} />
-                <Route path="/matchups" element={<Matchups />} />
-                <Route path="/ban-list" element={<BanList />} />
-                <Route path="/trends" element={<MetaTrends />} />
-                <Route path="/tournaments" element={<Tournaments />} />
-                <Route path="/deck-builder" element={<DeckBuilder />} />
-                <Route path="/admin" element={<Admin />} />
-              </Routes>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/decks/:name" element={<DeckProfile />} />
+                  <Route path="/cards" element={<CardSearch />} />
+                  <Route path="/matchups" element={<Matchups />} />
+                  <Route path="/ban-list" element={<BanList />} />
+                  <Route path="/trends" element={<MetaTrends />} />
+                  <Route path="/tournaments" element={<Tournaments />} />
+                  <Route path="/deck-builder" element={<DeckBuilder />} />
+                  <Route path="/admin" element={<Admin />} />
+                </Routes>
+              </ErrorBoundary>
             </div>
           </main>
         </div>

@@ -29,9 +29,9 @@ export async function computeLadderEv(
 ): Promise<LadderEvResult[]> {
   const [matrix, deckRows] = await Promise.all([
     buildFullMatrix(pool, source, infer, includePersonal),
-    queryAll(pool,
+    queryAll<{ name: string; tier: number; play_rate: number | null }>(pool,
       'SELECT name, tier, play_rate FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
-    ) as { name: string; tier: number; play_rate: number | null }[],
+    ),
   ]);
 
   // Build a play-rate map. Decks with null play_rate get a small baseline.

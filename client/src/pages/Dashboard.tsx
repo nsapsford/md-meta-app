@@ -57,7 +57,7 @@ export default function Dashboard() {
         getDecks().catch(() => [] as DeckType[]),
       ]);
       setTierList(data);
-      setFeatured(feat);
+      setFeatured(Array.isArray(feat) ? feat : []);
       setSyncRecords(sync);
       const names = decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name);
       setDeckNames(names);
@@ -101,11 +101,11 @@ export default function Dashboard() {
   if (!tierList) return null;
 
   const allDecks = [
-    ...tierList['0'].map(d => ({ ...d, tierKey: 0 })),
-    ...tierList['1'].map(d => ({ ...d, tierKey: 1 })),
-    ...tierList['2'].map(d => ({ ...d, tierKey: 2 })),
-    ...tierList['3'].map(d => ({ ...d, tierKey: 3 })),
-    ...tierList.rogue.map(d => ({ ...d, tierKey: 4 })),
+    ...(tierList['0'] ?? []).map(d => ({ ...d, tierKey: 0 })),
+    ...(tierList['1'] ?? []).map(d => ({ ...d, tierKey: 1 })),
+    ...(tierList['2'] ?? []).map(d => ({ ...d, tierKey: 2 })),
+    ...(tierList['3'] ?? []).map(d => ({ ...d, tierKey: 3 })),
+    ...(tierList.rogue ?? []).map(d => ({ ...d, tierKey: 4 })),
   ];
 
   const popularityData = allDecks

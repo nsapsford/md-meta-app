@@ -1,6 +1,6 @@
 import type { Pool } from '@neondatabase/serverless';
 
-export async function queryAll(pool: Pool, sql: string, params: any[] = []): Promise<any[]> {
+export async function queryAll<T = any>(pool: Pool, sql: string, params: any[] = []): Promise<T[]> {
   const result = await pool.query(sql, params);
   return result.rows;
 }
