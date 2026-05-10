@@ -207,9 +207,9 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Tier 0', count: tierList['0'].length, color: 'text-tier-0', accent: '#ff2d55', desc: 'Dominant' },
-          { label: 'Tier 1', count: tierList['1'].length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Strong' },
-          { label: 'Tier 2', count: tierList['2'].length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Viable' },
+          { label: 'Tier 0', count: (tierList['0'] ?? []).length, color: 'text-tier-0', accent: '#ff2d55', desc: 'Dominant' },
+          { label: 'Tier 1', count: (tierList['1'] ?? []).length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Strong' },
+          { label: 'Tier 2', count: (tierList['2'] ?? []).length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Viable' },
           { label: 'Total Tracked', count: allDecks.length, color: 'text-md-gold', accent: '#d4af37', desc: 'Decks' },
         ].map((s) => (
           <div
