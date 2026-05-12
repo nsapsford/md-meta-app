@@ -10,6 +10,7 @@ import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
 import TierListView from '../components/dashboard/TierListView';
 import MoversWidget from '../components/dashboard/MoversWidget';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
@@ -134,6 +135,7 @@ export default function Dashboard() {
 
       {/* Quick Game Log */}
       {deckNames.length > 0 && (
+      <ErrorBoundary fallback={null}>
         <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-4 border border-md-border/40">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-md-purple to-md-blue"></div>
@@ -187,6 +189,7 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      </ErrorBoundary>
       )}
 
       {/* Featured Decks Section */}
