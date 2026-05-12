@@ -1,0 +1,94 @@
+<h2>Matchup matrix — how should it work on mobile?</h2>
+<p class="subtitle">Currently only 2 opponent columns fit. Pick the model that best fits how you actually use it.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1422;font-family:monospace;font-size:10px;line-height:1.4">
+      <div style="display:grid;grid-template-columns:80px repeat(5,1fr);gap:2px">
+        <div style="font-weight:700;color:#94a3b8">vs →</div>
+        <div style="text-align:center;color:#94a3b8">KT</div>
+        <div style="text-align:center;color:#94a3b8">K9</div>
+        <div style="text-align:center;color:#94a3b8">VS</div>
+        <div style="text-align:center;color:#94a3b8">Dr</div>
+        <div style="text-align:center;color:#94a3b8">El</div>
+        <div style="font-weight:700">Kewl T.</div>
+        <div style="text-align:center;background:#1a2332">—</div>
+        <div style="text-align:center;background:#1a2332">52</div>
+        <div style="text-align:center;background:#1e3a2e;color:#86efac">55</div>
+        <div style="text-align:center;background:#1a2332">50</div>
+        <div style="text-align:center;background:#3a1e1e;color:#fca5a5">46</div>
+        <div style="font-weight:700">K9 Eng.</div>
+        <div style="text-align:center;background:#1a2332">48</div>
+        <div style="text-align:center;background:#1a2332">—</div>
+        <div style="text-align:center;background:#1a2332">50</div>
+        <div style="text-align:center;background:#1e3a2e;color:#86efac">55</div>
+        <div style="text-align:center;background:#3a1e1e;color:#fca5a5">48</div>
+        <div style="font-weight:700">Vanq.S.</div>
+        <div style="text-align:center;background:#1a2332">50</div>
+        <div style="text-align:center;background:#1a2332">50</div>
+        <div style="text-align:center;background:#1a2332">—</div>
+        <div style="text-align:center;background:#1a2332">52</div>
+        <div style="text-align:center;background:#1a2332">49</div>
+      </div>
+      <p style="color:#94a3b8;font-size:9px;margin-top:8px">Sticky left column · 5+ opponent columns · color-coded heatmap · tap cell for details</p>
+    </div>
+    <div class="card-body">
+      <h3>A. Dense heatmap matrix</h3>
+      <p>Sticky deck-name column on left. Abbreviated column headers. Color-coded cells. Tap a cell to see full names + sample size.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1422;font-family:sans-serif;font-size:11px">
+      <div style="background:#1a2332;border-radius:8px;padding:8px;margin-bottom:6px">
+        <div style="font-weight:700;margin-bottom:6px">Your deck: Kewl Tune ▼</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#1e3a2e;border-radius:6px;margin-bottom:4px">
+        <span>vs Yummy</span><span style="color:#86efac;font-weight:700">55%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#1a2332;border-radius:6px;margin-bottom:4px">
+        <span>vs K9 Engine</span><span>52%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#1a2332;border-radius:6px;margin-bottom:4px">
+        <span>vs Vanquish Soul</span><span>50%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#3a1e1e;border-radius:6px;margin-bottom:4px">
+        <span>vs Mitsurugi</span><span style="color:#fca5a5;font-weight:700">44%</span>
+      </div>
+      <p style="color:#94a3b8;font-size:9px;margin-top:8px">Pick your deck → see all matchups as a sortable list</p>
+    </div>
+    <div class="card-body">
+      <h3>B. Single-deck focus view</h3>
+      <p>Pick "your deck" once, then see a single-column ranked list of all matchups. Full deck names, sortable by win-rate. Trades full grid for clarity.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1422;font-family:sans-serif;font-size:10px">
+      <div style="display:grid;grid-template-columns:90px repeat(3,1fr);gap:2px;margin-bottom:6px">
+        <div style="color:#94a3b8;font-size:9px">vs →</div>
+        <div style="text-align:center;color:#94a3b8">Kewl T.</div>
+        <div style="text-align:center;color:#94a3b8">K9 Eng.</div>
+        <div style="text-align:center;color:#94a3b8">Vanq.S.</div>
+        <div style="font-weight:700">Kewl Tune</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">—</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">52%</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">50%</div>
+        <div style="font-weight:700">K9 Engine</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">48%</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">—</div>
+        <div style="text-align:center;background:#1a2332;padding:6px">50%</div>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:8px">
+        <div style="flex:1;height:4px;background:#3b82f6;border-radius:2px"></div>
+        <div style="flex:1;height:4px;background:#1a2332;border-radius:2px"></div>
+        <div style="flex:1;height:4px;background:#1a2332;border-radius:2px"></div>
+      </div>
+      <p style="color:#94a3b8;font-size:9px;margin-top:6px">Swipeable column groups · sticky deck names · 3 cols per page</p>
+    </div>
+    <div class="card-body">
+      <h3>C. Paged/swipeable matrix</h3>
+      <p>Keep the matrix, but show 3 opponent columns at a time. Swipe horizontally to page through groups. Paginator dots show position. Sticky deck-name column.</p>
+    </div>
+  </div>
+</div>

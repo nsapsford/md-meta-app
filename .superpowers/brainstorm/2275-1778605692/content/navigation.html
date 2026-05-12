@@ -1,0 +1,33 @@
+<h2>Navigation pattern</h2>
+<p class="subtitle">Currently you have a hamburger menu top-left. On a tall S23 Ultra, the top corner is a stretch for thumbs. How should mobile nav work?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Keep hamburger (top-left)</h3>
+      <p>No change to nav. All real-estate goes to content. Simple, but reaches are awkward on a 6.8" screen.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Bottom tab bar (4-5 primary destinations)</h3>
+      <p>Native-feeling. Thumb-reachable. Eats ~56px of bottom space. Best for the most-used pages (Dashboard, Matchups, Decks, Cards). Less-used items live in a "More" tab or hamburger.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Collapsing top bar + hamburger</h3>
+      <p>Header shrinks/hides on scroll-down, reappears on scroll-up. Reclaims vertical space when scrolling. Nav still via hamburger.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Bottom tab bar + collapsing top bar</h3>
+      <p>Combines B and C. Maximum thumb-friendliness, maximum vertical reclaim. Most "native app" feel.</p>
+    </div>
+  </div>
+</div>

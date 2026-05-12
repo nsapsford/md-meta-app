@@ -48,6 +48,61 @@ The content is organized as follows:
 .superpowers/brainstorm/904-1775466494/state/server-stopped
 .superpowers/brainstorm/904-1775466494/state/server.pid
 client/.env.example
+client/.env.production
+client/android/.gitignore
+client/android/app/.gitignore
+client/android/app/build.gradle
+client/android/app/capacitor.build.gradle
+client/android/app/proguard-rules.pro
+client/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java
+client/android/app/src/main/AndroidManifest.xml
+client/android/app/src/main/java/com/mdmeta/app/MainActivity.java
+client/android/app/src/main/res/drawable-land-hdpi/splash.png
+client/android/app/src/main/res/drawable-land-mdpi/splash.png
+client/android/app/src/main/res/drawable-land-xhdpi/splash.png
+client/android/app/src/main/res/drawable-land-xxhdpi/splash.png
+client/android/app/src/main/res/drawable-land-xxxhdpi/splash.png
+client/android/app/src/main/res/drawable-port-hdpi/splash.png
+client/android/app/src/main/res/drawable-port-mdpi/splash.png
+client/android/app/src/main/res/drawable-port-xhdpi/splash.png
+client/android/app/src/main/res/drawable-port-xxhdpi/splash.png
+client/android/app/src/main/res/drawable-port-xxxhdpi/splash.png
+client/android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
+client/android/app/src/main/res/drawable/ic_launcher_background.xml
+client/android/app/src/main/res/drawable/splash.png
+client/android/app/src/main/res/layout/activity_main.xml
+client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+client/android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+client/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+client/android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+client/android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+client/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+client/android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+client/android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+client/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+client/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+client/android/app/src/main/res/values/ic_launcher_background.xml
+client/android/app/src/main/res/values/strings.xml
+client/android/app/src/main/res/values/styles.xml
+client/android/app/src/main/res/xml/file_paths.xml
+client/android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java
+client/android/build.gradle
+client/android/capacitor.settings.gradle
+client/android/gradle.properties
+client/android/gradle/wrapper/gradle-wrapper.jar
+client/android/gradle/wrapper/gradle-wrapper.properties
+client/android/gradlew
+client/android/gradlew.bat
+client/android/settings.gradle
+client/android/variables.gradle
+client/capacitor.config.ts
 client/index.html
 client/package.json
 client/postcss.config.js
@@ -56,17 +111,22 @@ client/src/api/cards.ts
 client/src/api/client.ts
 client/src/api/matchups.ts
 client/src/api/meta.ts
+client/src/api/personalGames.ts
 client/src/api/sync.ts
 client/src/api/tournaments.ts
 client/src/App.tsx
 client/src/components/common/CardImage.tsx
+client/src/components/common/DataValue.tsx
 client/src/components/common/ErrorBanner.tsx
+client/src/components/common/ErrorBoundary.tsx
 client/src/components/common/LoadingSpinner.tsx
 client/src/components/common/NegateImpact.tsx
 client/src/components/common/Pagination.tsx
 client/src/components/common/SearchInput.tsx
 client/src/components/common/SyncFreshnessBadge.tsx
+client/src/components/common/SyncStatusBanner.tsx
 client/src/components/common/TierBadge.tsx
+client/src/components/dashboard/MoversWidget.tsx
 client/src/components/dashboard/TierListView.tsx
 client/src/components/dashboard/TopArchetypesGrid.tsx
 client/src/components/decks/DecklistView.tsx
@@ -74,9 +134,11 @@ client/src/components/layout/Header.tsx
 client/src/components/layout/Sidebar.tsx
 client/src/components/matchups/EcosystemView.tsx
 client/src/components/matchups/MetaAdvisor.tsx
+client/src/components/matchups/MyMatchupSpread.tsx
 client/src/hooks/useDebounce.ts
 client/src/index.css
 client/src/main.tsx
+client/src/pages/Admin.tsx
 client/src/pages/BanList.tsx
 client/src/pages/CardSearch.tsx
 client/src/pages/Dashboard.tsx
@@ -112,11 +174,13 @@ server/src/routes/deckBuilder.ts
 server/src/routes/decks.ts
 server/src/routes/matchups.ts
 server/src/routes/metaTrends.ts
+server/src/routes/personalGames.ts
 server/src/routes/sync.ts
 server/src/routes/tierList.ts
 server/src/routes/tournaments.ts
 server/src/services/cacheService.ts
 server/src/services/ecosystemAnalysisService.ts
+server/src/services/ladderEvService.ts
 server/src/services/matchupBlendService.ts
 server/src/services/mdmService.ts
 server/src/services/syncService.ts
@@ -132,142 +196,6 @@ start.bat
 ```
 
 # Files
-
-## File: server/migrate-local-to-neon.mjs
-```javascript
-/**
- * One-time migration script: copies historical data from local SQLite (data.db) to Neon PostgreSQL.
- *
- * Usage: node migrate-local-to-neon.mjs
- * Requires: DATABASE_URL in .env
- */
-import Database from 'better-sqlite3';
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
-
-config(); // load .env
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = resolve(__dirname, 'data.db');
-
-neonConfig.webSocketConstructor = ws;
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 5,
-});
-
-const sqlite = new Database(DB_PATH, { readonly: true });
-
-async function migrateTable(tableName, { batchSize = 200, onConflict = 'DO NOTHING' } = {}) {
-  // Get all rows from SQLite
-  const rows = sqlite.prepare(`SELECT * FROM ${tableName}`).all();
-  if (rows.length === 0) {
-    console.log(`[${tableName}] No rows to migrate`);
-    return 0;
-  }
-
-  const columns = Object.keys(rows[0]);
-  console.log(`[${tableName}] Migrating ${rows.length} rows (columns: ${columns.join(', ')})`);
-
-  let migrated = 0;
-
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const params = [];
-    const valueSets = [];
-
-    for (let j = 0; j < batch.length; j++) {
-      const row = batch[j];
-      const placeholders = columns.map((_, colIdx) => `$${j * columns.length + colIdx + 1}`);
-      valueSets.push(`(${placeholders.join(', ')})`);
-
-      for (const col of columns) {
-        params.push(row[col] ?? null);
-      }
-    }
-
-    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valueSets.join(', ')} ON CONFLICT ${onConflict}`;
-
-    try {
-      await pool.query(sql, params);
-      migrated += batch.length;
-    } catch (err) {
-      // If batch fails, try one-by-one to skip problematic rows
-      console.warn(`[${tableName}] Batch insert failed, trying one-by-one: ${err.message}`);
-      for (const row of batch) {
-        const singleParams = columns.map(col => row[col] ?? null);
-        const singlePlaceholders = columns.map((_, idx) => `$${idx + 1}`);
-        const singleSql = `INSERT INTO ${tableName} (${singlePlaceholders.join(', ')}) VALUES (${singlePlaceholders.join(', ')}) ON CONFLICT ${onConflict}`;
-        try {
-          await pool.query(
-            `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${singlePlaceholders.join(', ')}) ON CONFLICT ${onConflict}`,
-            singleParams
-          );
-          migrated++;
-        } catch (e) {
-          // Skip this row
-        }
-      }
-    }
-
-    if ((i + batchSize) % 1000 === 0 || i + batchSize >= rows.length) {
-      console.log(`[${tableName}] Progress: ${Math.min(i + batchSize, rows.length)}/${rows.length}`);
-    }
-  }
-
-  console.log(`[${tableName}] Migrated ${migrated}/${rows.length} rows`);
-  return migrated;
-}
-
-async function main() {
-  console.log('=== Local SQLite → Neon PostgreSQL Migration ===\n');
-
-  // Check what tables have data in SQLite
-  const tables = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-  console.log('SQLite tables:', tables.map(t => t.name).join(', '));
-
-  // Count rows in each table
-  for (const t of tables) {
-    const count = sqlite.prepare(`SELECT COUNT(*) as c FROM ${t.name}`).get();
-    console.log(`  ${t.name}: ${count.c} rows`);
-  }
-  console.log('');
-
-  // Migrate meta_snapshots (historical trend data)
-  await migrateTable('meta_snapshots', {
-    onConflict: '(deck_type_name, snapshot_date) DO NOTHING',
-  });
-
-  // Migrate matchups
-  await migrateTable('matchups', {
-    onConflict: '(deck_a, deck_b) DO UPDATE SET win_rate_a = EXCLUDED.win_rate_a, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at',
-  });
-
-  // Migrate matchup_sources
-  try {
-    await migrateTable('matchup_sources', {
-      onConflict: '(deck_a, deck_b, source) DO UPDATE SET win_rate = EXCLUDED.win_rate, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at',
-    });
-  } catch (e) {
-    console.log('[matchup_sources] Table may not exist in SQLite, skipping');
-  }
-
-  console.log('\n=== Migration Complete ===');
-
-  sqlite.close();
-  await pool.end();
-}
-
-main().catch(err => {
-  console.error('Migration failed:', err);
-  process.exit(1);
-});
-```
 
 ## File: .gitignore
 ```
@@ -988,24 +916,988 @@ dist/
 VITE_API_URL=
 ```
 
-## File: client/index.html
-```html
-<!DOCTYPE html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MD Meta - Yu-Gi-Oh! Master Duel Meta Analysis</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body class="bg-md-bg text-md-text">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+## File: client/android/.gitignore
+```
+# Using Android gitignore template: https://github.com/github/gitignore/blob/HEAD/Android.gitignore
+
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+#  Uncomment the following line in case you need and you don't have the release build type files in your app
+# release/
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Proguard folder generated by Eclipse
+proguard/
+
+# Log Files
+*.log
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# IntelliJ
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+# Android Studio 3 in .gitignore file.
+.idea/caches
+.idea/modules.xml
+# Comment next line if keeping position of elements in Navigation Editor is relevant for you
+.idea/navEditor.xml
+
+# Keystore files
+# Uncomment the following lines if you do not want to check your keystore files in.
+#*.jks
+#*.keystore
+
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild
+.cxx/
+
+# Google Services (e.g. APIs or Firebase)
+# google-services.json
+
+# Freeline
+freeline.py
+freeline/
+freeline_project_description.json
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/readme.md
+
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+# lint/reports/
+
+# Android Profiling
+*.hprof
+
+# Cordova plugins for Capacitor
+capacitor-cordova-android-plugins
+
+# Copied web assets
+app/src/main/assets/public
+
+# Generated Config files
+app/src/main/assets/capacitor.config.json
+app/src/main/assets/capacitor.plugins.json
+app/src/main/res/xml/config.xml
+```
+
+## File: client/android/app/.gitignore
+```
+/build/*
+!/build/.npmkeep
+```
+
+## File: client/android/app/capacitor.build.gradle
+```
+// DO NOT EDIT THIS FILE! IT IS GENERATED EACH TIME "capacitor update" IS RUN
+
+android {
+  compileOptions {
+      sourceCompatibility JavaVersion.VERSION_21
+      targetCompatibility JavaVersion.VERSION_21
+  }
+}
+
+apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+dependencies {
+    implementation project(':capacitor-app')
+    implementation project(':capacitor-splash-screen')
+    implementation project(':capacitor-status-bar')
+
+}
+
+
+if (hasProperty('postBuildExtras')) {
+  postBuildExtras()
+}
+```
+
+## File: client/android/app/proguard-rules.pro
+```
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
+
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
+
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
+
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile
+```
+
+## File: client/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java
+```java
+package com.getcapacitor.myapp;
+
+import static org.junit.Assert.*;
+
+import android.content.Context;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+/**
+ * Instrumented test, which will execute on an Android device.
+ *
+ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
+ */
+@RunWith(AndroidJUnit4.class)
+public class ExampleInstrumentedTest {
+
+    @Test
+    public void useAppContext() throws Exception {
+        // Context of the app under test.
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+
+        assertEquals("com.getcapacitor.app", appContext.getPackageName());
+    }
+}
+```
+
+## File: client/android/app/src/main/AndroidManifest.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
+```
+
+## File: client/android/app/src/main/java/com/mdmeta/app/MainActivity.java
+```java
+package com.mdmeta.app;
+
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {}
+```
+
+## File: client/android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
+```xml
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M32,64C32,64 38.39,52.99 44.13,50.95C51.37,48.37 70.14,49.57 70.14,49.57L108.26,87.69L108,109.01L75.97,107.97L32,64Z"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="78.5885"
+                android:endY="90.9159"
+                android:startX="48.7653"
+                android:startY="61.0927"
+                android:type="linear">
+                <item
+                    android:color="#44000000"
+                    android:offset="0.0" />
+                <item
+                    android:color="#00000000"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M66.94,46.02L66.94,46.02C72.44,50.07 76,56.61 76,64L32,64C32,56.61 35.56,50.11 40.98,46.06L36.18,41.19C35.45,40.45 35.45,39.3 36.18,38.56C36.91,37.81 38.05,37.81 38.78,38.56L44.25,44.05C47.18,42.57 50.48,41.71 54,41.71C57.48,41.71 60.78,42.57 63.68,44.05L69.11,38.56C69.84,37.81 70.98,37.81 71.71,38.56C72.44,39.3 72.44,40.45 71.71,41.19L66.94,46.02ZM62.94,56.92C64.08,56.92 65,56.01 65,54.88C65,53.76 64.08,52.85 62.94,52.85C61.8,52.85 60.88,53.76 60.88,54.88C60.88,56.01 61.8,56.92 62.94,56.92ZM45.06,56.92C46.2,56.92 47.13,56.01 47.13,54.88C47.13,53.76 46.2,52.85 45.06,52.85C43.92,52.85 43,53.76 43,54.88C43,56.01 43.92,56.92 45.06,56.92Z"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1" />
+</vector>
+```
+
+## File: client/android/app/src/main/res/drawable/ic_launcher_background.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <path
+        android:fillColor="#26A69A"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M9,0L9,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,0L19,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,0L29,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,0L39,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,0L49,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,0L59,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,0L69,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,0L79,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M89,0L89,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M99,0L99,108"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,9L108,9"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,19L108,19"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,29L108,29"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,39L108,39"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,49L108,49"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,59L108,59"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,69L108,69"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,79L108,79"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,89L108,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,99L108,99"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,29L89,29"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,39L89,39"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,49L89,49"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,59L89,59"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,69L89,69"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,79L89,79"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,19L29,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,19L39,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,19L49,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,19L59,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,19L69,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,19L79,89"
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="0.8" />
+</vector>
+```
+
+## File: client/android/app/src/main/res/layout/activity_main.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <WebView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+```
+
+## File: client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+```
+
+## File: client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+```
+
+## File: client/android/app/src/main/res/values/ic_launcher_background.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
+```
+
+## File: client/android/app/src/main/res/values/strings.xml
+```xml
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MD Meta</string>
+    <string name="title_activity_main">MD Meta</string>
+    <string name="package_name">com.mdmeta.app</string>
+    <string name="custom_url_scheme">com.mdmeta.app</string>
+</resources>
+```
+
+## File: client/android/app/src/main/res/values/styles.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+    </style>
+</resources>
+```
+
+## File: client/android/app/src/main/res/xml/file_paths.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-path name="my_images" path="." />
+    <cache-path name="my_cache_images" path="." />
+</paths>
+```
+
+## File: client/android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java
+```java
+package com.getcapacitor.myapp;
+
+import static org.junit.Assert.*;
+
+import org.junit.Test;
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
+ */
+public class ExampleUnitTest {
+
+    @Test
+    public void addition_isCorrect() throws Exception {
+        assertEquals(4, 2 + 2);
+    }
+}
+```
+
+## File: client/android/capacitor.settings.gradle
+```
+// DO NOT EDIT THIS FILE! IT IS GENERATED EACH TIME "capacitor update" IS RUN
+include ':capacitor-android'
+project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
+
+include ':capacitor-app'
+project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
+
+include ':capacitor-splash-screen'
+project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capacitor/splash-screen/android')
+
+include ':capacitor-status-bar'
+project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacitor/status-bar/android')
+```
+
+## File: client/android/gradlew
+```
+#!/bin/sh
+
+#
+# Copyright © 2015-2021 the original authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+##############################################################################
+#
+#   Gradle start up script for POSIX generated by Gradle.
+#
+#   Important for running:
+#
+#   (1) You need a POSIX-compliant shell to run this script. If your /bin/sh is
+#       noncompliant, but you have some other compliant shell such as ksh or
+#       bash, then to run this script, type that shell name before the whole
+#       command line, like:
+#
+#           ksh Gradle
+#
+#       Busybox and similar reduced shells will NOT work, because this script
+#       requires all of these POSIX shell features:
+#         * functions;
+#         * expansions «$var», «${var}», «${var:-default}», «${var+SET}»,
+#           «${var#prefix}», «${var%suffix}», and «$( cmd )»;
+#         * compound commands having a testable exit status, especially «case»;
+#         * various built-in commands including «command», «set», and «ulimit».
+#
+#   Important for patching:
+#
+#   (2) This script targets any POSIX shell, so it avoids extensions provided
+#       by Bash, Ksh, etc; in particular arrays are avoided.
+#
+#       The "traditional" practice of packing multiple parameters into a
+#       space-separated string is a well documented source of bugs and security
+#       problems, so this is (mostly) avoided, by progressively accumulating
+#       options in "$@", and eventually passing that to Java.
+#
+#       Where the inherited environment variables (DEFAULT_JVM_OPTS, JAVA_OPTS,
+#       and GRADLE_OPTS) rely on word-splitting, this is performed explicitly;
+#       see the in-line comments for details.
+#
+#       There are tweaks for specific operating systems such as AIX, CygWin,
+#       Darwin, MinGW, and NonStop.
+#
+#   (3) This script is generated from the Groovy template
+#       https://github.com/gradle/gradle/blob/HEAD/platforms/jvm/plugins-application/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
+#       within the Gradle project.
+#
+#       You can find Gradle at https://github.com/gradle/gradle/.
+#
+##############################################################################
+
+# Attempt to set APP_HOME
+
+# Resolve links: $0 may be a link
+app_path=$0
+
+# Need this for daisy-chained symlinks.
+while
+    APP_HOME=${app_path%"${app_path##*/}"}  # leaves a trailing /; empty if no leading path
+    [ -h "$app_path" ]
+do
+    ls=$( ls -ld "$app_path" )
+    link=${ls#*' -> '}
+    case $link in             #(
+      /*)   app_path=$link ;; #(
+      *)    app_path=$APP_HOME$link ;;
+    esac
+done
+
+# This is normally unused
+# shellcheck disable=SC2034
+APP_BASE_NAME=${0##*/}
+# Discard cd standard output in case $CDPATH is set (https://github.com/gradle/gradle/issues/25036)
+APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && printf '%s\n' "$PWD" ) || exit
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+MAX_FD=maximum
+
+warn () {
+    echo "$*"
+} >&2
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+} >&2
+
+# OS specific support (must be 'true' or 'false').
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "$( uname )" in                #(
+  CYGWIN* )         cygwin=true  ;; #(
+  Darwin* )         darwin=true  ;; #(
+  MSYS* | MINGW* )  msys=true    ;; #(
+  NONSTOP* )        nonstop=true ;;
+esac
+
+CLASSPATH="\\\"\\\""
+
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD=$JAVA_HOME/jre/sh/java
+    else
+        JAVACMD=$JAVA_HOME/bin/java
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+else
+    JAVACMD=java
+    if ! command -v java >/dev/null 2>&1
+    then
+        die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+fi
+
+# Increase the maximum file descriptors if we can.
+if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
+    case $MAX_FD in #(
+      max*)
+        # In POSIX sh, ulimit -H is undefined. That's why the result is checked to see if it worked.
+        # shellcheck disable=SC2039,SC3045
+        MAX_FD=$( ulimit -H -n ) ||
+            warn "Could not query maximum file descriptor limit"
+    esac
+    case $MAX_FD in  #(
+      '' | soft) :;; #(
+      *)
+        # In POSIX sh, ulimit -n is undefined. That's why the result is checked to see if it worked.
+        # shellcheck disable=SC2039,SC3045
+        ulimit -n "$MAX_FD" ||
+            warn "Could not set maximum file descriptor limit to $MAX_FD"
+    esac
+fi
+
+# Collect all arguments for the java command, stacking in reverse order:
+#   * args from the command line
+#   * the main class name
+#   * -classpath
+#   * -D...appname settings
+#   * --module-path (only if needed)
+#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and GRADLE_OPTS environment variables.
+
+# For Cygwin or MSYS, switch paths to Windows format before running java
+if "$cygwin" || "$msys" ; then
+    APP_HOME=$( cygpath --path --mixed "$APP_HOME" )
+    CLASSPATH=$( cygpath --path --mixed "$CLASSPATH" )
+
+    JAVACMD=$( cygpath --unix "$JAVACMD" )
+
+    # Now convert the arguments - kludge to limit ourselves to /bin/sh
+    for arg do
+        if
+            case $arg in                                #(
+              -*)   false ;;                            # don't mess with options #(
+              /?*)  t=${arg#/} t=/${t%%/*}              # looks like a POSIX filepath
+                    [ -e "$t" ] ;;                      #(
+              *)    false ;;
+            esac
+        then
+            arg=$( cygpath --path --ignore --mixed "$arg" )
+        fi
+        # Roll the args list around exactly as many times as the number of
+        # args, so each arg winds up back in the position where it started, but
+        # possibly modified.
+        #
+        # NB: a `for` loop captures its iteration list before it begins, so
+        # changing the positional parameters here affects neither the number of
+        # iterations, nor the values presented in `arg`.
+        shift                   # remove old arg
+        set -- "$@" "$arg"      # push replacement arg
+    done
+fi
+
+
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+# Collect all arguments for the java command:
+#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,
+#     and any embedded shellness will be escaped.
+#   * For example: A user cannot expect ${Hostname} to be expanded, as it is an environment variable and will be
+#     treated as '${Hostname}' itself on the command line.
+
+set -- \
+        "-Dorg.gradle.appname=$APP_BASE_NAME" \
+        -classpath "$CLASSPATH" \
+        -jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+        "$@"
+
+# Stop when "xargs" is not available.
+if ! command -v xargs >/dev/null 2>&1
+then
+    die "xargs is not available"
+fi
+
+# Use "xargs" to parse quoted args.
+#
+# With -n1 it outputs one arg per line, with the quotes and backslashes removed.
+#
+# In Bash we could simply go:
+#
+#   readarray ARGS < <( xargs -n1 <<<"$var" ) &&
+#   set -- "${ARGS[@]}" "$@"
+#
+# but POSIX shell has neither arrays nor command substitution, so instead we
+# post-process each arg (as a line of input to sed) to backslash-escape any
+# character that might be a shell metacharacter, then use eval to reverse
+# that process (while maintaining the separation between arguments), and wrap
+# the whole thing up as a single "set" statement.
+#
+# This will of course break if any of these variables contains a newline or
+# an unmatched quote.
+#
+
+eval "set -- $(
+        printf '%s\n' "$DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS" |
+        xargs -n1 |
+        sed ' s~[^-[:alnum:]+,./:=@_]~\\&~g; ' |
+        tr '\n' ' '
+    )" '"$@"'
+
+exec "$JAVACMD" "$@"
+```
+
+## File: client/android/gradlew.bat
+```batch
+@rem
+@rem Copyright 2015 the original author or authors.
+@rem
+@rem Licensed under the Apache License, Version 2.0 (the "License");
+@rem you may not use this file except in compliance with the License.
+@rem You may obtain a copy of the License at
+@rem
+@rem      https://www.apache.org/licenses/LICENSE-2.0
+@rem
+@rem Unless required by applicable law or agreed to in writing, software
+@rem distributed under the License is distributed on an "AS IS" BASIS,
+@rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@rem See the License for the specific language governing permissions and
+@rem limitations under the License.
+@rem
+@rem SPDX-License-Identifier: Apache-2.0
+@rem
+
+@if "%DEBUG%"=="" @echo off
+@rem ##########################################################################
+@rem
+@rem  Gradle startup script for Windows
+@rem
+@rem ##########################################################################
+
+@rem Set local scope for the variables with windows NT shell
+if "%OS%"=="Windows_NT" setlocal
+
+set DIRNAME=%~dp0
+if "%DIRNAME%"=="" set DIRNAME=.
+@rem This is normally unused
+set APP_BASE_NAME=%~n0
+set APP_HOME=%DIRNAME%
+
+@rem Resolve any "." and ".." in APP_HOME to make it shorter.
+for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
+
+@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+
+@rem Find java.exe
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if %ERRORLEVEL% equ 0 goto execute
+
+echo. 1>&2
+echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2
+echo. 1>&2
+echo Please set the JAVA_HOME variable in your environment to match the 1>&2
+echo location of your Java installation. 1>&2
+
+goto fail
+
+:findJavaFromJavaHome
+set JAVA_HOME=%JAVA_HOME:"=%
+set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+
+if exist "%JAVA_EXE%" goto execute
+
+echo. 1>&2
+echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME% 1>&2
+echo. 1>&2
+echo Please set the JAVA_HOME variable in your environment to match the 1>&2
+echo location of your Java installation. 1>&2
+
+goto fail
+
+:execute
+@rem Setup the command line
+
+set CLASSPATH=
+
+
+@rem Execute Gradle
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
+
+:end
+@rem End local scope for the variables with windows NT shell
+if %ERRORLEVEL% equ 0 goto mainEnd
+
+:fail
+rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
+rem the _cmd.exe /c_ return code!
+set EXIT_CODE=%ERRORLEVEL%
+if %EXIT_CODE% equ 0 set EXIT_CODE=1
+if not ""=="%GRADLE_EXIT_CONSOLE%" exit %EXIT_CODE%
+exit /b %EXIT_CODE%
+
+:mainEnd
+if "%OS%"=="Windows_NT" endlocal
+
+:omega
+```
+
+## File: client/android/settings.gradle
+```
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'
+```
+
+## File: client/android/variables.gradle
+```
+ext {
+    minSdkVersion = 24
+    compileSdkVersion = 36
+    targetSdkVersion = 36
+    androidxActivityVersion = '1.11.0'
+    androidxAppCompatVersion = '1.7.1'
+    androidxCoordinatorLayoutVersion = '1.3.0'
+    androidxCoreVersion = '1.17.0'
+    androidxFragmentVersion = '1.8.9'
+    coreSplashScreenVersion = '1.2.0'
+    androidxWebkitVersion = '1.14.0'
+    junitVersion = '4.13.2'
+    androidxJunitVersion = '1.3.0'
+    androidxEspressoCoreVersion = '3.7.0'
+    cordovaAndroidVersion = '14.0.1'
+}
+```
+
+## File: client/capacitor.config.ts
+```typescript
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.mdmeta.app',
+  appName: 'MD Meta',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+  },
+  android: {
+    allowMixedContent: false,
+  },
+};
+
+export default config;
 ```
 
 ## File: client/postcss.config.js
@@ -1026,20 +1918,49 @@ export default {
 </svg>
 ```
 
-## File: client/src/api/sync.ts
+## File: client/src/api/personalGames.ts
 ```typescript
 import api from './client';
 
-export interface SyncRecord {
-  source: 'ygoprodeck' | 'mdm_deck_types' | 'mdm_tournaments' | 'untapped';
-  status: 'success' | 'partial' | 'failed';
-  detail: string | null;
-  synced_at: number; // unix timestamp
+export interface PersonalGame {
+  id: number;
+  deck_played: string;
+  opponent_deck: string;
+  result: 'win' | 'loss' | 'draw';
+  went_first: boolean | null;
+  notes: string | null;
+  played_at: number;
 }
 
-export async function getSyncStatus(): Promise<SyncRecord[]> {
-  const res = await api.get('/sync/status');
-  return res.data;
+export interface PersonalSpread {
+  deck_played: string;
+  opponent_deck: string;
+  total: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  win_rate: number;
+}
+
+export async function logGame(
+  game: Pick<PersonalGame, 'deck_played' | 'opponent_deck' | 'result' | 'went_first' | 'notes'>
+): Promise<PersonalGame> {
+  const { data } = await api.post<PersonalGame>('/personal-games', game);
+  return data;
+}
+
+export async function getGames(params?: { deck?: string; limit?: number; offset?: number }): Promise<PersonalGame[]> {
+  const { data } = await api.get<PersonalGame[]>('/personal-games', { params });
+  return data;
+}
+
+export async function deleteGame(id: number): Promise<void> {
+  await api.delete(`/personal-games/${id}`);
+}
+
+export async function getSpread(params?: { deck?: string; days?: number }): Promise<PersonalSpread[]> {
+  const { data } = await api.get<PersonalSpread[]>('/personal-games/spread', { params });
+  return data;
 }
 ```
 
@@ -1064,6 +1985,95 @@ export async function getRecentTournamentResults(): Promise<TournamentResult[]> 
 }
 ```
 
+## File: client/src/components/common/DataValue.tsx
+```typescript
+import clsx from 'clsx';
+
+interface DataValueProps {
+  value: number | null | undefined;
+  format?: 'percent' | 'number';
+  confidence?: 'high' | 'medium' | 'low';
+  inferred?: boolean;
+  inference_method?: string;
+  n_untapped?: number;
+  n_tournament?: number;
+  freshness_age_hours?: number;
+  className?: string;
+}
+
+export default function DataValue({
+  value,
+  format = 'percent',
+  confidence = 'high',
+  inferred = false,
+  inference_method,
+  n_untapped = 0,
+  n_tournament = 0,
+  freshness_age_hours,
+  className,
+}: DataValueProps) {
+  if (value === null || value === undefined) {
+    return <span className="text-md-textMuted text-xs">—</span>;
+  }
+
+  // Format the value
+  let displayValue: string;
+  if (format === 'percent') {
+    displayValue = `${(value * 100).toFixed(0)}%`;
+  } else {
+    displayValue = value.toFixed(1);
+  }
+
+  // Confidence styling
+  const confidenceClass = confidence === 'high'
+    ? 'text-md-green'
+    : confidence === 'medium'
+    ? 'text-md-orange'
+    : 'text-md-red';
+
+  // Base classes
+  const baseClasses = clsx(
+    'inline-flex items-center',
+    className,
+  );
+
+  // Build tooltip content
+  const tooltipParts: string[] = [];
+  if (inferred) {
+    tooltipParts.push(`Inferred (${inference_method ?? 'inferred'})`);
+  }
+  tooltipParts.push(`Confidence: ${confidence}`);
+  if (n_untapped > 0 || n_tournament > 0) {
+    tooltipParts.push(`Untapped n=${n_untapped}, Tournament n=${n_tournament}`);
+  }
+  if (freshness_age_hours !== undefined) {
+    const hours = Math.floor(freshness_age_hours);
+    const mins = Math.floor((freshness_age_hours % 1) * 60);
+    tooltipParts.push(`Updated: ${hours}h ${mins}m ago`);
+  }
+  const tooltip = tooltipParts.join(' | ');
+
+  return (
+    <span
+      className={baseClasses}
+      title={tooltip}
+      style={{
+        opacity: inferred ? 0.65 : 1,
+        textDecoration: inferred ? 'underline dashed' : 'none',
+        textDecorationColor: inferred ? 'currentColor' : undefined,
+      }}
+    >
+      <span className={clsx('font-semibold', confidenceClass)}>
+        {displayValue}
+      </span>
+      {confidence === 'low' && (
+        <span className="ml-1 text-xs text-md-textMuted">◆</span>
+      )}
+    </span>
+  );
+}
+```
+
 ## File: client/src/components/common/ErrorBanner.tsx
 ```typescript
 export default function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -1077,6 +2087,39 @@ export default function ErrorBanner({ message, onRetry }: { message: string; onR
       )}
     </div>
   );
+}
+```
+
+## File: client/src/components/common/ErrorBoundary.tsx
+```typescript
+import { Component, ReactNode } from 'react';
+
+interface Props { children: ReactNode; fallback?: ReactNode; }
+interface State { hasError: boolean; message: string; }
+
+export default class ErrorBoundary extends Component<Props, State> {
+  state: State = { hasError: false, message: '' };
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, message: error.message };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="bg-md-red/10 border border-md-red/30 rounded-lg p-4 flex items-center justify-between m-4">
+          <span className="text-md-red">Something went wrong: {this.state.message}</span>
+          <button
+            onClick={() => this.setState({ hasError: false, message: '' })}
+            className="px-3 py-1 bg-md-red/20 hover:bg-md-red/30 rounded text-sm transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 ```
 
@@ -1162,6 +2205,212 @@ export default function NegateImpact({ card, compact = false }: NegateImpactProp
 }
 ```
 
+## File: client/src/components/common/SyncStatusBanner.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import { getSyncStatus, SYNC_TTL, SOURCE_LABEL, type SyncRecord } from '../../api/sync';
+
+function isStale(record: SyncRecord): boolean {
+  const age = Math.floor(Date.now() / 1000) - record.synced_at;
+  return age > SYNC_TTL[record.source] * 2;
+}
+
+export default function SyncStatusBanner() {
+  const [problems, setProblems] = useState<SyncRecord[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function check() {
+      try {
+        const records = await getSyncStatus();
+        if (!cancelled) {
+          setProblems(records.filter(r => r.status === 'failed' || isStale(r)));
+        }
+      } catch {
+        // silently ignore — don't banner on a status-check failure
+      }
+    }
+
+    check();
+    const id = setInterval(check, 5 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  if (problems.length === 0) return null;
+
+  return (
+    <div className="bg-md-red/10 border-b border-md-red/30 px-4 py-2 flex items-center gap-3 flex-wrap">
+      <span className="text-xs font-bold text-md-red uppercase tracking-wider shrink-0">Data Warning</span>
+      <div className="flex flex-wrap gap-2">
+        {problems.map(p => (
+          <span key={p.source} className="text-xs text-md-red/80">
+            {SOURCE_LABEL[p.source]}: {p.status === 'failed' ? `sync failed${p.detail ? ` — ${p.detail}` : ''}` : 'data may be stale'}
+          </span>
+        ))}
+      </div>
+      <a href="/admin" className="ml-auto text-xs text-md-red underline shrink-0">Admin</a>
+    </div>
+  );
+}
+```
+
+## File: client/src/components/matchups/MyMatchupSpread.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import { getSpread, deleteGame, getGames, type PersonalSpread, type PersonalGame } from '../../api/personalGames';
+import ErrorBanner from '../common/ErrorBanner';
+import LoadingSpinner from '../common/LoadingSpinner';
+import clsx from 'clsx';
+
+function WinRateBar({ rate }: { rate: number }) {
+  const pct = Math.round(rate * 100);
+  const color = rate >= 0.55 ? 'bg-md-green' : rate >= 0.45 ? 'bg-md-orange' : 'bg-md-red';
+  return (
+    <div className="flex items-center gap-2">
+      <span className={clsx('text-sm font-semibold tabular-nums w-10 text-right', {
+        'text-md-green': rate >= 0.55,
+        'text-md-orange': rate >= 0.45 && rate < 0.55,
+        'text-md-red': rate < 0.45,
+      })}>
+        {pct}%
+      </span>
+      <div className="flex-1 h-1.5 bg-md-bg rounded-full overflow-hidden">
+        <div className={clsx('h-full rounded-full', color)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+interface Props {
+  deckNames: string[];
+}
+
+export default function MyMatchupSpread({ deckNames }: Props) {
+  const [spread, setSpread] = useState<PersonalSpread[]>([]);
+  const [recentGames, setRecentGames] = useState<PersonalGame[]>([]);
+  const [selectedDeck, setSelectedDeck] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [days, setDays] = useState(90);
+
+  useEffect(() => {
+    if (deckNames.length > 0 && !selectedDeck) setSelectedDeck(deckNames[0]);
+  }, [deckNames, selectedDeck]);
+
+  useEffect(() => {
+    if (!selectedDeck) return;
+    setLoading(true);
+    Promise.all([
+      getSpread({ deck: selectedDeck, days }),
+      getGames({ deck: selectedDeck, limit: 10 }),
+    ])
+      .then(([s, g]) => { setSpread(s); setRecentGames(g); })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [selectedDeck, days]);
+
+  const handleDelete = async (id: number) => {
+    await deleteGame(id);
+    setRecentGames((prev) => prev.filter((g) => g.id !== id));
+    // Refresh spread
+    getSpread({ deck: selectedDeck, days }).then(setSpread).catch(() => {});
+  };
+
+  const totalGames = spread.filter((s) => s.deck_played.toLowerCase() === selectedDeck.toLowerCase())
+    .reduce((sum, s) => sum + s.total, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-semibold text-md-text">My Spread</h3>
+          <div className="flex items-center gap-2">
+            {[30, 90, 180].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors', {
+                  'bg-md-blue/15 text-md-blue border-md-blue/30': days === d,
+                  'text-md-textMuted border-md-border hover:border-md-borderLight': days !== d,
+                })}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm text-md-textMuted block mb-2">Playing as:</label>
+          <select
+            value={selectedDeck}
+            onChange={(e) => setSelectedDeck(e.target.value)}
+            className="bg-md-bg border border-md-border rounded-lg px-3 py-2.5 text-sm text-md-text focus:outline-none focus:border-md-blue w-full max-w-sm"
+          >
+            {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+
+        {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+
+        {loading ? <LoadingSpinner /> : spread.length > 0 ? (
+          <>
+            <p className="text-xs text-md-textMuted">{totalGames} games logged</p>
+            <div className="divide-y divide-md-border">
+              {spread
+                .filter((s) => s.deck_played.toLowerCase() === selectedDeck.toLowerCase())
+                .map((s) => (
+                  <div key={s.opponent_deck} className="py-2.5 grid grid-cols-[1fr_auto_auto] items-center gap-3">
+                    <span className="text-sm font-medium truncate">{s.opponent_deck}</span>
+                    <span className="text-xs text-md-textMuted whitespace-nowrap">{s.total}g</span>
+                    <WinRateBar rate={s.win_rate} />
+                  </div>
+                ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-md-textMuted">No games logged for this deck in the last {days} days.</p>
+        )}
+      </div>
+
+      {recentGames.length > 0 && (
+        <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-md-text">Recent Games</h4>
+          <div className="divide-y divide-md-border">
+            {recentGames.map((g) => (
+              <div key={g.id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={clsx('font-semibold w-8', {
+                    'text-md-green': g.result === 'win',
+                    'text-md-red': g.result === 'loss',
+                    'text-md-textMuted': g.result === 'draw',
+                  })}>
+                    {g.result.toUpperCase()}
+                  </span>
+                  <span className="text-md-textMuted">vs</span>
+                  <span className="font-medium">{g.opponent_deck}</span>
+                  {g.went_first != null && (
+                    <span className="text-xs text-md-textMuted">({g.went_first ? '1st' : '2nd'})</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDelete(g.id)}
+                  className="text-xs text-md-textMuted hover:text-md-red transition-colors px-1"
+                  title="Delete"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
 ## File: client/src/hooks/useDebounce.ts
 ```typescript
 import { useState, useEffect } from 'react';
@@ -1176,18 +2425,144 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 ```
 
-## File: client/src/main.tsx
+## File: client/src/pages/Admin.tsx
 ```typescript
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
+import { useState, useEffect, useCallback } from 'react';
+import { getSyncStatus, triggerSync, SYNC_TTL, SOURCE_LABEL, type SyncRecord, type SyncSource } from '../api/sync';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const SOURCES: SyncSource[] = ['mdm_deck_types', 'mdm_tournaments', 'untapped', 'ygoprodeck'];
+const TOKEN_KEY = 'admin_token';
+
+function ageString(synced_at: number): string {
+  const secs = Math.floor(Date.now() / 1000) - synced_at;
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  return `${Math.floor(secs / 3600)}h ago`;
+}
+
+function isStale(record: SyncRecord): boolean {
+  return Math.floor(Date.now() / 1000) - record.synced_at > SYNC_TTL[record.source] * 2;
+}
+
+export default function Admin() {
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '');
+  const [tokenInput, setTokenInput] = useState('');
+  const [records, setRecords] = useState<SyncRecord[]>([]);
+  const [running, setRunning] = useState<SyncSource | null>(null);
+  const [flash, setFlash] = useState<{ source: SyncSource; ok: boolean } | null>(null);
+
+  const authenticated = Boolean(token);
+
+  const refresh = useCallback(async () => {
+    try {
+      setRecords(await getSyncStatus());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (authenticated) {
+      refresh();
+      const id = setInterval(refresh, 30_000);
+      return () => clearInterval(id);
+    }
+  }, [authenticated, refresh]);
+
+  function saveToken() {
+    localStorage.setItem(TOKEN_KEY, tokenInput);
+    setToken(tokenInput);
+  }
+
+  async function runSync(source: SyncSource) {
+    setRunning(source);
+    try {
+      await triggerSync(source, token);
+      setFlash({ source, ok: true });
+      await refresh();
+    } catch {
+      setFlash({ source, ok: false });
+    } finally {
+      setRunning(null);
+      setTimeout(() => setFlash(null), 3000);
+    }
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="max-w-sm mx-auto mt-20 p-6 bg-md-surface border border-md-border rounded-2xl">
+        <h1 className="text-lg font-bold text-md-text mb-4">Admin Access</h1>
+        <input
+          type="password"
+          value={tokenInput}
+          onChange={e => setTokenInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && saveToken()}
+          placeholder="Admin token"
+          className="w-full px-3 py-2 rounded-lg bg-md-bg border border-md-border text-md-text text-sm mb-3 focus:outline-none focus:border-md-blue"
+        />
+        <button
+          onClick={saveToken}
+          className="w-full py-2 rounded-lg bg-md-blue text-white text-sm font-semibold"
+        >
+          Unlock
+        </button>
+      </div>
+    );
+  }
+
+  const recordMap = Object.fromEntries(records.map(r => [r.source, r]));
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-md-text">Admin</h1>
+        <button
+          onClick={() => { localStorage.removeItem(TOKEN_KEY); setToken(''); }}
+          className="text-xs text-md-textMuted hover:text-md-red"
+        >
+          Sign out
+        </button>
+      </div>
+
+      <div className="bg-md-surface border border-md-border rounded-2xl divide-y divide-md-border">
+        {SOURCES.map(source => {
+          const r = recordMap[source];
+          const stale = r ? isStale(r) : false;
+          const failed = r?.status === 'failed';
+          const busy = running === source;
+          const result = flash?.source === source;
+
+          return (
+            <div key={source} className="flex items-center gap-4 px-5 py-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-md-text">{SOURCE_LABEL[source]}</p>
+                {r ? (
+                  <p className={`text-xs mt-0.5 ${failed ? 'text-md-red' : stale ? 'text-md-orange' : 'text-md-textMuted'}`}>
+                    {failed ? `Failed: ${r.detail ?? 'unknown error'}` : stale ? `Stale — last sync ${ageString(r.synced_at)}` : `OK — ${ageString(r.synced_at)}`}
+                  </p>
+                ) : (
+                  <p className="text-xs text-md-textMuted mt-0.5">Never synced</p>
+                )}
+              </div>
+
+              {result && (
+                <span className={`text-xs font-bold ${flash!.ok ? 'text-md-green' : 'text-md-red'}`}>
+                  {flash!.ok ? 'Done' : 'Failed'}
+                </span>
+              )}
+
+              <button
+                onClick={() => runSync(source)}
+                disabled={busy}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-md-blue/15 text-md-blue border border-md-blue/30 hover:bg-md-blue/25 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              >
+                {busy ? 'Syncing…' : 'Sync now'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 ```
 
 ## File: client/src/test/matchupBlend.test.ts
@@ -1352,45 +2727,6 @@ export function computeFreshness(record: MinimalSyncRecord): Freshness {
 }
 ```
 
-## File: client/vite.config.ts
-```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
-  },
-});
-```
-
-## File: package.json
-```json
-{
-  "name": "md-meta-app",
-  "private": true,
-  "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client && npm run build --prefix server",
-    "start": "npm start --prefix server"
-  },
-  "devDependencies": {
-    "@types/pg": "^8.20.0",
-    "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "pg": "^8.20.0"
-  }
-}
-```
-
 ## File: server/.env.example
 ```
 # Neon PostgreSQL connection string (use pooled endpoint)
@@ -1401,6 +2737,142 @@ CORS_ORIGIN=http://localhost:5173
 
 # Port (Render sets this automatically)
 PORT=3001
+```
+
+## File: server/migrate-local-to-neon.mjs
+```javascript
+/**
+ * One-time migration script: copies historical data from local SQLite (data.db) to Neon PostgreSQL.
+ *
+ * Usage: node migrate-local-to-neon.mjs
+ * Requires: DATABASE_URL in .env
+ */
+import Database from 'better-sqlite3';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { config } from 'dotenv';
+
+config(); // load .env
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = resolve(__dirname, 'data.db');
+
+neonConfig.webSocketConstructor = ws;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+});
+
+const sqlite = new Database(DB_PATH, { readonly: true });
+
+async function migrateTable(tableName, { batchSize = 200, onConflict = 'DO NOTHING' } = {}) {
+  // Get all rows from SQLite
+  const rows = sqlite.prepare(`SELECT * FROM ${tableName}`).all();
+  if (rows.length === 0) {
+    console.log(`[${tableName}] No rows to migrate`);
+    return 0;
+  }
+
+  const columns = Object.keys(rows[0]);
+  console.log(`[${tableName}] Migrating ${rows.length} rows (columns: ${columns.join(', ')})`);
+
+  let migrated = 0;
+
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const params = [];
+    const valueSets = [];
+
+    for (let j = 0; j < batch.length; j++) {
+      const row = batch[j];
+      const placeholders = columns.map((_, colIdx) => `$${j * columns.length + colIdx + 1}`);
+      valueSets.push(`(${placeholders.join(', ')})`);
+
+      for (const col of columns) {
+        params.push(row[col] ?? null);
+      }
+    }
+
+    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valueSets.join(', ')} ON CONFLICT ${onConflict}`;
+
+    try {
+      await pool.query(sql, params);
+      migrated += batch.length;
+    } catch (err) {
+      // If batch fails, try one-by-one to skip problematic rows
+      console.warn(`[${tableName}] Batch insert failed, trying one-by-one: ${err.message}`);
+      for (const row of batch) {
+        const singleParams = columns.map(col => row[col] ?? null);
+        const singlePlaceholders = columns.map((_, idx) => `$${idx + 1}`);
+        const singleSql = `INSERT INTO ${tableName} (${singlePlaceholders.join(', ')}) VALUES (${singlePlaceholders.join(', ')}) ON CONFLICT ${onConflict}`;
+        try {
+          await pool.query(
+            `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${singlePlaceholders.join(', ')}) ON CONFLICT ${onConflict}`,
+            singleParams
+          );
+          migrated++;
+        } catch (e) {
+          // Skip this row
+        }
+      }
+    }
+
+    if ((i + batchSize) % 1000 === 0 || i + batchSize >= rows.length) {
+      console.log(`[${tableName}] Progress: ${Math.min(i + batchSize, rows.length)}/${rows.length}`);
+    }
+  }
+
+  console.log(`[${tableName}] Migrated ${migrated}/${rows.length} rows`);
+  return migrated;
+}
+
+async function main() {
+  console.log('=== Local SQLite → Neon PostgreSQL Migration ===\n');
+
+  // Check what tables have data in SQLite
+  const tables = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+  console.log('SQLite tables:', tables.map(t => t.name).join(', '));
+
+  // Count rows in each table
+  for (const t of tables) {
+    const count = sqlite.prepare(`SELECT COUNT(*) as c FROM ${t.name}`).get();
+    console.log(`  ${t.name}: ${count.c} rows`);
+  }
+  console.log('');
+
+  // Migrate meta_snapshots (historical trend data)
+  await migrateTable('meta_snapshots', {
+    onConflict: '(deck_type_name, snapshot_date) DO NOTHING',
+  });
+
+  // Migrate matchups
+  await migrateTable('matchups', {
+    onConflict: '(deck_a, deck_b) DO UPDATE SET win_rate_a = EXCLUDED.win_rate_a, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at',
+  });
+
+  // Migrate matchup_sources
+  try {
+    await migrateTable('matchup_sources', {
+      onConflict: '(deck_a, deck_b, source) DO UPDATE SET win_rate = EXCLUDED.win_rate, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at',
+    });
+  } catch (e) {
+    console.log('[matchup_sources] Table may not exist in SQLite, skipping');
+  }
+
+  console.log('\n=== Migration Complete ===');
+
+  sqlite.close();
+  await pool.end();
+}
+
+main().catch(err => {
+  console.error('Migration failed:', err);
+  process.exit(1);
+});
 ```
 
 ## File: server/render.yaml
@@ -1421,28 +2893,101 @@ services:
         value: production
 ```
 
-## File: server/src/config.ts
+## File: server/src/routes/personalGames.ts
 ```typescript
-export const config = {
-  port: parseInt(process.env.PORT || '3001'),
-  ygoprodeckBaseUrl: 'https://db.ygoprodeck.com/api/v7',
-  mdmBaseUrl: 'https://www.masterduelmeta.com/api/v1',
-  mdmSiteUrl: 'https://www.masterduelmeta.com',
-  untappedBaseUrl: 'https://ygom.untapped.gg',
-  cache: {
-    cardsTtl: 86400,       // 24 hours
-    tierListTtl: 3600,     // 1 hour
-    topDecksTtl: 7200,     // 2 hours
-    tournamentsTtl: 7200,  // 2 hours
-    matchupsTtl: 14400,    // 4 hours
-    banListTtl: 86400,     // 24 hours
-    untappedTtl: 10800,    // 3 hours
-  },
-  rateLimit: {
-    ygoprodeckRps: 10,
-    mdmDelayMs: 500,
-  },
-};
+import { Router, Request, Response } from 'express';
+import { getPool } from '../db/connection.js';
+import { queryAll, queryOne, run } from '../utils/dbHelpers.js';
+
+const router = Router();
+
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const deck = req.query.deck as string | undefined;
+
+    let query = 'SELECT * FROM personal_games';
+    const params: any[] = [];
+    if (deck) {
+      query += ' WHERE LOWER(deck_played) = LOWER($1)';
+      params.push(deck);
+    }
+    query += ` ORDER BY played_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    res.json(await queryAll(pool, query, params));
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { deck_played, opponent_deck, result, went_first, notes } = req.body;
+    if (!deck_played || !opponent_deck || !result) {
+      return res.status(400).json({ error: 'deck_played, opponent_deck, and result are required' });
+    }
+    if (!['win', 'loss', 'draw'].includes(result)) {
+      return res.status(400).json({ error: 'result must be win, loss, or draw' });
+    }
+
+    const pool = getPool();
+    const row = await queryOne(pool,
+      `INSERT INTO personal_games (deck_played, opponent_deck, result, went_first, notes, played_at)
+       VALUES ($1, $2, $3, $4, $5, EXTRACT(EPOCH FROM NOW())::INTEGER) RETURNING *`,
+      [deck_played, opponent_deck, result, went_first ?? null, notes ?? null]
+    );
+    res.status(201).json(row);
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    await run(pool, 'DELETE FROM personal_games WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.get('/spread', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    const days = parseInt(req.query.days as string) || 90;
+    const deck = req.query.deck as string | undefined;
+
+    let query = `
+      SELECT
+        deck_played,
+        opponent_deck,
+        COUNT(*)::INTEGER AS total,
+        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END)::INTEGER AS wins,
+        SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END)::INTEGER AS losses,
+        SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END)::INTEGER AS draws,
+        ROUND(SUM(CASE WHEN result = 'win' THEN 1.0 ELSE 0 END) / COUNT(*), 4)::REAL AS win_rate
+      FROM personal_games
+      WHERE played_at > EXTRACT(EPOCH FROM NOW())::INTEGER - $1
+    `;
+    const params: any[] = [days * 86400];
+
+    if (deck) {
+      query += ` AND LOWER(deck_played) = LOWER($2)`;
+      params.push(deck);
+    }
+    query += ' GROUP BY deck_played, opponent_deck ORDER BY deck_played, total DESC';
+
+    res.json(await queryAll(pool, query, params));
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+export default router;
 ```
 
 ## File: server/src/services/untappedAuthService.ts
@@ -1624,189 +3169,209 @@ cd /d "%~dp0"
 npm run dev
 ```
 
-## File: client/package.json
-```json
-{
-  "name": "md-meta-client",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "axios": "^1.7.7",
-    "clsx": "^2.1.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0",
-    "recharts": "^2.12.7"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.41",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.5.0",
-    "vite": "^5.4.2",
-    "vitest": "^4.1.2"
-  }
+## File: client/.env.production
+```
+# REQUIRED for Android/production builds. Replace with the actual Render service URL.
+# Example: VITE_API_URL=https://md-meta-api.onrender.com/api
+VITE_API_URL=https://md-meta-app.onrender.com/api
+```
+
+## File: client/android/app/build.gradle
+```
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.mdmeta.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.mdmeta.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 ```
 
-## File: client/src/api/client.ts
-```typescript
-import axios from 'axios';
+## File: client/android/build.gradle
+```
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 30000,
-});
+buildscript {
+    
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.2.1'
+        classpath 'com.google.gms:google-services:4.4.4'
 
-export default api;
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
 ```
 
-## File: client/src/api/meta.ts
+## File: client/android/gradle.properties
+```
+# Project-wide Gradle settings.
+
+# IDE (e.g. Android Studio) users:
+# Gradle settings configured through the IDE *will override*
+# any settings specified in this file.
+
+# For more details on how to configure your build environment visit
+# http://www.gradle.org/docs/current/userguide/build_environment.html
+
+# Specifies the JVM arguments used for the daemon process.
+# The setting is particularly useful for tweaking memory settings.
+org.gradle.jvmargs=-Xmx1536m
+
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. More details, visit
+# http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+# org.gradle.parallel=true
+
+# AndroidX package structure to make it clearer which packages are bundled with the
+# Android operating system, and which are packaged with your app's APK
+# https://developer.android.com/topic/libraries/support-library/androidx-rn
+android.useAndroidX=true
+android.defaults.buildfeatures.resvalues=true
+android.sdk.defaultTargetSdkToCompileSdkIfUnset=false
+android.enableAppCompileTimeRClass=false
+android.usesSdkInManifest.disallowed=false
+android.uniquePackageNames=false
+android.dependency.useConstraints=true
+android.r8.strictFullModeForKeepRules=false
+android.r8.optimizedResourceShrinking=false
+android.builtInKotlin=false
+android.newDsl=false
+```
+
+## File: client/android/gradle/wrapper/gradle-wrapper.properties
+```
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.1-all.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+```
+
+## File: client/index.html
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <title>MD Meta - Yu-Gi-Oh! Master Duel Meta Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-md-bg text-md-text">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+## File: client/src/api/sync.ts
 ```typescript
 import api from './client';
-import type { TierList, Matchup, MetaSnapshot, Tournament, TournamentResult, BanListData } from '../types/meta';
-import type { DeckType, DeckProfile } from '../types/deck';
 
-export async function getTierList(): Promise<TierList> {
-  const res = await api.get('/tier-list');
+export type SyncSource = 'ygoprodeck' | 'mdm_deck_types' | 'mdm_tournaments' | 'untapped';
+
+export interface SyncRecord {
+  source: SyncSource;
+  status: 'success' | 'partial' | 'failed';
+  detail: string | null;
+  synced_at: number; // unix timestamp
+}
+
+// Expected sync intervals in seconds, used to detect stale data (threshold = 2×)
+export const SYNC_TTL: Record<SyncSource, number> = {
+  ygoprodeck:      86400, // 24h
+  mdm_deck_types:  21600, // 6h
+  mdm_tournaments:  7200, // 2h
+  untapped:        10800, // 3h
+};
+
+export const SOURCE_LABEL: Record<SyncSource, string> = {
+  ygoprodeck:      'Card DB',
+  mdm_deck_types:  'Deck Types',
+  mdm_tournaments: 'Tournaments',
+  untapped:        'Untapped',
+};
+
+export async function getSyncStatus(): Promise<SyncRecord[]> {
+  const res = await api.get('/sync/status');
   return res.data;
 }
 
-export async function getDecks(tier?: number): Promise<DeckType[]> {
-  const res = await api.get('/decks', { params: tier != null ? { tier } : {} });
-  return res.data;
-}
-
-export async function getDeckProfile(name: string): Promise<DeckProfile> {
-  const res = await api.get(`/decks/${encodeURIComponent(name)}`);
-  return res.data;
-}
-
-export async function getDeckTopLists(name: string) {
-  const res = await api.get(`/decks/${encodeURIComponent(name)}/top-lists`);
-  return res.data;
-}
-
-export async function getMatchups(deck?: string): Promise<Matchup[]> {
-  const res = await api.get('/matchups', { params: deck ? { deck } : {} });
-  return res.data;
-}
-
-export async function getBanList(): Promise<BanListData> {
-  const res = await api.get('/ban-list');
-  return res.data;
-}
-
-export async function getMetaTrends(): Promise<Record<string, MetaSnapshot[]>> {
-  const res = await api.get('/meta-trends');
-  return res.data;
-}
-
-export async function getDeckTrends(deckName: string): Promise<MetaSnapshot[]> {
-  const res = await api.get(`/meta-trends/${encodeURIComponent(deckName)}`);
-  return res.data;
-}
-
-export async function getTournaments(): Promise<Tournament[]> {
-  const res = await api.get('/tournaments');
-  return res.data;
-}
-
-export async function getTournament(id: string): Promise<Tournament> {
-  const res = await api.get(`/tournaments/${id}`);
-  return res.data;
-}
-
-export async function getRecentTournamentResults(): Promise<TournamentResult[]> {
-  const res = await api.get('/tournaments/recent-results');
-  return res.data;
-}
-
-export async function scoreDeck(main: string[], extra: string[]) {
-  const res = await api.post('/deck-builder/score', { main, extra });
-  return res.data;
-}
-
-export async function validateDeck(main: string[], extra: string[], side: string[]) {
-  const res = await api.post('/deck-builder/validate', { main, extra, side });
-  return res.data;
-}
-
-export async function getFeaturedDecks(): Promise<Array<{
-  id: string;
-  name: string;
-  tier: number | null;
-  power: number | null;
-  power_trend: number | null;
-  thumbnail_image: string | null;
-  win_rate: number | null;
-  play_rate: number | null;
-  cards: Array<{ name: string; image: string | null }>;
-}>> {
-  const res = await api.get('/decks/featured');
-  return res.data;
-}
-
-export async function syncAll() {
-  const res = await api.post('/sync/all');
-  return res.data;
-}
-
-export async function syncUntapped() {
-  const res = await api.post('/sync/untapped');
-  return res.data;
-}
-```
-
-## File: client/src/App.tsx
-```typescript
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Header from './components/layout/Header';
-import Sidebar from './components/layout/Sidebar';
-import Dashboard from './pages/Dashboard';
-import DeckProfile from './pages/DeckProfile';
-import CardSearch from './pages/CardSearch';
-import Matchups from './pages/Matchups';
-import BanList from './pages/BanList';
-import MetaTrends from './pages/MetaTrends';
-import Tournaments from './pages/Tournaments';
-import DeckBuilder from './pages/DeckBuilder';
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-md-bg">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6 overflow-x-hidden bg-hero-glow">
-            <div className="max-w-[1400px] mx-auto animate-fade-in">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/decks/:name" element={<DeckProfile />} />
-                <Route path="/cards" element={<CardSearch />} />
-                <Route path="/matchups" element={<Matchups />} />
-                <Route path="/ban-list" element={<BanList />} />
-                <Route path="/trends" element={<MetaTrends />} />
-                <Route path="/tournaments" element={<Tournaments />} />
-                <Route path="/deck-builder" element={<DeckBuilder />} />
-              </Routes>
-            </div>
-          </main>
-        </div>
-      </div>
-    </BrowserRouter>
-  );
+export async function triggerSync(source: SyncSource, token: string): Promise<void> {
+  await api.post(`/sync/run/${source}`, null, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 ```
 
@@ -2022,6 +3587,135 @@ export default function TierBadge({ tier, size = 'md' }: { tier: number | null; 
     )}>
       {cfg.label}
     </span>
+  );
+}
+```
+
+## File: client/src/components/dashboard/MoversWidget.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { getMetaMovers, type MoverEntry, type MoversResult } from '../../api/meta';
+import clsx from 'clsx';
+
+function MoverRow({ deck, rank }: { deck: MoverEntry; rank: number }) {
+  const rising = deck.power_delta > 0;
+  const deltaStr = `${rising ? '+' : ''}${deck.power_delta.toFixed(1)}`;
+  const deltaColor = rising ? 'text-md-green' : 'text-md-red';
+  const arrow = rising ? '▲' : '▼';
+
+  return (
+    <Link
+      to={`/decks/${encodeURIComponent(deck.deck_type_name)}`}
+      className="flex items-center gap-3 py-2 group hover:opacity-80 transition-opacity"
+    >
+      <span className="text-xs text-md-textMuted tabular-nums w-4 shrink-0">{rank}</span>
+
+      <div className="w-10 h-7 rounded overflow-hidden border border-md-border/30 bg-md-surface shrink-0 relative">
+        {deck.thumbnail_image ? (
+          <img
+            src={deck.thumbnail_image}
+            alt={deck.deck_type_name}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-md-textMuted/30 text-xs">?</div>
+        )}
+      </div>
+
+      <span className="text-sm font-medium truncate flex-1 group-hover:text-md-blue transition-colors">
+        {deck.deck_type_name}
+      </span>
+
+      <div className="flex items-center gap-1 shrink-0">
+        <span className={clsx('text-xs font-bold', deltaColor)}>{arrow}</span>
+        <span className={clsx('text-sm font-bold tabular-nums', deltaColor)}>{deltaStr}</span>
+      </div>
+    </Link>
+  );
+}
+
+export default function MoversWidget() {
+  const [data, setData] = useState<MoversResult | null>(null);
+  const [windowDays, setWindowDays] = useState<7 | 14>(7);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getMetaMovers(windowDays)
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [windowDays]);
+
+  // Only render if we have meaningful data
+  if (!loading && (!data || ((data.risers?.length ?? 0) === 0 && (data.fallers?.length ?? 0) === 0))) {
+    return null;
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 backdrop-blur-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-orange to-md-red"></div>
+          <h3 className="text-lg font-bold text-md-text">What's Moving</h3>
+          {data?.post_banlist && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-md-gold/15 text-md-gold border border-md-gold/25">
+              Post F&L
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {([7, 14] as const).map((w) => (
+            <button
+              key={w}
+              onClick={() => setWindowDays(w)}
+              className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors', {
+                'bg-md-blue/15 text-md-blue border-md-blue/30': windowDays === w,
+                'text-md-textMuted border-md-border hover:border-md-borderLight': windowDays !== w,
+              })}
+            >
+              {w}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-4">
+          <div className="w-6 h-6 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin"></div>
+        </div>
+      ) : data && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+          <div>
+            <p className="text-xs font-bold text-md-green uppercase tracking-wider mb-1">Risers</p>
+            <div className="divide-y divide-md-border/30">
+              {data.risers.slice(0, 3).map((d, i) => (
+                <MoverRow key={d.deck_type_name} deck={d} rank={i + 1} />
+              ))}
+              {data.risers.length === 0 && (
+                <p className="text-xs text-md-textMuted py-2">Not enough history yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold text-md-red uppercase tracking-wider mb-1">Fallers</p>
+            <div className="divide-y divide-md-border/30">
+              {data.fallers.slice(0, 3).map((d, i) => (
+                <MoverRow key={d.deck_type_name} deck={d} rank={i + 1} />
+              ))}
+              {data.fallers.length === 0 && (
+                <p className="text-xs text-md-textMuted py-2">Not enough history yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-md-textMuted mt-3">Power delta over last {windowDays} days.</p>
+    </div>
   );
 }
 ```
@@ -2787,202 +4481,116 @@ export default function EcosystemView({ deckNames }: Props) {
 }
 ```
 
-## File: client/tailwind.config.ts
+## File: client/src/main.tsx
 ```typescript
-import type { Config } from 'tailwindcss';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import './index.css';
 
-export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      colors: {
-        md: {
-          bg: '#09090b',
-          surface: '#111113',
-          surfaceAlt: '#18181b',
-          surfaceHover: '#1c1c1f',
-          border: '#27272a',
-          borderLight: '#3f3f46',
-          gold: '#d4af37',
-          goldMuted: '#b8962e',
-          blue: '#4a8eff',
-          blueLight: '#6ba3ff',
-          purple: '#8b6cff',
-          orange: '#ff9147',
-          green: '#34d399',
-          red: '#ff4d5e',
-          text: '#eceef4',
-          textSecondary: '#a1a1aa',
-          textMuted: '#71717a',
-          winRate: '#34d399',
-          playRate: '#94a3b8',
-        },
-        tier: {
-          '0': '#ff2d55',
-          '1': '#ff8c38',
-          '2': '#ffd60a',
-          '3': '#38c96e',
-          rogue: '#6b7694',
-        },
-        rarity: {
-          ur: '#8b6cff',
-          sr: '#ff9147',
-          r: '#4a8eff',
-          n: '#6b7694',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'hero-glow': 'radial-gradient(ellipse at 50% 0%, rgba(74,142,255,0.08) 0%, transparent 60%)',
-        'gold-glow': 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.06) 0%, transparent 50%)',
-      },
-      boxShadow: {
-        'glow-blue': '0 0 20px rgba(74,142,255,0.15)',
-        'glow-gold': '0 0 20px rgba(212,175,55,0.15)',
-        'glow-purple': '0 0 20px rgba(139,108,255,0.15)',
-        'card': '0 4px 24px rgba(0,0,0,0.4)',
-        'card-hover': '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.08)',
-        'card-featured': '0 0 0 1px rgba(255,255,255,0.06), 0 12px 48px rgba(0,0,0,0.7)',
-        'surface': '0 1px 3px rgba(0,0,0,0.3)',
-        'surface-lg': '0 4px 16px rgba(0,0,0,0.4)',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        pulseSoft: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' },
-        },
+async function initNative() {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    if (!Capacitor.isNativePlatform()) return;
+    const [{ StatusBar, Style }, { SplashScreen }] = await Promise.all([
+      import('@capacitor/status-bar'),
+      import('@capacitor/splash-screen'),
+    ]);
+    await StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+    await SplashScreen.hide().catch(() => {});
+  } catch {
+    // Capacitor not installed in this environment (e.g. plain web build) — ignore.
+  }
+}
+void initNative();
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  </React.StrictMode>
+);
+```
+
+## File: client/vite.config.ts
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  base: './',
+  build: { outDir: 'dist', emptyOutDir: true },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
       },
     },
   },
-  plugins: [],
-} satisfies Config;
+});
 ```
 
-## File: server/src/index.ts
-```typescript
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import cron from 'node-cron';
-import { config } from './config.js';
-import 'dotenv/config';
-import { initDb, getPool } from './db/connection.js';
-import { queryOne } from './utils/dbHelpers.js';
-import cardsRouter from './routes/cards.js';
-import tierListRouter from './routes/tierList.js';
-import decksRouter from './routes/decks.js';
-import matchupsRouter from './routes/matchups.js';
-import banListRouter from './routes/banList.js';
-import metaTrendsRouter from './routes/metaTrends.js';
-import tournamentsRouter from './routes/tournaments.js';
-import deckBuilderRouter from './routes/deckBuilder.js';
-import syncRouter from './routes/sync.js';
-import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped } from './services/syncService.js';
-import { updateTiersFromScrape } from './services/tierListService.js';
-
-async function main() {
-  // Init DB first
-  await initDb();
-
-  const app = express();
-
-  app.use(helmet({ crossOriginResourcePolicy: false }));
-
-  const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
-  app.use(cors({ origin: allowedOrigins }));
-
-  app.use(express.json());
-
-  // Routes
-  app.use('/api/cards', cardsRouter);
-  app.use('/api/tier-list', tierListRouter);
-  app.use('/api/decks', decksRouter);
-  app.use('/api/matchups', matchupsRouter);
-  app.use('/api/ban-list', banListRouter);
-  app.use('/api/meta-trends', metaTrendsRouter);
-  app.use('/api/tournaments', tournamentsRouter);
-  app.use('/api/deck-builder', deckBuilderRouter);
-  app.use('/api/sync', syncRouter);
-
-  // Health check
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
-  });
-
-  // Initial data sync on startup (non-blocking)
-  (async () => {
-    try {
-      const pool = getPool();
-      const cardCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM cards');
-      if (!cardCount || cardCount.c === 0) {
-        console.log('[Startup] No cards found, running initial sync...');
-        await syncCards();
-        await syncArchetypes();
-        console.log('[Startup] Card sync complete');
-      }
-
-      const dtCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM deck_types');
-      if (!dtCount || dtCount.c === 0) {
-        console.log('[Startup] No deck types found, syncing meta data...');
-        await syncDeckTypes();
-        await syncTopDecks();
-        await syncTournaments();
-        await updateTiersFromScrape();
-        console.log('[Startup] Meta sync complete');
-      }
-    } catch (err) {
-      console.error('[Startup] Initial sync failed:', err);
-    }
-  })();
-
-  // Scheduled syncs
-  cron.schedule('0 */6 * * *', async () => {
-    console.log('[Cron] Running meta sync...');
-    try {
-      await syncDeckTypes();
-      await syncTopDecks();
-      await syncTournaments();
-      await updateTiersFromScrape();
-      await syncUntapped();
-    } catch (err) {
-      console.error('[Cron] Meta sync failed:', err);
-    }
-  });
-
-  cron.schedule('0 4 * * *', async () => {
-    console.log('[Cron] Running card sync...');
-    try {
-      await syncCards();
-      await syncArchetypes();
-    } catch (err) {
-      console.error('[Cron] Card sync failed:', err);
-    }
-  });
-
-  app.listen(config.port, () => {
-    console.log(`[Server] Running on http://localhost:${config.port}`);
-  });
+## File: package.json
+```json
+{
+  "name": "md-meta-app",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "start": "npm start --prefix server"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  }
 }
+```
 
-main().catch(console.error);
+## File: server/src/config.ts
+```typescript
+// Known MD Forbidden & Limited list dates (YYYY-MM-DD). Used to badge movers that
+// crossed a banlist boundary in the requested window.
+export const MD_BANLIST_DATES: string[] = [
+  '2024-01-09',
+  '2024-04-09',
+  '2024-07-09',
+  '2024-10-08',
+  '2025-01-07',
+  '2025-04-08',
+  '2025-07-08',
+];
+
+export const config = {
+  port: parseInt(process.env.PORT || '3001'),
+  adminToken: process.env.ADMIN_TOKEN || '',
+  ygoprodeckBaseUrl: 'https://db.ygoprodeck.com/api/v7',
+  mdmBaseUrl: 'https://www.masterduelmeta.com/api/v1',
+  mdmSiteUrl: 'https://www.masterduelmeta.com',
+  untappedBaseUrl: 'https://ygom.untapped.gg',
+  cache: {
+    cardsTtl: 86400,       // 24 hours
+    tierListTtl: 3600,     // 1 hour
+    topDecksTtl: 7200,     // 2 hours
+    tournamentsTtl: 7200,  // 2 hours
+    matchupsTtl: 14400,    // 4 hours
+    banListTtl: 86400,     // 24 hours
+    untappedTtl: 10800,    // 3 hours
+  },
+  rateLimit: {
+    ygoprodeckRps: 10,
+    mdmDelayMs: 500,
+  },
+};
 ```
 
 ## File: server/src/routes/deckBuilder.ts
@@ -3077,53 +4685,6 @@ router.post('/validate', async (req: Request, res: Response) => {
 export default router;
 ```
 
-## File: server/src/routes/metaTrends.ts
-```typescript
-import { Router, Request, Response } from 'express';
-import { getPool } from '../db/connection.js';
-import { queryAll } from '../utils/dbHelpers.js';
-
-const router = Router();
-
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const pool = getPool();
-    const snapshots = await queryAll(pool, `
-      SELECT deck_type_name, tier, power, pop_rank, snapshot_date
-      FROM meta_snapshots
-      ORDER BY snapshot_date DESC, deck_type_name
-    `);
-
-    const grouped: Record<string, any[]> = {};
-    for (const s of snapshots) {
-      if (!grouped[s.deck_type_name]) grouped[s.deck_type_name] = [];
-      grouped[s.deck_type_name].push(s);
-    }
-
-    res.json(grouped);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/:deckName', async (req: Request, res: Response) => {
-  try {
-    const pool = getPool();
-    const snapshots = await queryAll(pool, `
-      SELECT * FROM meta_snapshots
-      WHERE LOWER(deck_type_name) = LOWER($1)
-      ORDER BY snapshot_date ASC
-    `, [req.params.deckName]);
-
-    res.json(snapshots);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-export default router;
-```
-
 ## File: server/src/services/cacheService.ts
 ```typescript
 import { getPool } from '../db/connection.js';
@@ -3154,6 +4715,127 @@ export async function clearCache(pattern?: string): Promise<void> {
   } else {
     await run(pool, 'DELETE FROM api_cache');
   }
+}
+```
+
+## File: server/src/services/ladderEvService.ts
+```typescript
+import type { Pool } from '@neondatabase/serverless';
+import { queryAll } from '../utils/dbHelpers.js';
+import { buildFullMatrix, type MatrixCell } from './matchupBlendService.js';
+
+export interface MatchupSummary {
+  opponent: string;
+  win_rate: number;
+  play_rate: number;
+  confidence: 'high' | 'medium' | 'low';
+  inferred: boolean;
+}
+
+export interface LadderEvResult {
+  deck: string;
+  tier: number | null;
+  ev: number;
+  n_effective: number;
+  low_confidence_fraction: number;
+  top_good_matchups: MatchupSummary[];
+  top_bad_matchups: MatchupSummary[];
+  coverage: number; // fraction of opponent pool with matchup data
+}
+
+export async function computeLadderEv(
+  pool: Pool,
+  source: string = 'blended',
+  infer: boolean = true,
+  includePersonal: boolean = false
+): Promise<LadderEvResult[]> {
+  const [matrix, deckRows] = await Promise.all([
+    buildFullMatrix(pool, source, infer, includePersonal),
+    queryAll<{ name: string; tier: number; play_rate: number | null }>(pool,
+      'SELECT name, tier, play_rate FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
+    ),
+  ]);
+
+  // Build a play-rate map. Decks with null play_rate get a small baseline.
+  const playRateMap = new Map<string, number>();
+  for (const d of deckRows) {
+    playRateMap.set(d.name, d.play_rate ?? 0.5);
+  }
+  const tierMap = new Map<string, number | null>(deckRows.map((d) => [d.name, d.tier]));
+
+  const results: LadderEvResult[] = [];
+
+  for (const deck of matrix.decks) {
+    const row = matrix.matrix[deck];
+    if (!row) continue;
+
+    // Gather all opponent cells that have data
+    const entries: Array<{ opponent: string; cell: MatrixCell; playRate: number }> = [];
+    for (const opponent of matrix.decks) {
+      if (opponent === deck) continue;
+      const cell = row[opponent];
+      if (!cell) continue;
+      const pr = playRateMap.get(opponent) ?? 0;
+      entries.push({ opponent, cell, playRate: pr });
+    }
+
+    if (entries.length === 0) {
+      results.push({
+        deck,
+        tier: tierMap.get(deck) ?? null,
+        ev: 0.5,
+        n_effective: 0,
+        low_confidence_fraction: 1,
+        top_good_matchups: [],
+        top_bad_matchups: [],
+        coverage: 0,
+      });
+      continue;
+    }
+
+    // Normalize play rates over the opponents we have data for
+    const totalPlayRate = entries.reduce((s, e) => s + e.playRate, 0) || 1;
+
+    // EV = Σ(win_rate × normalized_play_rate)
+    // Low-confidence cells are still counted but flagged
+    let ev = 0;
+    let nEffective = 0;
+    let lowConfCount = 0;
+
+    for (const { cell, playRate } of entries) {
+      const weight = playRate / totalPlayRate;
+      ev += cell.rate * weight;
+      nEffective += (cell.n_untapped + cell.n_tournament) * weight;
+      if (cell.confidence === 'low') lowConfCount++;
+    }
+
+    const lowConfFraction = entries.length > 0 ? lowConfCount / entries.length : 0;
+    const coverage = entries.length / (matrix.decks.length - 1);
+
+    // Sort by win rate for top/bottom matchups
+    const sorted = entries
+      .map(({ opponent, cell, playRate }) => ({
+        opponent,
+        win_rate: cell.rate,
+        play_rate: playRate / totalPlayRate,
+        confidence: cell.confidence,
+        inferred: cell.inferred ?? false,
+      }))
+      .sort((a, b) => b.win_rate - a.win_rate);
+
+    results.push({
+      deck,
+      tier: tierMap.get(deck) ?? null,
+      ev,
+      n_effective: Math.round(nEffective),
+      low_confidence_fraction: lowConfFraction,
+      top_good_matchups: sorted.slice(0, 3),
+      top_bad_matchups: sorted.slice(-3).reverse(),
+      coverage,
+    });
+  }
+
+  return results.sort((a, b) => b.ev - a.ev);
 }
 ```
 
@@ -3349,25 +5031,6 @@ export async function getBanList(): Promise<YGOCard[]> {
 }
 ```
 
-## File: server/src/utils/dbHelpers.ts
-```typescript
-import type { Pool } from '@neondatabase/serverless';
-
-export async function queryAll(pool: Pool, sql: string, params: any[] = []): Promise<any[]> {
-  const result = await pool.query(sql, params);
-  return result.rows;
-}
-
-export async function queryOne(pool: Pool, sql: string, params: any[] = []): Promise<any | null> {
-  const result = await pool.query(sql, params);
-  return result.rows[0] || null;
-}
-
-export async function run(pool: Pool, sql: string, params: any[] = []): Promise<void> {
-  await pool.query(sql, params);
-}
-```
-
 ## File: client/src/api/cards.ts
 ```typescript
 import api from './client';
@@ -3388,6 +5051,126 @@ export async function getCardById(id: number) {
 
 export async function getArchetypes(): Promise<string[]> {
   const res = await api.get('/cards/archetypes');
+  return res.data;
+}
+```
+
+## File: client/src/api/meta.ts
+```typescript
+import api from './client';
+import type { TierList, Matchup, MetaSnapshot, Tournament, TournamentResult, BanListData } from '../types/meta';
+import type { DeckType, DeckProfile } from '../types/deck';
+
+export async function getTierList(): Promise<TierList> {
+  const res = await api.get('/tier-list');
+  return res.data;
+}
+
+export async function getDecks(tier?: number): Promise<DeckType[]> {
+  const res = await api.get('/decks', { params: tier != null ? { tier } : {} });
+  return res.data;
+}
+
+export async function getDeckProfile(name: string): Promise<DeckProfile> {
+  const res = await api.get(`/decks/${encodeURIComponent(name)}`);
+  return res.data;
+}
+
+export async function getDeckTopLists(name: string) {
+  const res = await api.get(`/decks/${encodeURIComponent(name)}/top-lists`);
+  return res.data;
+}
+
+export async function getMatchups(deck?: string): Promise<Matchup[]> {
+  const res = await api.get('/matchups', { params: deck ? { deck } : {} });
+  return res.data;
+}
+
+export async function getBanList(): Promise<BanListData> {
+  const res = await api.get('/ban-list');
+  return res.data;
+}
+
+export async function getMetaTrends(): Promise<Record<string, MetaSnapshot[]>> {
+  const res = await api.get('/meta-trends');
+  return res.data;
+}
+
+export async function getDeckTrends(deckName: string): Promise<MetaSnapshot[]> {
+  const res = await api.get(`/meta-trends/${encodeURIComponent(deckName)}`);
+  return res.data;
+}
+
+export async function getTournaments(): Promise<Tournament[]> {
+  const res = await api.get('/tournaments');
+  return res.data;
+}
+
+export async function getTournament(id: string): Promise<Tournament> {
+  const res = await api.get(`/tournaments/${id}`);
+  return res.data;
+}
+
+export async function getRecentTournamentResults(): Promise<TournamentResult[]> {
+  const res = await api.get('/tournaments/recent-results');
+  return res.data;
+}
+
+export async function scoreDeck(main: string[], extra: string[]) {
+  const res = await api.post('/deck-builder/score', { main, extra });
+  return res.data;
+}
+
+export async function validateDeck(main: string[], extra: string[], side: string[]) {
+  const res = await api.post('/deck-builder/validate', { main, extra, side });
+  return res.data;
+}
+
+export async function getFeaturedDecks(): Promise<Array<{
+  id: string;
+  name: string;
+  tier: number | null;
+  power: number | null;
+  power_trend: number | null;
+  thumbnail_image: string | null;
+  win_rate: number | null;
+  play_rate: number | null;
+  cards: Array<{ name: string; image: string | null }>;
+}>> {
+  const res = await api.get('/decks/featured');
+  return res.data;
+}
+
+export interface MoverEntry {
+  deck_type_name: string;
+  tier: number | null;
+  thumbnail_image: string | null;
+  power_now: number;
+  power_then: number;
+  power_delta: number;
+  date_now: string;
+  date_then: string;
+}
+
+export interface MoversResult {
+  risers: MoverEntry[];
+  fallers: MoverEntry[];
+  post_banlist: boolean;
+  window_days: number;
+}
+
+export async function getMetaMovers(window: 7 | 14 = 7): Promise<MoversResult> {
+  const res = await api.get('/meta-trends/movers', { params: { window } });
+  return res.data;
+}
+
+export async function syncAll() {
+  const res = await api.post('/sync/all');
+  return res.data;
+}
+
+export async function syncUntapped() {
+  const res = await api.post('/sync/untapped');
   return res.data;
 }
 ```
@@ -3436,175 +5219,6 @@ export default function SyncFreshnessBadge({ records, sources }: Props) {
     <span className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-medium ${classes}`}>
       {label}
     </span>
-  );
-}
-```
-
-## File: client/src/components/dashboard/TopArchetypesGrid.tsx
-```typescript
-import { Link } from 'react-router-dom';
-import TierBadge from '../common/TierBadge';
-
-const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
-
-interface FeaturedDeck {
-  id: string;
-  name: string;
-  tier: number | null;
-  power: number | null;
-  power_trend: number | null;
-  thumbnail_image: string | null;
-  win_rate: number | null;
-  play_rate: number | null;
-  cards: Array<{ name: string; image: string | null }>;
-}
-
-function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image: string | null }>; thumbnail?: string | null }) {
-  // Fallback: if no card data but we have a thumbnail, show it as a single centered card
-  if ((!cards || cards.length === 0) && thumbnail) {
-    return (
-      <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
-        <div className="absolute bottom-0" style={{ transformOrigin: 'bottom center', zIndex: 0 }}>
-          <img
-            src={thumbnail}
-            alt="Deck thumbnail"
-            className="rounded-md shadow-card border border-white/5"
-            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (!cards || cards.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-32 text-md-textMuted text-xs">
-        No card data
-      </div>
-    );
-  }
-
-  const count = Math.min(cards.length, 3);
-  const totalSpread = 40;
-  const angles = Array.from({ length: count }, (_, i) =>
-    count === 1 ? 0 : -totalSpread / 2 + (i * totalSpread) / (count - 1)
-  );
-  const xOffsets = Array.from({ length: count }, (_, i) =>
-    count === 1 ? 0 : -20 * (count - 1) / 2 + i * 20
-  );
-
-  return (
-    <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
-      {cards.slice(0, count).map((card, i) => (
-        <div
-          key={card.name}
-          className="absolute bottom-0 transition-transform duration-300 ease-out group-hover:scale-105"
-          style={{
-            transform: `translateX(${xOffsets[i]}px) rotate(${angles[i]}deg)`,
-            transformOrigin: 'bottom center',
-            zIndex: i,
-          }}
-          title={card.name}
-        >
-          {card.image ? (
-            <img
-              src={card.image}
-              alt={card.name}
-              className="rounded-md shadow-card border border-white/5"
-              style={{ width: '64px', height: '94px', objectFit: 'cover' }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          ) : (
-            <div
-              className="rounded-md border border-white/[0.07] bg-md-surfaceAlt flex items-center justify-center"
-              style={{ width: '64px', height: '94px' }}
-            >
-              <span className="text-md-gold text-lg font-bold">?</span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface TopArchetypesGridProps {
-  featured: FeaturedDeck[];
-}
-
-export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) {
-  if (featured.length === 0) return null;
-
-  return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {featured.map((deck, idx) => {
-          const tierColor = tierColors[deck.tier ?? 4];
-          return (
-            <Link
-              key={deck.id}
-              to={`/decks/${encodeURIComponent(deck.name)}`}
-              className="group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
-            >
-              {/* Tier-colored top accent line */}
-              <div
-                className="absolute top-0 inset-x-0 h-1"
-                style={{ background: `linear-gradient(90deg, transparent, ${tierColor}80, transparent)` }}
-              />
-
-              {/* Ambient glow — fades in on hover */}
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse at 50% 0%, ${tierColor}40 0%, transparent 68%)` }}
-              />
-
-              <div className="relative p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-md-surface/80 to-md-surface border border-md-border flex items-center justify-center text-sm font-bold text-md-textSecondary">
-                      {idx + 1}
-                    </span>
-                    <TierBadge tier={deck.tier} size="md" />
-                  </div>
-                  {typeof deck.power === 'number' && (
-                    <span className="text-xs font-mono text-md-textMuted bg-md-surface/60 border border-md-border/50 px-2.5 py-1 rounded-lg">
-                      {deck.power.toFixed(1)} PWR
-                    </span>
-                  )}
-                </div>
-
-                {/* Card fan */}
-                <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} />
-
-                {/* Name + stats */}
-                <div className="mt-5 text-center">
-                  <p className="font-bold text-md-text group-hover:text-md-gold transition-colors duration-300 truncate text-lg">
-                    {deck.name}
-                  </p>
-                  <div className="flex items-center justify-center gap-4 mt-3 text-sm tabular-nums">
-                    {typeof deck.win_rate === 'number' && (
-                      <span className="text-md-winRate font-semibold">
-                        {deck.win_rate.toFixed(1)}% WR
-                      </span>
-                    )}
-                    {typeof deck.play_rate === 'number' && (
-                      <span className="text-md-playRate font-medium">{deck.play_rate.toFixed(1)}% PR</span>
-                    )}
-                    {typeof deck.power_trend === 'number' && deck.power_trend !== 0 && (
-                      <span className={`font-semibold ${deck.power_trend > 0 ? 'text-md-winRate' : 'text-md-red'}`}>
-                        {deck.power_trend > 0 ? '+' : ''}{deck.power_trend.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 ```
@@ -3766,783 +5380,6 @@ export default function DecklistView({ mainDeck, extraDeck, deckArchetype }: Dec
           <hr className="border-md-border" />
           <CardSection label="Extra Deck" cards={extraDeck} />
         </>
-      )}
-    </div>
-  );
-}
-```
-
-## File: client/src/components/layout/Header.tsx
-```typescript
-import { Link } from 'react-router-dom';
-import { syncAll, syncUntapped } from '../../api/meta';
-import { useState } from 'react';
-
-export default function Header() {
-  const [syncing, setSyncing] = useState(false);
-  const [syncingUntapped, setSyncingUntapped] = useState(false);
-  const [syncMsg, setSyncMsg] = useState('');
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncMsg('');
-    try {
-      const res = await syncAll();
-      setSyncMsg(res.message || 'Done');
-      setTimeout(() => setSyncMsg(''), 4000);
-    } catch (e) {
-      console.error('Sync failed:', e);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleSyncUntapped = async () => {
-    setSyncingUntapped(true);
-    setSyncMsg('');
-    try {
-      const res = await syncUntapped();
-      setSyncMsg(res.message || 'Done');
-      setTimeout(() => setSyncMsg(''), 4000);
-    } catch (e) {
-      console.error('Untapped sync failed:', e);
-    } finally {
-      setSyncingUntapped(false);
-    }
-  };
-
-  return (
-    <header className="sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
-      <div className="flex items-center justify-between px-6 h-16">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold group-hover:from-md-gold/40 group-hover:to-md-gold/20 group-hover:shadow-glow-gold transition-all duration-300 transform group-hover:scale-105">
-            <span className="text-md-gold font-extrabold text-lg tracking-tighter">MD</span>
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent">
-              MD Meta
-            </h1>
-            <p className="text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
-              Master Duel Analysis
-            </p>
-          </div>
-        </Link>
-        <div className="flex items-center gap-3">
-          {syncMsg && (
-            <span className="text-xs text-md-green/90 max-w-[280px] truncate animate-fade-in font-semibold px-3 py-1.5 rounded-lg bg-md-green/10 border border-md-green/20">
-              {syncMsg}
-            </span>
-          )}
-          <button
-            onClick={handleSyncUntapped}
-            disabled={syncingUntapped || syncing}
-            title="Sync win/play rate data from untapped.gg"
-            className="px-4 py-2 text-xs font-bold rounded-xl transition-all duration-300 disabled:opacity-40
-              bg-gradient-to-br from-md-green/15 to-md-green/5 text-md-green border border-md-green/30 hover:from-md-green/25 hover:to-md-green/10 hover:border-md-green/50 hover:shadow-glow-gold group"
-          >
-            {syncingUntapped ? (
-              <span className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-md-green/30 border-t-md-green rounded-full animate-spin" />
-                Syncing...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Sync untapped.gg
-              </span>
-            )}
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing || syncingUntapped}
-            className="px-4 py-2 text-xs font-bold rounded-xl transition-all duration-300 disabled:opacity-40
-              bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue group"
-          >
-            {syncing ? (
-              <span className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
-                Syncing...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Sync All
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-    </header>
-  );
-}
-```
-
-## File: client/src/components/layout/Sidebar.tsx
-```typescript
-import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import clsx from 'clsx';
-import { getSyncStatus, type SyncRecord } from '../../api/sync';
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { to: '/cards', label: 'Card Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  { to: '/matchups', label: 'Matchups', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { to: '/ban-list', label: 'Ban List', icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' },
-  { to: '/trends', label: 'Meta Trends', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
-  { to: '/tournaments', label: 'Tournaments', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-  { to: '/deck-builder', label: 'Deck Builder', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-];
-
-const SOURCE_LABELS: Record<string, string> = {
-  ygoprodeck: 'YGOProDeck',
-  mdm_deck_types: 'MDM Decks',
-  mdm_tournaments: 'Tournaments',
-  untapped: 'Untapped.gg',
-};
-
-function formatAge(syncedAt: number): string {
-  const mins = Math.floor((Date.now() / 1000 - syncedAt) / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function dotColor(record: SyncRecord): string {
-  if (record.status === 'failed') return 'bg-md-red';
-  if (record.status === 'partial') return 'bg-md-orange';
-  const ageHrs = (Date.now() / 1000 - record.synced_at) / 3600;
-  if (ageHrs > 12) return 'bg-md-red';
-  if (ageHrs > 2) return 'bg-md-orange';
-  return 'bg-md-green animate-pulse';
-}
-
-export default function Sidebar() {
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-
-  useEffect(() => {
-    getSyncStatus().then(setSyncRecords).catch(() => {});
-  }, []);
-
-  return (
-    <nav className="w-56 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-5 px-3 flex flex-col gap-1 shadow-lg shadow-black/5">
-      <div className="mb-2 px-2">
-        <h3 className="text-xs font-bold text-md-textMuted uppercase tracking-widest">Navigation</h3>
-      </div>
-
-      {navItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.to === '/'}
-          className={({ isActive }) =>
-            clsx(
-              'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 group',
-              isActive
-                ? 'bg-gradient-to-r from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/20 shadow-md shadow-md-blue/10 nav-active'
-                : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/40'
-            )
-          }
-        >
-          <svg className="w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={item.icon} />
-          </svg>
-          <span className="group-hover:translate-x-1 transition-transform">{item.label}</span>
-        </NavLink>
-      ))}
-
-      <div className="mt-auto pt-4 border-t border-md-border/20">
-        <div className="px-3 py-3 rounded-xl bg-md-surface/40 border border-md-border/30 space-y-2">
-          <p className="text-[10px] font-bold text-md-textMuted uppercase tracking-widest mb-1">Data Sources</p>
-          {syncRecords.length === 0 ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-md-textMuted" />
-              <span className="text-[10px] text-md-textMuted">No sync data yet</span>
-            </div>
-          ) : (
-            syncRecords.map((r) => (
-              <div key={r.source} className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(r)}`} />
-                <div className="min-w-0">
-                  <span className="text-[10px] font-medium text-md-textSecondary">
-                    {SOURCE_LABELS[r.source] ?? r.source}
-                  </span>
-                  <span className="text-[10px] text-md-textMuted ml-1">
-                    {r.status === 'failed' ? '— failed' : formatAge(r.synced_at)}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </nav>
-  );
-}
-```
-
-## File: client/src/components/matchups/MetaAdvisor.tsx
-```typescript
-import { useState, useEffect } from 'react';
-import { getMatchupAdvisor, type AdvisorResult, type AdvisorOpponent } from '../../api/matchups';
-import LoadingSpinner from '../common/LoadingSpinner';
-import ErrorBanner from '../common/ErrorBanner';
-import axios from 'axios';
-
-function WinRatePill({ rate }: { rate: number }) {
-  const pct = (rate * 100).toFixed(1);
-  const cls = rate >= 0.55
-    ? 'bg-md-green/15 text-md-green border border-md-green/20'
-    : rate >= 0.45
-    ? 'bg-md-orange/15 text-md-orange border border-md-orange/20'
-    : 'bg-md-red/15 text-md-red border border-md-red/20';
-  return <span className={`px-2 py-0.5 rounded text-sm font-semibold ${cls}`}>{pct}%</span>;
-}
-
-interface Props {
-  decks: string[];
-}
-
-export default function MetaAdvisor({ decks }: Props) {
-  const [selectedDeck, setSelectedDeck] = useState('');
-  const [result, setResult] = useState<AdvisorResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (decks.length > 0 && !selectedDeck) setSelectedDeck(decks[0]);
-  }, [decks, selectedDeck]);
-
-  useEffect(() => {
-    if (!selectedDeck) return;
-    const controller = new AbortController();
-    setLoading(true);
-    getMatchupAdvisor(selectedDeck, controller.signal)
-      .then(setResult)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [selectedDeck]);
-
-  return (
-    <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-md-text">Meta Advisor</h3>
-        <span className="text-xs text-md-textMuted">Based on last 3 tournaments</span>
-      </div>
-
-      <div>
-        <label className="text-sm text-md-textMuted block mb-2">I'm playing:</label>
-        <select
-          value={selectedDeck}
-          onChange={(e) => setSelectedDeck(e.target.value)}
-          className="bg-md-bg border border-md-border rounded-lg px-3 py-2.5 text-sm text-md-text focus:outline-none focus:border-md-blue w-full max-w-sm"
-        >
-          {decks.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-      </div>
-
-      {error && <ErrorBanner message={error} onRetry={() => { setError(''); }} />}
-
-      {loading ? <LoadingSpinner /> : result && result.opponents.length > 0 ? (
-        <>
-          {/* Vulnerability banner */}
-          {(() => {
-            const dangerousOpponents = result.opponents.filter((o) => o.win_rate < 0.48 && o.field_pct >= 0.05);
-            const totalDangerPct = dangerousOpponents.reduce((s, o) => s + o.field_pct, 0);
-            if (dangerousOpponents.length === 0) return (
-              <div className="bg-md-green/5 border border-md-green/20 rounded-lg p-3 text-sm">
-                <span className="font-semibold text-md-green">Safe</span>
-                <span className="text-md-textMuted ml-2">No major threats in the current tournament field.</span>
-              </div>
-            );
-            return (
-              <div className="bg-md-orange/5 border border-md-orange/20 rounded-lg p-3 text-sm">
-                <span className="font-semibold text-md-orange">
-                  {totalDangerPct >= 0.2 ? 'Exposed' : 'Moderate'}
-                </span>
-                <span className="text-md-textMuted ml-2">
-                  {dangerousOpponents.length} predator{dangerousOpponents.length > 1 ? 's' : ''} in the field
-                  ({(totalDangerPct * 100).toFixed(0)}% combined):
-                  {' '}{dangerousOpponents.map((o) => o.opponent).join(', ')}
-                </span>
-              </div>
-            );
-          })()}
-
-          <div className="divide-y divide-md-border">
-            {result.opponents.map((o: AdvisorOpponent) => (
-              <div key={o.opponent} className="flex items-center justify-between py-2.5">
-                <div>
-                  <span className="text-sm font-medium">{o.opponent}</span>
-                  <span className="text-xs text-md-textMuted ml-2">
-                    {(o.field_pct * 100).toFixed(0)}% of field
-                  </span>
-                </div>
-                <WinRatePill rate={o.win_rate} />
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3">
-            <span className="text-sm font-semibold text-md-blue">
-              Expected weighted win rate: {(result.weighted_win_rate * 100).toFixed(1)}%
-            </span>
-            {result.opponents[0] && result.opponents[0].win_rate < 0.48 && (
-              <p className="text-xs text-md-textMuted mt-1">
-                Watch out for {result.opponents[0].opponent} ({(result.opponents[0].field_pct * 100).toFixed(0)}% of the field).
-              </p>
-            )}
-          </div>
-        </>
-      ) : result?.opponents.length === 0 ? (
-        <p className="text-sm text-md-textMuted">No tournament field data available yet. Run a sync to populate.</p>
-      ) : null}
-    </div>
-  );
-}
-```
-
-## File: client/src/index.css
-```css
-html {
-  font-size: 20.8px; /* 16px default × 1.3 — scales all rem-based Tailwind classes */
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-md-bg text-md-text min-h-screen antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    background-image: radial-gradient(at 15% 30%, rgba(74,142,255,0.03) 0%, transparent 40%),
-                      radial-gradient(at 85% 80%, rgba(212,175,55,0.03) 0%, transparent 40%);
-  }
-
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-md-bg rounded-full;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-md-border rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-md-borderLight;
-  }
-
-  /* Smooth scrolling */
-  * {
-    scrollbar-gutter: stable;
-  }
-}
-
-@layer components {
-  /* Enhanced card hover lift effect */
-  .card-hover {
-    @apply transition-all duration-300 ease-out;
-  }
-  .card-hover:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.12);
-  }
-
-  /* Featured card glassmorphism with enhanced effects */
-  .featured-card {
-    background: rgba(17,17,19,0.75);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.08);
-    @apply transition-all duration-300;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  }
-  .featured-card:hover {
-    border-color: rgba(255,255,255,0.18);
-    background: rgba(17,17,19,0.85);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  }
-
-  /* Enhanced glass surface effect */
-  .glass {
-    @apply bg-md-surface/80 backdrop-blur-xl border border-md-border/60;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
-  }
-  .glass-subtle {
-    @apply bg-md-surface/50 backdrop-blur-sm border border-md-border/40;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
-  }
-
-  /* Enhanced stat card styling */
-  .stat-card {
-    @apply bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/50 rounded-2xl p-6 relative overflow-hidden backdrop-blur-sm;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-  }
-  .stat-card::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
-    background: linear-gradient(135deg, rgba(74,142,255,0.05) 0%, transparent 50%);
-  }
-  .stat-card:hover::before {
-    @apply opacity-100;
-  }
-  .stat-card::after {
-    content: '';
-    @apply absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 pointer-events-none;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.2);
-  }
-  .stat-card:hover::after {
-    @apply opacity-100;
-  }
-
-  /* Enhanced tier glows */
-  .tier-glow-0 {
-    box-shadow: 0 0 24px rgba(255, 45, 85, 0.35);
-    @apply transition-all duration-300;
-  }
-  .tier-glow-0:hover {
-    box-shadow: 0 0 32px rgba(255, 45, 85, 0.5);
-  }
-
-  .tier-glow-1 {
-    box-shadow: 0 0 24px rgba(255, 140, 56, 0.35);
-    @apply transition-all duration-300;
-  }
-  .tier-glow-1:hover {
-    box-shadow: 0 0 32px rgba(255, 140, 56, 0.5);
-  }
-
-  .tier-glow-2 {
-    box-shadow: 0 0 24px rgba(255, 214, 10, 0.28);
-    @apply transition-all duration-300;
-  }
-  .tier-glow-2:hover {
-    box-shadow: 0 0 32px rgba(255, 214, 10, 0.4);
-  }
-
-  .tier-glow-3 {
-    box-shadow: 0 0 24px rgba(56, 201, 110, 0.28);
-    @apply transition-all duration-300;
-  }
-  .tier-glow-3:hover {
-    box-shadow: 0 0 32px rgba(56, 201, 110, 0.4);
-  }
-
-  /* Enhanced gold shimmer text */
-  .text-shimmer {
-    background: linear-gradient(135deg, #d4af37 0%, #f0d060 40%, #d4af37 60%, #b8962e 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    @apply animate-pulse-soft;
-  }
-
-  /* Enhanced accent border top */
-  .accent-top {
-    @apply relative;
-  }
-  .accent-top::after {
-    content: '';
-    @apply absolute top-0 left-6 right-6 h-px;
-    background: linear-gradient(90deg, transparent, rgba(74,142,255,0.4), transparent);
-  }
-
-  /* Enhanced sidebar active indicator */
-  .nav-active {
-    @apply relative;
-  }
-  .nav-active::before {
-    content: '';
-    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-md-blue/50 to-md-blue;
-    box-shadow: 0 0 8px rgba(74,142,255,0.5);
-  }
-
-  /* Loading skeleton animations */
-  .skeleton-pulse {
-    @apply animate-pulse bg-gradient-to-r from-md-surface/80 via-md-surface to-md-surface/80;
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s ease-in-out infinite;
-  }
-
-  @keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  /* Enhanced fade in animation */
-  .animate-fade-in {
-    animation: fadeInUp 0.4s ease-out forwards;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Soft pulse animation */
-  .animate-pulse-soft {
-    animation: pulseSoft 3s ease-in-out infinite;
-  }
-
-  /* Slide up animation */
-  .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-/* Custom utility classes */
-.gradient-border {
-  position: relative;
-  background: linear-gradient(135deg, rgba(74,142,255,0.1), rgba(212,175,55,0.1));
-  padding: 1px;
-  border-radius: 12px;
-}
-
-.gradient-border > * {
-  background: #111113;
-  border-radius: 11px;
-}
-```
-
-## File: client/src/pages/Dashboard.tsx
-```typescript
-import { useState, useEffect } from 'react';
-import { getTierList, getFeaturedDecks } from '../api/meta';
-import type { TierList } from '../types/meta';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorBanner from '../components/common/ErrorBanner';
-import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
-import TierListView from '../components/dashboard/TierListView';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
-const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
-
-interface FeaturedDeck {
-  id: string;
-  name: string;
-  tier: number | null;
-  power: number | null;
-  power_trend: number | null;
-  thumbnail_image: string | null;
-  win_rate: number | null;
-  play_rate: number | null;
-  cards: Array<{ name: string; image: string | null }>;
-}
-
-export default function Dashboard() {
-  const [tierList, setTierList] = useState<TierList | null>(null);
-  const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [data, feat] = await Promise.all([getTierList(), getFeaturedDecks()]);
-      setTierList(data);
-      setFeatured(feat);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load tier list');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  if (loading) return (
-    <div className="flex justify-center items-center py-20">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-md-blue/30 border-t-md-blue rounded-full animate-spin"></div>
-        <p className="text-md-textSecondary">Loading dashboard...</p>
-      </div>
-    </div>
-  );
-
-  if (error) return <ErrorBanner message={error} onRetry={load} />;
-  if (!tierList) return null;
-
-  const allDecks = [
-    ...tierList['0'].map(d => ({ ...d, tierKey: 0 })),
-    ...tierList['1'].map(d => ({ ...d, tierKey: 1 })),
-    ...tierList['2'].map(d => ({ ...d, tierKey: 2 })),
-    ...tierList['3'].map(d => ({ ...d, tierKey: 3 })),
-    ...tierList.rogue.map(d => ({ ...d, tierKey: 4 })),
-  ];
-
-  const popularityData = allDecks
-    .filter(d => d.power != null)
-    .sort((a, b) => (b.power || 0) - (a.power || 0))
-    .slice(0, 12)
-    .map(d => ({ name: d.name, power: d.power, tier: d.tierKey }));
-
-  return (
-    <div className="space-y-8 pb-8">
-      {/* Hero header with gradient */}
-      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMCIvPjxwYXRoIGQ9Ik0wIDBINzAgTDIwIDEwMFoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAxKSIgc3Ryb2tlLXdpZHRoPSIxcHgiLz48L3N2Zz4=')] opacity-5"></div>
-        <div className="relative">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
-            Meta Dashboard
-          </h1>
-          <p className="text-md-textSecondary text-base mt-2 max-w-2xl">
-            Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
-          </p>
-        </div>
-      </div>
-
-      {/* Featured Decks Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-gold to-md-orange"></div>
-            <h2 className="text-2xl font-bold text-md-text">Top Performing Decks</h2>
-          </div>
-          <span className="text-xs text-md-textMuted bg-md-surface px-3 py-1.5 rounded-full border border-md-border font-medium">
-            Last 30 days
-          </span>
-        </div>
-
-        <TopArchetypesGrid featured={featured} />
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: 'Tier 0', count: tierList['0'].length, color: 'text-tier-0', accent: '#ff2d55', desc: 'Dominant' },
-          { label: 'Tier 1', count: tierList['1'].length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Strong' },
-          { label: 'Tier 2', count: tierList['2'].length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Viable' },
-          { label: 'Total Tracked', count: allDecks.length, color: 'text-md-gold', accent: '#d4af37', desc: 'Decks' },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm group hover:shadow-lg hover:shadow-black/10 transition-all duration-300"
-          >
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${s.accent}10 0%, transparent 50%)` }}></div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-md-textSecondary uppercase tracking-widest font-bold">{s.label}</p>
-                <p className={`text-3xl font-extrabold mt-1 tabular-nums ${s.color}`}>{s.count}</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${s.accent}15` }}>
-                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: s.accent }}></div>
-              </div>
-            </div>
-            <p className="text-xs text-md-textMuted mt-3">{s.desc}</p>
-            <div className="absolute bottom-0 left-0 right-0 h-px opacity-30" style={{ background: `linear-gradient(90deg, transparent, ${s.accent}, transparent)` }} />
-          </div>
-        ))}
-      </div>
-
-      {/* Data sources */}
-      <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-5 border border-md-border/40">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-md-blue animate-pulse"></div>
-            <h3 className="text-sm font-bold text-md-text">Data Sources</h3>
-          </div>
-          <span className="text-xs text-md-textMuted bg-md-surface px-2.5 py-1 rounded-full border border-md-border">
-            Real-time
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 mt-4">
-          <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/50">
-            <span className="text-sm font-semibold text-md-text">MasterDuelMeta</span>
-          </div>
-          <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/50">
-            <span className="text-sm font-semibold text-md-text">YGOProDeck</span>
-          </div>
-          {allDecks.some(d => d.win_rate != null) ? (
-            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-md-winRate/10 to-md-winRate/5 border border-md-winRate/30">
-              <span className="text-sm font-bold text-md-winRate">untapped.gg</span>
-            </div>
-          ) : (
-            <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/30 opacity-50">
-              <span className="text-sm font-semibold text-md-textMuted">untapped.gg</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Tier List Section */}
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-blue to-md-purple"></div>
-          <h2 className="text-2xl font-bold text-md-text">Complete Tier List</h2>
-        </div>
-
-        <TierListView tierList={tierList} />
-      </div>
-
-      {/* Power Rankings Chart */}
-      {popularityData.length > 0 && (
-        <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-green to-md-blue"></div>
-            <h3 className="text-lg font-bold text-md-text">Power Rankings</h3>
-            <span className="text-xs text-md-textMuted ml-auto">Top 12 decks</span>
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={popularityData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  stroke="#a1a1aa"
-                  fontSize={12}
-                  width={110}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: '#eceef4' }}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{
-                    backgroundColor: '#18181b',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.65)',
-                    fontSize: 13,
-                  }}
-                  labelStyle={{ color: '#eceef4', fontWeight: 600 }}
-                  itemStyle={{ color: '#a1a1aa' }}
-                />
-                <Bar dataKey="power" radius={[0, 6, 6, 0]} barSize={20}>
-                  {popularityData.map((entry, i) => (
-                    <Cell key={i} fill={tierColors[entry.tier] || tierColors[4]} fillOpacity={0.85} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -5097,6 +5934,99 @@ export interface CardSearchResult {
 export type BanStatus = 'Banned' | 'Limited' | 'Semi-Limited' | null;
 ```
 
+## File: client/tailwind.config.ts
+```typescript
+import type { Config } from 'tailwindcss';
+
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        md: {
+          bg: '#09090b',
+          surface: '#111113',
+          surfaceAlt: '#18181b',
+          surfaceHover: '#1c1c1f',
+          border: '#27272a',
+          borderLight: '#3f3f46',
+          gold: '#d4af37',
+          goldMuted: '#b8962e',
+          blue: '#4a8eff',
+          blueLight: '#6ba3ff',
+          purple: '#8b6cff',
+          orange: '#ff9147',
+          green: '#34d399',
+          red: '#ff4d5e',
+          text: '#eceef4',
+          textSecondary: '#a1a1aa',
+          textMuted: '#71717a',
+          winRate: '#34d399',
+          playRate: '#94a3b8',
+        },
+        tier: {
+          '0': '#ff2d55',
+          '1': '#ff8c38',
+          '2': '#ffd60a',
+          '3': '#38c96e',
+          rogue: '#6b7694',
+        },
+        rarity: {
+          ur: '#8b6cff',
+          sr: '#ff9147',
+          r: '#4a8eff',
+          n: '#6b7694',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      spacing: {
+        'safe-t': 'env(safe-area-inset-top)',
+        'safe-b': 'env(safe-area-inset-bottom)',
+        'safe-l': 'env(safe-area-inset-left)',
+        'safe-r': 'env(safe-area-inset-right)',
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'hero-glow': 'radial-gradient(ellipse at 50% 0%, rgba(74,142,255,0.08) 0%, transparent 60%)',
+        'gold-glow': 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.06) 0%, transparent 50%)',
+      },
+      boxShadow: {
+        'glow-blue': '0 0 20px rgba(74,142,255,0.15)',
+        'glow-gold': '0 0 20px rgba(212,175,55,0.15)',
+        'glow-purple': '0 0 20px rgba(139,108,255,0.15)',
+        'card': '0 4px 24px rgba(0,0,0,0.4)',
+        'card-hover': '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.08)',
+        'card-featured': '0 0 0 1px rgba(255,255,255,0.06), 0 12px 48px rgba(0,0,0,0.7)',
+        'surface': '0 1px 3px rgba(0,0,0,0.3)',
+        'surface-lg': '0 4px 16px rgba(0,0,0,0.4)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        },
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+```
+
 ## File: server/src/routes/cards.ts
 ```typescript
 import { Router, Request, Response } from 'express';
@@ -5190,6 +6120,110 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.json(fetched);
     }
     res.json(card);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
+```
+
+## File: server/src/routes/metaTrends.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { getPool } from '../db/connection.js';
+import { queryAll } from '../utils/dbHelpers.js';
+import { MD_BANLIST_DATES } from '../config.js';
+
+const router = Router();
+
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    const snapshots = await queryAll(pool, `
+      SELECT deck_type_name, tier, power, pop_rank, snapshot_date
+      FROM meta_snapshots
+      ORDER BY snapshot_date DESC, deck_type_name
+    `);
+
+    const grouped: Record<string, any[]> = {};
+    for (const s of snapshots) {
+      if (!grouped[s.deck_type_name]) grouped[s.deck_type_name] = [];
+      grouped[s.deck_type_name].push(s);
+    }
+
+    res.json(grouped);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/movers', async (req: Request, res: Response) => {
+  try {
+    const window = Math.min(Math.max(parseInt(req.query.window as string) || 7, 1), 30);
+    const pool = getPool();
+
+    // Get the most recent snapshot date and the closest date >= window days ago
+    const rows = await queryAll(pool, `
+      WITH ranked AS (
+        SELECT
+          s.deck_type_name,
+          s.power,
+          s.tier,
+          s.pop_rank,
+          s.snapshot_date,
+          dt.thumbnail_image,
+          ROW_NUMBER() OVER (PARTITION BY s.deck_type_name ORDER BY s.snapshot_date DESC) AS rn_latest,
+          ROW_NUMBER() OVER (PARTITION BY s.deck_type_name ORDER BY ABS(
+            EXTRACT(EPOCH FROM (s.snapshot_date::date - (CURRENT_DATE - $1::int)::date))
+          )) AS rn_past
+        FROM meta_snapshots s
+        JOIN deck_types dt ON LOWER(s.deck_type_name) = LOWER(dt.name)
+        WHERE dt.tier IS NOT NULL AND dt.tier <= 3
+      ),
+      latest AS (SELECT * FROM ranked WHERE rn_latest = 1),
+      past   AS (SELECT * FROM ranked WHERE rn_past   = 1)
+      SELECT
+        l.deck_type_name,
+        l.tier,
+        l.thumbnail_image,
+        l.power          AS power_now,
+        p.power          AS power_then,
+        l.power - p.power AS power_delta,
+        l.snapshot_date  AS date_now,
+        p.snapshot_date  AS date_then
+      FROM latest l
+      JOIN past p ON LOWER(l.deck_type_name) = LOWER(p.deck_type_name)
+      WHERE l.snapshot_date != p.snapshot_date
+        AND l.power IS NOT NULL
+        AND p.power IS NOT NULL
+      ORDER BY power_delta DESC
+    `, [window]);
+
+    // Check if the window crosses any known banlist date
+    const today = new Date().toISOString().slice(0, 10);
+    const windowStart = new Date(Date.now() - window * 86400000).toISOString().slice(0, 10);
+    const postBanlist = MD_BANLIST_DATES.some((d) => d > windowStart && d <= today);
+
+    const risers = rows.slice(0, 5);
+    const fallers = [...rows].sort((a, b) => a.power_delta - b.power_delta).slice(0, 5);
+
+    res.json({ risers, fallers, post_banlist: postBanlist, window_days: window });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:deckName', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    const snapshots = await queryAll(pool, `
+      SELECT * FROM meta_snapshots
+      WHERE LOWER(deck_type_name) = LOWER($1)
+      ORDER BY snapshot_date ASC
+    `, [req.params.deckName]);
+
+    res.json(snapshots);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -5802,251 +6836,6 @@ function detectRPSCycles(
 }
 ```
 
-## File: server/src/services/matchupBlendService.ts
-```typescript
-import type { Pool } from '@neondatabase/serverless';
-import { queryAll } from '../utils/dbHelpers.js';
-import { computeEcosystemAnalysis } from './ecosystemAnalysisService.js';
-
-export interface MatchupSource {
-  rate: number;
-  n: number;
-}
-
-export interface BlendResult {
-  rate: number;
-  confidence: 'high' | 'medium' | 'low';
-}
-
-export interface MatrixCell {
-  rate: number;
-  n_untapped: number;
-  n_tournament: number;
-  confidence: 'high' | 'medium' | 'low';
-  inferred?: boolean;
-  inference_method?: string;
-}
-
-export interface FullMatrix {
-  decks: string[];
-  matrix: Record<string, Record<string, MatrixCell>>;
-}
-
-export function blendMatchupRates(
-  untapped: MatchupSource | null,
-  tournament: MatchupSource | null,
-  weights = { untapped: 0.7, tournament: 0.3 }
-): BlendResult {
-  if (!untapped && !tournament) return { rate: 0.5, confidence: 'low' };
-  if (!untapped) return { rate: tournament!.rate, confidence: tournament!.n >= 30 ? 'medium' : 'low' };
-  if (!tournament) return { rate: untapped.rate, confidence: untapped.n >= 100 ? 'high' : 'medium' };
-  const rate = untapped.rate * weights.untapped + tournament.rate * weights.tournament;
-  return { rate, confidence: 'high' };
-}
-
-/**
- * Build the full NxN matchup matrix for tier 1-3 decks, blending data sources.
- * When infer=true, fills gaps using ecosystem analysis (predator/prey relationships,
- * inverse matchups, and win-rate estimation).
- */
-export async function buildFullMatrix(pool: Pool, source: string = 'blended', infer: boolean = false): Promise<FullMatrix> {
-  const decks = (await queryAll(pool,
-    'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
-  ) as { name: string }[]).map((d) => d.name);
-
-  const rows = await queryAll(pool, 'SELECT * FROM matchup_sources') as {
-    deck_a: string; deck_b: string; source: string; win_rate: number; sample_size: number;
-  }[];
-
-  const legacyRows = await queryAll(pool, 'SELECT deck_a, deck_b, win_rate_a, sample_size FROM matchups') as {
-    deck_a: string; deck_b: string; win_rate_a: number; sample_size: number;
-  }[];
-
-  const matrix: Record<string, Record<string, MatrixCell>> = {};
-
-  for (const a of decks) {
-    matrix[a] = {};
-    for (const b of decks) {
-      if (a === b) continue;
-
-      const al = a.toLowerCase(), bl = b.toLowerCase();
-      const sourceRow  = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'untapped');
-      const tournRow   = rows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl && r.source === 'tournament');
-      const legacyRow  = legacyRows.find((r) => r.deck_a.toLowerCase() === al && r.deck_b.toLowerCase() === bl);
-
-      const untappedData = sourceRow
-        ? { rate: sourceRow.win_rate, n: sourceRow.sample_size ?? 0 }
-        : legacyRow
-        ? { rate: legacyRow.win_rate_a / 100, n: legacyRow.sample_size ?? 0 }
-        : null;
-      const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
-
-      if (!untappedData && !tournData) continue;
-      if (source === 'tournament' && !tournData) continue;
-      if (source === 'untapped' && !untappedData) continue;
-
-      const blend = source === 'tournament'
-        ? blendMatchupRates(null, tournData)
-        : source === 'untapped'
-        ? blendMatchupRates(untappedData, null)
-        : blendMatchupRates(untappedData, tournData);
-
-      matrix[a][b] = {
-        rate: blend.rate,
-        n_untapped: untappedData?.n ?? 0,
-        n_tournament: tournData?.n ?? 0,
-        confidence: blend.confidence,
-      };
-    }
-  }
-
-  // Fill gaps with inferred data from ecosystem analysis
-  if (infer) {
-    await fillMatrixGaps(pool, decks, matrix, source);
-  }
-
-  return { decks, matrix };
-}
-
-/**
- * Fill empty matrix cells using multiple inference strategies:
- * 1. Inverse: if B vs A exists, A vs B = 1 - B_vs_A
- * 2. Ecosystem predator/prey relationships (direct + tournament-correlated)
- * 3. Win-rate estimation from overall deck strength
- */
-async function fillMatrixGaps(
-  pool: Pool,
-  decks: string[],
-  matrix: Record<string, Record<string, MatrixCell>>,
-  source: string
-): Promise<void> {
-  // Pass 1: Inverse inference — if we have B vs A but not A vs B
-  for (const a of decks) {
-    for (const b of decks) {
-      if (a === b || matrix[a]?.[b]) continue;
-      const inverse = matrix[b]?.[a];
-      if (inverse) {
-        if (!matrix[a]) matrix[a] = {};
-        matrix[a][b] = {
-          rate: 1 - inverse.rate,
-          n_untapped: inverse.n_untapped,
-          n_tournament: inverse.n_tournament,
-          confidence: inverse.confidence,
-          inferred: true,
-          inference_method: 'inverse',
-        };
-      }
-    }
-  }
-
-  // Pass 2: Ecosystem relationships (predator/prey + anti-correlation)
-  try {
-    const ecosystem = await computeEcosystemAnalysis(pool, source);
-    const deckSet = new Set(decks.map((d) => d.toLowerCase()));
-
-    for (const profile of ecosystem.profiles) {
-      const aName = decks.find((d) => d.toLowerCase() === profile.deck.toLowerCase());
-      if (!aName) continue;
-
-      // From prey relationships: this deck beats prey
-      for (const rel of profile.prey) {
-        const bName = decks.find((d) => d.toLowerCase() === rel.prey.toLowerCase());
-        if (!bName || aName === bName) continue;
-        if (matrix[aName]?.[bName]) continue; // don't overwrite real data
-        if (!matrix[aName]) matrix[aName] = {};
-        matrix[aName][bName] = {
-          rate: rel.win_rate,
-          n_untapped: 0,
-          n_tournament: 0,
-          confidence: rel.confidence,
-          inferred: true,
-          inference_method: rel.mechanism === 'inferred' ? 'anti-correlation' : 'ecosystem',
-        };
-      }
-
-      // From predator relationships: this deck loses to predators
-      for (const rel of profile.predators) {
-        const bName = decks.find((d) => d.toLowerCase() === rel.predator.toLowerCase());
-        if (!bName || aName === bName) continue;
-        if (matrix[aName]?.[bName]) continue;
-        if (!matrix[aName]) matrix[aName] = {};
-        matrix[aName][bName] = {
-          rate: 1 - rel.win_rate, // flip: predator's win_rate is their advantage
-          n_untapped: 0,
-          n_tournament: 0,
-          confidence: rel.confidence,
-          inferred: true,
-          inference_method: rel.mechanism === 'inferred' ? 'anti-correlation' : 'ecosystem',
-        };
-      }
-    }
-
-    // Pass 3: Win-rate estimation for remaining gaps
-    // Estimate from overall win rates: E(A vs B) ≈ wrA / (wrA + wrB)
-    const wrMap = new Map<string, number>();
-    const powerMap = new Map<string, number>();
-    for (const p of ecosystem.profiles) {
-      if (p.win_rate != null) wrMap.set(p.deck.toLowerCase(), p.win_rate);
-      if (p.power != null) powerMap.set(p.deck.toLowerCase(), p.power);
-    }
-
-    for (const a of decks) {
-      for (const b of decks) {
-        if (a === b || matrix[a]?.[b]) continue;
-        const wrA = wrMap.get(a.toLowerCase());
-        const wrB = wrMap.get(b.toLowerCase());
-        if (wrA == null || wrB == null) continue;
-        // Bradley-Terry model: P(A beats B) ≈ wrA / (wrA + wrB)
-        const estimated = wrA / (wrA + wrB);
-        if (!matrix[a]) matrix[a] = {};
-        matrix[a][b] = {
-          rate: estimated,
-          n_untapped: 0,
-          n_tournament: 0,
-          confidence: 'low',
-          inferred: true,
-          inference_method: 'win-rate-model',
-        };
-      }
-    }
-
-    // Pass 4: Power-based estimation for decks with no win rate
-    // Use MDM power rating as a proxy: normalize to 0-1 range, apply Bradley-Terry
-    if (powerMap.size > 0) {
-      const maxPower = Math.max(...powerMap.values());
-      const minPower = Math.min(...powerMap.values());
-      const range = maxPower - minPower || 1;
-
-      for (const a of decks) {
-        for (const b of decks) {
-          if (a === b || matrix[a]?.[b]) continue;
-          // Use win rate if available, otherwise estimate from power
-          const sA = wrMap.get(a.toLowerCase()) ?? (powerMap.has(a.toLowerCase())
-            ? 0.45 + 0.10 * ((powerMap.get(a.toLowerCase())! - minPower) / range)
-            : null);
-          const sB = wrMap.get(b.toLowerCase()) ?? (powerMap.has(b.toLowerCase())
-            ? 0.45 + 0.10 * ((powerMap.get(b.toLowerCase())! - minPower) / range)
-            : null);
-          if (sA == null || sB == null) continue;
-          const estimated = sA / (sA + sB);
-          if (!matrix[a]) matrix[a] = {};
-          matrix[a][b] = {
-            rate: estimated,
-            n_untapped: 0,
-            n_tournament: 0,
-            confidence: 'low',
-            inferred: true,
-            inference_method: 'power-model',
-          };
-        }
-      }
-    }
-  } catch {
-    // If ecosystem computation fails, gaps remain unfilled
-  }
-}
-```
-
 ## File: server/src/services/syncStatusService.ts
 ```typescript
 import { getPool } from '../db/connection.js';
@@ -6078,6 +6867,25 @@ export async function getSyncStatus(): Promise<SyncRecord[]> {
 }
 ```
 
+## File: server/src/utils/dbHelpers.ts
+```typescript
+import type { Pool } from '@neondatabase/serverless';
+
+export async function queryAll<T = any>(pool: Pool, sql: string, params: any[] = []): Promise<T[]> {
+  const result = await pool.query(sql, params);
+  return result.rows;
+}
+
+export async function queryOne(pool: Pool, sql: string, params: any[] = []): Promise<any | null> {
+  const result = await pool.query(sql, params);
+  return result.rows[0] || null;
+}
+
+export async function run(pool: Pool, sql: string, params: any[] = []): Promise<void> {
+  await pool.query(sql, params);
+}
+```
+
 ## File: .claude/launch.json
 ```json
 {
@@ -6099,6 +6907,85 @@ export async function getSyncStatus(): Promise<SyncRecord[]> {
     }
   ]
 }
+```
+
+## File: client/package.json
+```json
+{
+  "name": "md-meta-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cap:sync": "npm run build && cap sync android",
+    "cap:open": "cap open android",
+    "android:dev": "npm run build && cap sync android && cap run android",
+    "android:build:debug": "npm run build && cap sync android && cd android && gradlew assembleDebug",
+    "android:build:release": "npm run build && cap sync android && cd android && gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.3.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
+    "axios": "^1.7.7",
+    "clsx": "^2.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.3",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.2",
+    "vitest": "^4.1.2"
+  }
+}
+```
+
+## File: client/src/api/client.ts
+```typescript
+import axios from 'axios';
+
+const baseURL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV
+    ? '/api'
+    : (() => {
+        throw new Error('VITE_API_URL must be set for production builds');
+      })());
+
+const api = axios.create({
+  baseURL,
+  timeout: 30000,
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const body = err.response?.data;
+    const message =
+      (typeof body === 'object' && body?.error) ||
+      (typeof body === 'string' && body.length < 200 && body) ||
+      err.message ||
+      'Network error';
+    return Promise.reject(new Error(message));
+  }
+);
+
+export default api;
 ```
 
 ## File: client/src/components/dashboard/TierListView.tsx
@@ -6249,6 +7136,454 @@ export default function TierListView({ tierList }: TierListViewProps) {
           </div>
         );
       })}
+    </div>
+  );
+}
+```
+
+## File: client/src/components/dashboard/TopArchetypesGrid.tsx
+```typescript
+import { Link } from 'react-router-dom';
+import TierBadge from '../common/TierBadge';
+
+const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
+
+interface FeaturedDeck {
+  id: string;
+  name: string;
+  tier: number | null;
+  power: number | null;
+  power_trend: number | null;
+  thumbnail_image: string | null;
+  win_rate: number | null;
+  play_rate: number | null;
+  cards: Array<{ name: string; image: string | null }>;
+}
+
+function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image: string | null }>; thumbnail?: string | null }) {
+  // Fallback: if no card data but we have a thumbnail, show it as a single centered card
+  if ((!cards || cards.length === 0) && thumbnail) {
+    return (
+      <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
+        <div className="absolute bottom-0" style={{ transformOrigin: 'bottom center', zIndex: 0 }}>
+          <img
+            src={thumbnail}
+            alt="Deck thumbnail"
+            className="rounded-md shadow-card border border-white/5"
+            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (!cards || cards.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-md-textMuted text-xs">
+        No card data
+      </div>
+    );
+  }
+
+  const count = Math.min(cards.length, 3);
+  const totalSpread = 40;
+  const angles = Array.from({ length: count }, (_, i) =>
+    count === 1 ? 0 : -totalSpread / 2 + (i * totalSpread) / (count - 1)
+  );
+  const xOffsets = Array.from({ length: count }, (_, i) =>
+    count === 1 ? 0 : -20 * (count - 1) / 2 + i * 20
+  );
+
+  return (
+    <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
+      {cards.slice(0, count).map((card, i) => (
+        <div
+          key={card.name}
+          className="absolute bottom-0 transition-transform duration-300 ease-out group-hover:scale-105"
+          style={{
+            transform: `translateX(${xOffsets[i]}px) rotate(${angles[i]}deg)`,
+            transformOrigin: 'bottom center',
+            zIndex: i,
+          }}
+          title={card.name}
+        >
+          {card.image ? (
+            <img
+              src={card.image}
+              alt={card.name}
+              className="rounded-md shadow-card border border-white/5"
+              style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <div
+              className="rounded-md border border-white/[0.07] bg-md-surfaceAlt flex items-center justify-center"
+              style={{ width: '64px', height: '94px' }}
+            >
+              <span className="text-md-gold text-lg font-bold">?</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface TopArchetypesGridProps {
+  featured: FeaturedDeck[];
+}
+
+export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) {
+  if (featured.length === 0) return null;
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+        {featured.map((deck, idx) => {
+          const tierColor = tierColors[deck.tier ?? 4];
+          return (
+            <Link
+              key={deck.id}
+              to={`/decks/${encodeURIComponent(deck.name)}`}
+              className="group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
+            >
+              {/* Tier-colored top accent line */}
+              <div
+                className="absolute top-0 inset-x-0 h-1"
+                style={{ background: `linear-gradient(90deg, transparent, ${tierColor}80, transparent)` }}
+              />
+
+              {/* Ambient glow — fades in on hover */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse at 50% 0%, ${tierColor}40 0%, transparent 68%)` }}
+              />
+
+              <div className="relative p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-md-surface/80 to-md-surface border border-md-border flex items-center justify-center text-sm font-bold text-md-textSecondary">
+                      {idx + 1}
+                    </span>
+                    <TierBadge tier={deck.tier} size="md" />
+                  </div>
+                  {typeof deck.power === 'number' && (
+                    <span className="text-xs font-mono text-md-textMuted bg-md-surface/60 border border-md-border/50 px-2.5 py-1 rounded-lg">
+                      {deck.power.toFixed(1)} PWR
+                    </span>
+                  )}
+                </div>
+
+                {/* Card fan */}
+                <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} />
+
+                {/* Name + stats */}
+                <div className="mt-5 text-center">
+                  <p className="font-bold text-md-text group-hover:text-md-gold transition-colors duration-300 truncate text-lg">
+                    {deck.name}
+                  </p>
+                  <div className="flex items-center justify-center gap-4 mt-3 text-sm tabular-nums">
+                    {typeof deck.win_rate === 'number' && (
+                      <span className="text-md-winRate font-semibold">
+                        {deck.win_rate.toFixed(1)}% WR
+                      </span>
+                    )}
+                    {typeof deck.play_rate === 'number' && (
+                      <span className="text-md-playRate font-medium">{deck.play_rate.toFixed(1)}% PR</span>
+                    )}
+                    {typeof deck.power_trend === 'number' && deck.power_trend !== 0 && (
+                      <span className={`font-semibold ${deck.power_trend > 0 ? 'text-md-winRate' : 'text-md-red'}`}>
+                        {deck.power_trend > 0 ? '+' : ''}{deck.power_trend.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+```
+
+## File: client/src/components/matchups/MetaAdvisor.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import {
+  getMatchupAdvisor, getLadderEv,
+  type AdvisorResult, type AdvisorOpponent, type LadderEvResult,
+} from '../../api/matchups';
+import LoadingSpinner from '../common/LoadingSpinner';
+import ErrorBanner from '../common/ErrorBanner';
+import DataValue from '../common/DataValue';
+import TierBadge from '../common/TierBadge';
+import axios from 'axios';
+import clsx from 'clsx';
+
+function WinRatePill({ rate, confidence }: { rate: number; confidence?: 'high' | 'medium' | 'low' }) {
+  const cls = rate >= 0.55
+    ? 'bg-md-green/15 border border-md-green/20'
+    : rate >= 0.45
+    ? 'bg-md-orange/15 border border-md-orange/20'
+    : 'bg-md-red/15 border border-md-red/20';
+  return (
+    <span className={`px-2 py-0.5 rounded text-sm ${cls}`}>
+      <DataValue value={rate} format="percent" confidence={confidence ?? 'high'} />
+    </span>
+  );
+}
+
+function EvBadge({ ev, lowConf }: { ev: number; lowConf: number }) {
+  const pct = Math.round(ev * 100);
+  const color = ev >= 0.54 ? 'text-md-green' : ev >= 0.48 ? 'text-md-orange' : 'text-md-red';
+  return (
+    <span className={clsx('font-bold tabular-nums text-base', color)} title={lowConf > 0.4 ? 'Low-confidence estimate' : undefined}>
+      {pct}%{lowConf > 0.4 && <span className="text-xs ml-0.5 opacity-60">◆</span>}
+    </span>
+  );
+}
+
+interface Props {
+  decks: string[];
+  includePersonal?: boolean;
+  onTogglePersonal?: () => void;
+}
+
+export default function MetaAdvisor({ decks, includePersonal = false, onTogglePersonal }: Props) {
+  const [mode, setMode] = useState<'ev' | 'deck'>('ev');
+  const [selectedDeck, setSelectedDeck] = useState('');
+  const [advisorResult, setAdvisorResult] = useState<AdvisorResult | null>(null);
+  const [evResults, setEvResults] = useState<LadderEvResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [tierFilter, setTierFilter] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (decks.length > 0 && !selectedDeck) setSelectedDeck(decks[0]);
+  }, [decks, selectedDeck]);
+
+  // Load EV ranking
+  useEffect(() => {
+    if (mode !== 'ev') return;
+    const controller = new AbortController();
+    setLoading(true);
+    getLadderEv(controller.signal, includePersonal)
+      .then(setEvResults)
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [mode, includePersonal]);
+
+  // Load per-deck advisor
+  useEffect(() => {
+    if (mode !== 'deck' || !selectedDeck) return;
+    const controller = new AbortController();
+    setLoading(true);
+    getMatchupAdvisor(selectedDeck, controller.signal, includePersonal)
+      .then(setAdvisorResult)
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [mode, selectedDeck, includePersonal]);
+
+  const filteredEv = tierFilter != null
+    ? evResults.filter((r) => r.tier != null && r.tier <= tierFilter)
+    : evResults;
+
+  return (
+    <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMode('ev')}
+            className={clsx('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors', {
+              'bg-md-blue/15 text-md-blue border-md-blue/30': mode === 'ev',
+              'text-md-textMuted border-md-border hover:border-md-borderLight': mode !== 'ev',
+            })}
+          >
+            EV Ranking
+          </button>
+          <button
+            onClick={() => setMode('deck')}
+            className={clsx('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors', {
+              'bg-md-blue/15 text-md-blue border-md-blue/30': mode === 'deck',
+              'text-md-textMuted border-md-border hover:border-md-borderLight': mode !== 'deck',
+            })}
+          >
+            By Deck
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {onTogglePersonal && (
+            <button
+              onClick={onTogglePersonal}
+              className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors', {
+                'bg-md-gold/15 text-md-gold border-md-gold/30': includePersonal,
+                'text-md-textMuted border-md-border hover:border-md-borderLight': !includePersonal,
+              })}
+              title="Blend your personal game results (requires 10+ games per matchup)"
+            >
+              My Games
+            </button>
+          )}
+          <span className="text-xs text-md-textMuted">Based on meta + blended rates</span>
+        </div>
+      </div>
+
+      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+
+      {/* EV Ranking mode */}
+      {mode === 'ev' && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-md-textMuted">Filter:</span>
+            {([null, 1, 2, 3] as const).map((t) => (
+              <button
+                key={String(t)}
+                onClick={() => setTierFilter(t)}
+                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors', {
+                  'bg-md-blue/15 text-md-blue border-md-blue/30': tierFilter === t,
+                  'text-md-textMuted border-md-border hover:border-md-borderLight': tierFilter !== t,
+                })}
+              >
+                {t == null ? 'All' : `≤T${t}`}
+              </button>
+            ))}
+          </div>
+
+          {loading ? <LoadingSpinner /> : filteredEv.length > 0 ? (
+            <div className="space-y-2">
+              {filteredEv.slice(0, 8).map((r, i) => (
+                <div
+                  key={r.deck}
+                  className="border border-md-border/50 rounded-xl p-3 hover:border-md-border transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-md-textMuted tabular-nums w-5 shrink-0">#{i + 1}</span>
+                      <TierBadge tier={r.tier} size="sm" />
+                      <span className="text-sm font-semibold truncate">{r.deck}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-md-textMuted">{Math.round(r.coverage * 100)}% cov.</span>
+                      <EvBadge ev={r.ev} lowConf={r.low_confidence_fraction} />
+                    </div>
+                  </div>
+
+                  {(r.top_good_matchups.length > 0 || r.top_bad_matchups.length > 0) && (
+                    <div className="mt-2 flex gap-4 text-xs">
+                      {r.top_good_matchups.length > 0 && (
+                        <div className="flex gap-1 flex-wrap">
+                          {r.top_good_matchups.map((m) => (
+                            <span key={m.opponent}
+                              className="px-1.5 py-0.5 rounded bg-md-green/10 text-md-green border border-md-green/15"
+                              title={`${Math.round(m.win_rate * 100)}% vs ${m.opponent}${m.inferred ? ' (inferred)' : ''}`}
+                            >
+                              {m.opponent.split(' ')[0]} {Math.round(m.win_rate * 100)}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {r.top_bad_matchups.length > 0 && (
+                        <div className="flex gap-1 flex-wrap ml-auto">
+                          {r.top_bad_matchups.map((m) => (
+                            <span key={m.opponent}
+                              className="px-1.5 py-0.5 rounded bg-md-red/10 text-md-red border border-md-red/15"
+                              title={`${Math.round(m.win_rate * 100)}% vs ${m.opponent}${m.inferred ? ' (inferred)' : ''}`}
+                            >
+                              {m.opponent.split(' ')[0]} {Math.round(m.win_rate * 100)}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-md-textMuted pt-1">
+                EV = weighted win rate across the tier 1–3 field by play rate. ◆ = low-confidence estimate.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-md-textMuted">No matchup data available. Run a sync to populate.</p>
+          )}
+        </>
+      )}
+
+      {/* By Deck mode */}
+      {mode === 'deck' && (
+        <>
+          <div>
+            <label className="text-sm text-md-textMuted block mb-2">I'm playing:</label>
+            <select
+              value={selectedDeck}
+              onChange={(e) => setSelectedDeck(e.target.value)}
+              className="bg-md-bg border border-md-border rounded-lg px-3 py-2.5 text-sm text-md-text focus:outline-none focus:border-md-blue w-full max-w-sm"
+            >
+              {decks.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {loading ? <LoadingSpinner /> : advisorResult && advisorResult.opponents.length > 0 ? (
+            <>
+              {(() => {
+                const dangerous = advisorResult.opponents.filter((o) => o.win_rate < 0.48 && o.field_pct >= 0.05);
+                const dangerPct = dangerous.reduce((s, o) => s + o.field_pct, 0);
+                if (dangerous.length === 0) return (
+                  <div className="bg-md-green/5 border border-md-green/20 rounded-lg p-3 text-sm">
+                    <span className="font-semibold text-md-green">Safe</span>
+                    <span className="text-md-textMuted ml-2">No major threats in the current tournament field.</span>
+                  </div>
+                );
+                return (
+                  <div className="bg-md-orange/5 border border-md-orange/20 rounded-lg p-3 text-sm">
+                    <span className="font-semibold text-md-orange">
+                      {dangerPct >= 0.2 ? 'Exposed' : 'Moderate'}
+                    </span>
+                    <span className="text-md-textMuted ml-2">
+                      {dangerous.length} predator{dangerous.length > 1 ? 's' : ''} in the field
+                      ({(dangerPct * 100).toFixed(0)}% combined):
+                      {' '}{dangerous.map((o) => o.opponent).join(', ')}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              <div className="divide-y divide-md-border">
+                {advisorResult.opponents.map((o: AdvisorOpponent) => (
+                  <div key={o.opponent} className="flex items-center justify-between py-2.5">
+                    <div>
+                      <span className="text-sm font-medium">{o.opponent}</span>
+                      <span className="text-xs text-md-textMuted ml-2">
+                        {(o.field_pct * 100).toFixed(0)}% of field
+                      </span>
+                    </div>
+                    <WinRatePill rate={o.win_rate} confidence={o.confidence} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3">
+                <span className="text-sm font-semibold text-md-blue">
+                  Expected weighted win rate: {(advisorResult.weighted_win_rate * 100).toFixed(1)}%
+                </span>
+                {advisorResult.opponents[0] && advisorResult.opponents[0].win_rate < 0.48 && (
+                  <p className="text-xs text-md-textMuted mt-1">
+                    Watch out for {advisorResult.opponents[0].opponent} ({(advisorResult.opponents[0].field_pct * 100).toFixed(0)}% of the field).
+                  </p>
+                )}
+              </div>
+            </>
+          ) : advisorResult?.opponents.length === 0 ? (
+            <p className="text-sm text-md-textMuted">No tournament field data available yet. Run a sync to populate.</p>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -7010,43 +8345,142 @@ export interface DeckProfile extends DeckType {
 }
 ```
 
-## File: server/src/db/connection.ts
+## File: server/src/index.ts
 ```typescript
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import cron from 'node-cron';
+import { config } from './config.js';
+import 'dotenv/config';
+import { initDb, getPool } from './db/connection.js';
+import { queryOne } from './utils/dbHelpers.js';
+import cardsRouter from './routes/cards.js';
+import tierListRouter from './routes/tierList.js';
+import decksRouter from './routes/decks.js';
+import matchupsRouter from './routes/matchups.js';
+import banListRouter from './routes/banList.js';
+import metaTrendsRouter from './routes/metaTrends.js';
+import tournamentsRouter from './routes/tournaments.js';
+import deckBuilderRouter from './routes/deckBuilder.js';
+import syncRouter from './routes/sync.js';
+import personalGamesRouter from './routes/personalGames.js';
+import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped } from './services/syncService.js';
+import { updateTiersFromScrape } from './services/tierListService.js';
+import { recordSync } from './services/syncStatusService.js';
 
-// Required for Node.js environments (Render, local dev)
-neonConfig.webSocketConstructor = ws;
+async function main() {
+  // Init DB first
+  await initDb();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+  const app = express();
 
-let pool: Pool | null = null;
+  app.use(helmet({ crossOriginResourcePolicy: false }));
 
-export function getPool(): Pool {
-  if (!pool) {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable is required');
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://localhost', 'capacitor://localhost'];
+  app.use(cors({ origin: allowedOrigins }));
+
+  app.use(express.json());
+
+  // Routes
+  app.use('/api/cards', cardsRouter);
+  app.use('/api/tier-list', tierListRouter);
+  app.use('/api/decks', decksRouter);
+  app.use('/api/matchups', matchupsRouter);
+  app.use('/api/ban-list', banListRouter);
+  app.use('/api/meta-trends', metaTrendsRouter);
+  app.use('/api/tournaments', tournamentsRouter);
+  app.use('/api/deck-builder', deckBuilderRouter);
+  app.use('/api/sync', syncRouter);
+  app.use('/api/personal-games', personalGamesRouter);
+
+  // Health check
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // Initial data sync on startup (non-blocking)
+  (async () => {
+    try {
+      const pool = getPool();
+      const cardCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM cards');
+      if (!cardCount || cardCount.c === 0) {
+        console.log('[Startup] No cards found, running initial sync...');
+        await syncCards();
+        await syncArchetypes();
+        console.log('[Startup] Card sync complete');
+      }
+
+      const dtCount = await queryOne(pool, 'SELECT COUNT(*) as c FROM deck_types');
+      if (!dtCount || dtCount.c === 0) {
+        console.log('[Startup] No deck types found, syncing meta data...');
+        await syncDeckTypes();
+        await syncTopDecks();
+        await syncTournaments();
+        await updateTiersFromScrape();
+        console.log('[Startup] Meta sync complete');
+      }
+    } catch (err) {
+      console.error('[Startup] Initial sync failed:', err);
     }
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 5,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-    });
-  }
-  return pool;
+  })();
+
+  // Scheduled syncs — per-source schedules
+  cron.schedule('0 */6 * * *', async () => {
+    console.log('[Cron] Running deck-type sync...');
+    try {
+      await syncDeckTypes();
+      await syncTopDecks();
+      await updateTiersFromScrape();
+      await recordSync('mdm_deck_types', 'success');
+    } catch (err: any) {
+      await recordSync('mdm_deck_types', 'failed', String(err?.message || err));
+      console.error('[Cron] Deck-type sync failed:', err);
+    }
+  });
+
+  cron.schedule('0 */2 * * *', async () => {
+    console.log('[Cron] Running tournament sync...');
+    try {
+      await syncTournaments();
+      await recordSync('mdm_tournaments', 'success');
+    } catch (err: any) {
+      await recordSync('mdm_tournaments', 'failed', String(err?.message || err));
+      console.error('[Cron] Tournament sync failed:', err);
+    }
+  });
+
+  cron.schedule('0 */3 * * *', async () => {
+    console.log('[Cron] Running untapped sync...');
+    try {
+      await syncUntapped();
+      await recordSync('untapped', 'success');
+    } catch (err: any) {
+      await recordSync('untapped', 'failed', String(err?.message || err));
+      console.error('[Cron] Untapped sync failed:', err);
+    }
+  });
+
+  cron.schedule('0 4 * * *', async () => {
+    console.log('[Cron] Running card sync...');
+    try {
+      await syncCards();
+      await syncArchetypes();
+      await recordSync('ygoprodeck', 'success');
+    } catch (err: any) {
+      await recordSync('ygoprodeck', 'failed', String(err?.message || err));
+      console.error('[Cron] Card sync failed:', err);
+    }
+  });
+
+  app.listen(config.port, () => {
+    console.log(`[Server] Running on http://localhost:${config.port}`);
+  });
 }
 
-export async function initDb(): Promise<void> {
-  const p = getPool();
-  const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-  await p.query(schema);
-  console.log('[DB] Schema initialized');
-}
+main().catch(console.error);
 ```
 
 ## File: server/src/routes/tournaments.ts
@@ -7766,61 +9200,472 @@ export async function scrapeArchetypeStats(
 }
 ```
 
-## File: client/src/api/matchups.ts
+## File: client/src/App.tsx
 ```typescript
-import api from './client';
-import type { Matchup, EcosystemAnalysis, DeckEcosystemResponse } from '../types/meta';
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import SyncStatusBanner from './components/common/SyncStatusBanner';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import Dashboard from './pages/Dashboard';
+import DeckProfile from './pages/DeckProfile';
+import CardSearch from './pages/CardSearch';
+import Matchups from './pages/Matchups';
+import BanList from './pages/BanList';
+import MetaTrends from './pages/MetaTrends';
+import Tournaments from './pages/Tournaments';
+import DeckBuilder from './pages/DeckBuilder';
+import Admin from './pages/Admin';
 
-export interface MatchupMatrixCell {
-  rate: number;
-  n_untapped: number;
-  n_tournament: number;
-  confidence: 'high' | 'medium' | 'low';
-  inferred?: boolean;
-  inference_method?: string;
+export default function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-md-bg">
+        <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
+        <SyncStatusBanner />
+        <div className="flex">
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <main className="flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow">
+            <div className="max-w-[1400px] mx-auto animate-fade-in">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/decks/:name" element={<DeckProfile />} />
+                  <Route path="/cards" element={<CardSearch />} />
+                  <Route path="/matchups" element={<Matchups />} />
+                  <Route path="/ban-list" element={<BanList />} />
+                  <Route path="/trends" element={<MetaTrends />} />
+                  <Route path="/tournaments" element={<Tournaments />} />
+                  <Route path="/deck-builder" element={<DeckBuilder />} />
+                  <Route path="/admin" element={<Admin />} />
+                </Routes>
+              </ErrorBoundary>
+            </div>
+          </main>
+        </div>
+      </div>
+    </BrowserRouter>
+  );
+}
+```
+
+## File: client/src/components/layout/Header.tsx
+```typescript
+import { Link } from 'react-router-dom';
+import { syncAll } from '../../api/meta';
+import { useState } from 'react';
+
+export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const res = await syncAll();
+      setSyncMsg(res.message || 'Done');
+      setTimeout(() => setSyncMsg(''), 4000);
+    } catch (e) {
+      console.error('Sync failed:', e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
+      <div className="flex items-center justify-between px-4 md:px-6 h-16">
+        <button onClick={onToggleSidebar} className="md:hidden p-2 -ml-2 mr-1 text-md-textSecondary hover:text-md-text rounded-lg">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold group-hover:from-md-gold/40 group-hover:to-md-gold/20 group-hover:shadow-glow-gold transition-all duration-300 transform group-hover:scale-105">
+            <span className="text-md-gold font-extrabold text-lg tracking-tighter">MD</span>
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent">
+              MD Meta
+            </h1>
+            <p className="hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
+              Master Duel Analysis
+            </p>
+          </div>
+        </Link>
+        <div className="flex items-center gap-2">
+          {syncMsg && (
+            <span className="hidden sm:block text-xs text-md-green/90 max-w-[200px] truncate animate-fade-in font-semibold px-3 py-1.5 rounded-lg bg-md-green/10 border border-md-green/20">
+              {syncMsg}
+            </span>
+          )}
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            title="Sync all data sources including untapped.gg"
+            className="flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl transition-all duration-300 disabled:opacity-40
+              bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue"
+          >
+            {syncing ? (
+              <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+
+## File: client/src/components/layout/Sidebar.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import clsx from 'clsx';
+import { getSyncStatus, type SyncRecord } from '../../api/sync';
+
+const navItems = [
+  { to: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { to: '/cards', label: 'Card Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+  { to: '/matchups', label: 'Matchups', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { to: '/ban-list', label: 'Ban List', icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' },
+  { to: '/trends', label: 'Meta Trends', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
+  { to: '/tournaments', label: 'Tournaments', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+  { to: '/deck-builder', label: 'Deck Builder', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+];
+
+const SOURCE_LABELS: Record<string, string> = {
+  ygoprodeck: 'YGOProDeck',
+  mdm_deck_types: 'MDM Decks',
+  mdm_tournaments: 'Tournaments',
+  untapped: 'Untapped.gg',
+};
+
+function formatAge(syncedAt: number): string {
+  const mins = Math.floor((Date.now() / 1000 - syncedAt) / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export interface MatchupMatrix {
-  decks: string[];
-  matrix: Record<string, Record<string, MatchupMatrixCell>>;
+function dotColor(record: SyncRecord): string {
+  if (record.status === 'failed') return 'bg-md-red';
+  if (record.status === 'partial') return 'bg-md-orange';
+  const ageHrs = (Date.now() / 1000 - record.synced_at) / 3600;
+  if (ageHrs > 12) return 'bg-md-red';
+  if (ageHrs > 2) return 'bg-md-orange';
+  return 'bg-md-green animate-pulse';
 }
 
-export interface AdvisorOpponent {
-  opponent: string;
-  field_pct: number;
-  win_rate: number;
-  confidence: 'high' | 'medium' | 'low';
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
+
+  useEffect(() => {
+    getSyncStatus().then(setSyncRecords).catch(() => {});
+  }, []);
+
+  return (
+    <nav className={clsx(
+      'w-40 min-h-[calc(100vh-4rem)] border-r border-md-border/30 bg-gradient-to-b from-md-surface/50 to-md-surface/30 py-4 px-2 flex flex-col gap-0.5 shadow-lg shadow-black/5',
+      'fixed top-[4rem] left-0 z-50 overflow-y-auto transition-transform duration-300 ease-in-out',
+      'md:static md:translate-x-0',
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    )}>
+      <div className="mb-2 px-2">
+        <h3 className="text-xs font-bold text-md-textMuted uppercase tracking-widest">Navigation</h3>
+      </div>
+
+      {navItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === '/'}
+          onClick={onClose}
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group',
+              isActive
+                ? 'bg-gradient-to-r from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/20 shadow-md shadow-md-blue/10 nav-active'
+                : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/40'
+            )
+          }
+        >
+          <svg className="w-4 h-4 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={item.icon} />
+          </svg>
+          <span className="group-hover:translate-x-1 transition-transform">{item.label}</span>
+        </NavLink>
+      ))}
+
+      <div className="mt-auto pt-4 border-t border-md-border/20">
+        <div className="px-3 py-3 rounded-xl bg-md-surface/40 border border-md-border/30 space-y-2">
+          <p className="text-[10px] font-bold text-md-textMuted uppercase tracking-widest mb-1">Data Sources</p>
+          {syncRecords.length === 0 ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-md-textMuted" />
+              <span className="text-[10px] text-md-textMuted">No sync data yet</span>
+            </div>
+          ) : (
+            syncRecords.map((r) => (
+              <div key={r.source} className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor(r)}`} />
+                <div className="min-w-0">
+                  <span className="text-[10px] font-medium text-md-textSecondary">
+                    {SOURCE_LABELS[r.source] ?? r.source}
+                  </span>
+                  <span className="text-[10px] text-md-textMuted ml-1">
+                    {r.status === 'failed' ? '— failed' : formatAge(r.synced_at)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
+```
+
+## File: client/src/index.css
+```css
+html {
+  font-size: 20.8px; /* 16px default × 1.3 — scales all rem-based Tailwind classes */
+  height: 100%;
+  background-color: #09090b;
 }
 
-export interface AdvisorResult {
-  deck: string;
-  opponents: AdvisorOpponent[];
-  weighted_win_rate: number;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-md-bg text-md-text min-h-screen antialiased overflow-x-hidden;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    background-image: radial-gradient(at 15% 30%, rgba(74,142,255,0.03) 0%, transparent 40%),
+                      radial-gradient(at 85% 80%, rgba(212,175,55,0.03) 0%, transparent 40%);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-md-bg rounded-full;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-md-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-md-borderLight;
+  }
+
+  /* Smooth scrolling */
+  * {
+    scrollbar-gutter: stable;
+  }
 }
 
-export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<Matchup[]> {
-  const res = await api.get('/matchups', { params: deck ? { deck } : {}, signal });
-  return res.data;
+@layer components {
+  /* Enhanced card hover lift effect */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+  .card-hover:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.12);
+  }
+
+  /* Featured card glassmorphism with enhanced effects */
+  .featured-card {
+    background: rgba(17,17,19,0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    @apply transition-all duration-300;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .featured-card:hover {
+    border-color: rgba(255,255,255,0.18);
+    background: rgba(17,17,19,0.85);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  }
+
+  /* Enhanced glass surface effect */
+  .glass {
+    @apply bg-md-surface/80 backdrop-blur-xl border border-md-border/60;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  }
+  .glass-subtle {
+    @apply bg-md-surface/50 backdrop-blur-sm border border-md-border/40;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  }
+
+  /* Enhanced stat card styling */
+  .stat-card {
+    @apply bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/50 rounded-2xl p-6 relative overflow-hidden backdrop-blur-sm;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  }
+  .stat-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background: linear-gradient(135deg, rgba(74,142,255,0.05) 0%, transparent 50%);
+  }
+  .stat-card:hover::before {
+    @apply opacity-100;
+  }
+  .stat-card::after {
+    content: '';
+    @apply absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 pointer-events-none;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .stat-card:hover::after {
+    @apply opacity-100;
+  }
+
+  /* Enhanced tier glows */
+  .tier-glow-0 {
+    box-shadow: 0 0 24px rgba(255, 45, 85, 0.35);
+    @apply transition-all duration-300;
+  }
+  .tier-glow-0:hover {
+    box-shadow: 0 0 32px rgba(255, 45, 85, 0.5);
+  }
+
+  .tier-glow-1 {
+    box-shadow: 0 0 24px rgba(255, 140, 56, 0.35);
+    @apply transition-all duration-300;
+  }
+  .tier-glow-1:hover {
+    box-shadow: 0 0 32px rgba(255, 140, 56, 0.5);
+  }
+
+  .tier-glow-2 {
+    box-shadow: 0 0 24px rgba(255, 214, 10, 0.28);
+    @apply transition-all duration-300;
+  }
+  .tier-glow-2:hover {
+    box-shadow: 0 0 32px rgba(255, 214, 10, 0.4);
+  }
+
+  .tier-glow-3 {
+    box-shadow: 0 0 24px rgba(56, 201, 110, 0.28);
+    @apply transition-all duration-300;
+  }
+  .tier-glow-3:hover {
+    box-shadow: 0 0 32px rgba(56, 201, 110, 0.4);
+  }
+
+  /* Enhanced gold shimmer text */
+  .text-shimmer {
+    background: linear-gradient(135deg, #d4af37 0%, #f0d060 40%, #d4af37 60%, #b8962e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    @apply animate-pulse-soft;
+  }
+
+  /* Enhanced accent border top */
+  .accent-top {
+    @apply relative;
+  }
+  .accent-top::after {
+    content: '';
+    @apply absolute top-0 left-6 right-6 h-px;
+    background: linear-gradient(90deg, transparent, rgba(74,142,255,0.4), transparent);
+  }
+
+  /* Enhanced sidebar active indicator */
+  .nav-active {
+    @apply relative;
+  }
+  .nav-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-md-blue/50 to-md-blue;
+    box-shadow: 0 0 8px rgba(74,142,255,0.5);
+  }
+
+  /* Loading skeleton animations */
+  .skeleton-pulse {
+    @apply animate-pulse bg-gradient-to-r from-md-surface/80 via-md-surface to-md-surface/80;
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Enhanced fade in animation */
+  .animate-fade-in {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Soft pulse animation */
+  .animate-pulse-soft {
+    animation: pulseSoft 3s ease-in-out infinite;
+  }
+
+  /* Slide up animation */
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-export async function getMatchupMatrix(source: 'blended' | 'untapped' | 'tournament' = 'blended', infer: boolean = false, signal?: AbortSignal): Promise<MatchupMatrix> {
-  const res = await api.get('/matchups/matrix', { params: { source, ...(infer ? { infer: 'true' } : {}) }, signal });
-  return res.data;
+/* Custom utility classes */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(135deg, rgba(74,142,255,0.1), rgba(212,175,55,0.1));
+  padding: 1px;
+  border-radius: 12px;
 }
 
-export async function getMatchupAdvisor(deck: string, signal?: AbortSignal): Promise<AdvisorResult> {
-  const res = await api.get('/matchups/advisor', { params: { deck }, signal });
-  return res.data;
-}
-
-export async function getEcosystemAnalysis(signal?: AbortSignal): Promise<EcosystemAnalysis> {
-  const res = await api.get('/matchups/ecosystem', { signal });
-  return res.data;
-}
-
-export async function getDeckEcosystem(deck: string, signal?: AbortSignal): Promise<DeckEcosystemResponse> {
-  const res = await api.get('/matchups/ecosystem', { params: { deck }, signal });
-  return res.data;
+.gradient-border > * {
+  background: #111113;
+  border-radius: 11px;
 }
 ```
 
@@ -8017,6 +9862,111 @@ export default function CardSearch() {
 }
 ```
 
+## File: server/src/db/connection.ts
+```typescript
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Required for Node.js environments (Render, local dev)
+neonConfig.webSocketConstructor = ws;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+
+let pool: Pool | null = null;
+
+export function getPool(): Pool {
+  if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+    // DATABASE_URL MUST point at Neon's pooled endpoint (host contains "-pooler") with sslmode=require.
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  return pool;
+}
+
+export async function initDb(): Promise<void> {
+  const p = getPool();
+  const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+  await p.query(schema);
+  console.log('[DB] Schema initialized');
+}
+```
+
+## File: server/src/routes/banList.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { getPool } from '../db/connection.js';
+import { queryOne } from '../utils/dbHelpers.js';
+import * as mdm from '../services/mdmService.js';
+
+const router = Router();
+
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const pool = getPool();
+    const banList = await mdm.getBanList();
+
+    const enrichCard = async (card: mdm.MDMBanCard) => {
+      const local = await queryOne(pool,
+        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1',
+        [card.name]
+      );
+      return {
+        ...card,
+        id: local?.id ?? null,
+        image_small_url: local?.image_small_url ?? null,
+        image_cropped_url: local?.image_cropped_url ?? null,
+        rarity: card.rarity ?? local?.md_rarity ?? null,
+        negate_effectiveness: local?.negate_effectiveness ?? null,
+        negated_win_rate: local?.negated_win_rate ?? null,
+        not_negated_win_rate: local?.not_negated_win_rate ?? null,
+        negate_sample_size: local?.negate_sample_size ?? null,
+      };
+    };
+
+    const sortByDate = (cards: Awaited<ReturnType<typeof enrichCard>>[]) =>
+      [...cards].sort((a, b) => {
+        if (!a.banListDate && !b.banListDate) return 0;
+        if (!a.banListDate) return 1;
+        if (!b.banListDate) return -1;
+        return b.banListDate.localeCompare(a.banListDate);
+      });
+
+    const forbidden = sortByDate(await Promise.all(banList.forbidden.map(enrichCard)));
+    const limited = sortByDate(await Promise.all(banList.limited.map(enrichCard)));
+    const semiLimited = sortByDate(await Promise.all(banList.semiLimited.map(enrichCard)));
+
+    res.json({ forbidden, limited, semiLimited });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Temporary debug - remove after checking
+router.get('/debug-raw', async (_req: Request, res: Response) => {
+  const axios = (await import('axios')).default;
+  try {
+    const r = await axios.get('https://www.masterduelmeta.com/api/v1/cards', {
+      params: { banStatus: 'Forbidden', limit: 2 },
+    });
+    const data = Array.isArray(r.data) ? r.data : [];
+    res.json({ fields: data[0] ? Object.keys(data[0]) : [], sample: data[0] });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+export default router;
+```
+
 ## File: server/src/db/schema.sql
 ```sql
 CREATE TABLE IF NOT EXISTS cards (
@@ -8144,190 +10094,19 @@ CREATE TABLE IF NOT EXISTS matchup_sources (
   updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
   PRIMARY KEY (deck_a, deck_b, source)
 );
-```
 
-## File: server/src/routes/banList.ts
-```typescript
-import { Router, Request, Response } from 'express';
-import { getPool } from '../db/connection.js';
-import { queryOne } from '../utils/dbHelpers.js';
-import * as mdm from '../services/mdmService.js';
+CREATE TABLE IF NOT EXISTS personal_games (
+  id SERIAL PRIMARY KEY,
+  deck_played TEXT NOT NULL,
+  opponent_deck TEXT NOT NULL,
+  result TEXT NOT NULL CHECK (result IN ('win', 'loss', 'draw')),
+  went_first BOOLEAN,
+  notes TEXT,
+  played_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
+);
 
-const router = Router();
-
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const pool = getPool();
-    const banList = await mdm.getBanList();
-
-    const enrichCard = async (card: mdm.MDMBanCard) => {
-      const local = await queryOne(pool,
-        'SELECT image_small_url, image_cropped_url, id, md_rarity, negate_effectiveness, negated_win_rate, not_negated_win_rate, negate_sample_size FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1',
-        [card.name]
-      );
-      return {
-        ...card,
-        id: local?.id ?? null,
-        image_small_url: local?.image_small_url ?? null,
-        image_cropped_url: local?.image_cropped_url ?? null,
-        rarity: card.rarity ?? local?.md_rarity ?? null,
-        negate_effectiveness: local?.negate_effectiveness ?? null,
-        negated_win_rate: local?.negated_win_rate ?? null,
-        not_negated_win_rate: local?.not_negated_win_rate ?? null,
-        negate_sample_size: local?.negate_sample_size ?? null,
-      };
-    };
-
-    const sortByDate = (cards: Awaited<ReturnType<typeof enrichCard>>[]) =>
-      [...cards].sort((a, b) => {
-        if (!a.banListDate && !b.banListDate) return 0;
-        if (!a.banListDate) return 1;
-        if (!b.banListDate) return -1;
-        return b.banListDate.localeCompare(a.banListDate);
-      });
-
-    const forbidden = sortByDate(await Promise.all(banList.forbidden.map(enrichCard)));
-    const limited = sortByDate(await Promise.all(banList.limited.map(enrichCard)));
-    const semiLimited = sortByDate(await Promise.all(banList.semiLimited.map(enrichCard)));
-
-    res.json({ forbidden, limited, semiLimited });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Temporary debug - remove after checking
-router.get('/debug-raw', async (_req: Request, res: Response) => {
-  const axios = (await import('axios')).default;
-  try {
-    const r = await axios.get('https://www.masterduelmeta.com/api/v1/cards', {
-      params: { banStatus: 'Forbidden', limit: 2 },
-    });
-    const data = Array.isArray(r.data) ? r.data : [];
-    res.json({ fields: data[0] ? Object.keys(data[0]) : [], sample: data[0] });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-export default router;
-```
-
-## File: server/src/routes/sync.ts
-```typescript
-import { Router, Request, Response } from 'express';
-import {
-  syncCards, syncArchetypes, syncDeckTypes, syncTopDecks,
-  syncTournaments, syncUntapped, syncCardNegateEffectiveness
-} from '../services/syncService.js';
-import { recordSync, getSyncStatus, SyncSource } from '../services/syncStatusService.js';
-import { clearCache } from '../services/cacheService.js';
-
-const router = Router();
-
-router.post('/cards', async (_req: Request, res: Response) => {
-  try {
-    const count = await syncCards();
-    await syncArchetypes();
-    await recordSync('ygoprodeck', 'success');
-    res.json({ message: `Synced ${count} cards` });
-  } catch (err: any) {
-    await recordSync('ygoprodeck', 'failed', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/meta', async (_req: Request, res: Response) => {
-  let step = 'init';
-  try {
-    await clearCache('mdm');
-    step = 'syncDeckTypes';
-    const dtCount = await syncDeckTypes();
-    step = 'syncTopDecks';
-    const tdCount = await syncTopDecks();
-    await recordSync('mdm_deck_types', 'success');
-    step = 'syncTournaments';
-    const tCount = await syncTournaments();
-    await recordSync('mdm_tournaments', 'success');
-    step = 'syncUntapped';
-    const uCount = await syncUntapped();
-    await recordSync('untapped', 'success');
-    res.json({ message: `Synced ${dtCount} deck types, ${tdCount} top decks, ${tCount} tournaments, ${uCount} untapped archetypes` });
-  } catch (err: any) {
-    const source =
-      step === 'syncTournaments' ? 'mdm_tournaments' :
-      step === 'syncUntapped'    ? 'untapped'        : 'mdm_deck_types';
-    await recordSync(source as SyncSource, 'failed', String(err?.message || err));
-    console.error(`[Sync] Meta sync failed at step "${step}":`, err);
-    res.status(500).json({ error: `${step}: ${String(err?.message || err)}` });
-  }
-});
-
-router.post('/untapped', async (_req: Request, res: Response) => {
-  try {
-    await clearCache('untapped');
-    const count = await syncUntapped();
-    await recordSync('untapped', 'success');
-    res.json({ message: `Synced ${count} archetypes from untapped.gg` });
-  } catch (err: any) {
-    await recordSync('untapped', 'failed', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/negate', async (_req: Request, res: Response) => {
-  try {
-    await clearCache('untapped:card-negate');
-    const count = await syncCardNegateEffectiveness();
-    res.json({ message: `Updated ${count} cards with negate effectiveness data` });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/all', async (_req: Request, res: Response) => {
-  let step = 'init';
-  try {
-    await clearCache('mdm');
-    step = 'syncCards';
-    const cardCount = await syncCards();
-    await syncArchetypes();
-    await recordSync('ygoprodeck', 'success');
-    step = 'syncDeckTypes';
-    const dtCount = await syncDeckTypes();
-    step = 'syncTopDecks';
-    const tdCount = await syncTopDecks();
-    await recordSync('mdm_deck_types', 'success');
-    step = 'syncTournaments';
-    const tCount = await syncTournaments();
-    await recordSync('mdm_tournaments', 'success');
-    step = 'syncUntapped';
-    const uCount = await syncUntapped();
-    await recordSync('untapped', 'success');
-    step = 'syncNegate';
-    const nCount = await syncCardNegateEffectiveness();
-    res.json({
-      message: 'Full sync complete',
-      cards: cardCount, deckTypes: dtCount, topDecks: tdCount,
-      tournaments: tCount, untappedArchetypes: uCount, cardNegateEffectiveness: nCount,
-    });
-  } catch (err: any) {
-    const source: SyncSource =
-      step === 'syncTournaments' ? 'mdm_tournaments' :
-      step === 'syncUntapped'    ? 'untapped'        :
-      (step === 'syncDeckTypes' || step === 'syncTopDecks') ? 'mdm_deck_types' : 'ygoprodeck';
-    await recordSync(source, 'failed', String(err?.message || err));
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/status', async (_req: Request, res: Response) => {
-  try {
-    res.json(await getSyncStatus());
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-export default router;
+CREATE INDEX IF NOT EXISTS idx_personal_games_played_at ON personal_games(played_at);
+CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_played, opponent_deck);
 ```
 
 ## File: server/src/routes/decks.ts
@@ -8578,6 +10357,587 @@ router.get('/:name/top-lists', async (req: Request, res: Response) => {
 export default router;
 ```
 
+## File: server/src/routes/sync.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import {
+  syncCards, syncArchetypes, syncDeckTypes, syncTopDecks,
+  syncTournaments, syncUntapped, syncCardNegateEffectiveness
+} from '../services/syncService.js';
+import { recordSync, getSyncStatus, SyncSource } from '../services/syncStatusService.js';
+import { clearCache } from '../services/cacheService.js';
+import { config } from '../config.js';
+import { updateTiersFromScrape } from '../services/tierListService.js';
+
+const router = Router();
+
+router.post('/cards', async (_req: Request, res: Response) => {
+  try {
+    const count = await syncCards();
+    await syncArchetypes();
+    await recordSync('ygoprodeck', 'success');
+    res.json({ message: `Synced ${count} cards` });
+  } catch (err: any) {
+    await recordSync('ygoprodeck', 'failed', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/meta', async (_req: Request, res: Response) => {
+  let step = 'init';
+  try {
+    await clearCache('mdm');
+    step = 'syncDeckTypes';
+    const dtCount = await syncDeckTypes();
+    step = 'syncTopDecks';
+    const tdCount = await syncTopDecks();
+    await recordSync('mdm_deck_types', 'success');
+    step = 'syncTournaments';
+    const tCount = await syncTournaments();
+    await recordSync('mdm_tournaments', 'success');
+    step = 'syncUntapped';
+    const uCount = await syncUntapped();
+    await recordSync('untapped', 'success');
+    res.json({ message: `Synced ${dtCount} deck types, ${tdCount} top decks, ${tCount} tournaments, ${uCount} untapped archetypes` });
+  } catch (err: any) {
+    const source =
+      step === 'syncTournaments' ? 'mdm_tournaments' :
+      step === 'syncUntapped'    ? 'untapped'        : 'mdm_deck_types';
+    await recordSync(source as SyncSource, 'failed', String(err?.message || err));
+    console.error(`[Sync] Meta sync failed at step "${step}":`, err);
+    res.status(500).json({ error: `${step}: ${String(err?.message || err)}` });
+  }
+});
+
+router.post('/untapped', async (_req: Request, res: Response) => {
+  try {
+    await clearCache('untapped');
+    const count = await syncUntapped();
+    await recordSync('untapped', 'success');
+    res.json({ message: `Synced ${count} archetypes from untapped.gg` });
+  } catch (err: any) {
+    await recordSync('untapped', 'failed', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/negate', async (_req: Request, res: Response) => {
+  try {
+    await clearCache('untapped:card-negate');
+    const count = await syncCardNegateEffectiveness();
+    res.json({ message: `Updated ${count} cards with negate effectiveness data` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/all', async (_req: Request, res: Response) => {
+  let step = 'init';
+  try {
+    await clearCache('mdm');
+    step = 'syncCards';
+    const cardCount = await syncCards();
+    await syncArchetypes();
+    await recordSync('ygoprodeck', 'success');
+    step = 'syncDeckTypes';
+    const dtCount = await syncDeckTypes();
+    step = 'syncTopDecks';
+    const tdCount = await syncTopDecks();
+    await recordSync('mdm_deck_types', 'success');
+    step = 'syncTournaments';
+    const tCount = await syncTournaments();
+    await recordSync('mdm_tournaments', 'success');
+    step = 'syncUntapped';
+    const uCount = await syncUntapped();
+    await recordSync('untapped', 'success');
+    step = 'syncNegate';
+    const nCount = await syncCardNegateEffectiveness();
+    res.json({
+      message: 'Full sync complete',
+      cards: cardCount, deckTypes: dtCount, topDecks: tdCount,
+      tournaments: tCount, untappedArchetypes: uCount, cardNegateEffectiveness: nCount,
+    });
+  } catch (err: any) {
+    const source: SyncSource =
+      step === 'syncTournaments' ? 'mdm_tournaments' :
+      step === 'syncUntapped'    ? 'untapped'        :
+      (step === 'syncDeckTypes' || step === 'syncTopDecks') ? 'mdm_deck_types' : 'ygoprodeck';
+    await recordSync(source, 'failed', String(err?.message || err));
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/status', async (_req: Request, res: Response) => {
+  try {
+    res.json(await getSyncStatus());
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/run/:source', async (req: Request, res: Response) => {
+  const token = (req.headers.authorization ?? '').replace('Bearer ', '');
+  if (!config.adminToken || token !== config.adminToken) {
+    return void res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const source = req.params.source as SyncSource;
+  try {
+    switch (source) {
+      case 'ygoprodeck':
+        await syncCards();
+        await syncArchetypes();
+        await recordSync('ygoprodeck', 'success');
+        break;
+      case 'mdm_deck_types':
+        await clearCache('mdm');
+        await syncDeckTypes();
+        await syncTopDecks();
+        await updateTiersFromScrape();
+        await recordSync('mdm_deck_types', 'success');
+        break;
+      case 'mdm_tournaments':
+        await syncTournaments();
+        await recordSync('mdm_tournaments', 'success');
+        break;
+      case 'untapped':
+        await clearCache('untapped');
+        await syncUntapped();
+        await recordSync('untapped', 'success');
+        break;
+      default:
+        return void res.status(400).json({ error: `Unknown source: ${source}` });
+    }
+    res.json({ ok: true, source });
+  } catch (err: any) {
+    await recordSync(source, 'failed', String(err?.message || err));
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
+```
+
+## File: server/src/services/matchupBlendService.ts
+```typescript
+import type { Pool } from '@neondatabase/serverless';
+import { queryAll } from '../utils/dbHelpers.js';
+import { computeEcosystemAnalysis } from './ecosystemAnalysisService.js';
+
+export interface MatchupSource {
+  rate: number;
+  n: number;
+}
+
+export interface BlendResult {
+  rate: number;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface MatrixCell {
+  rate: number;
+  n_untapped: number;
+  n_tournament: number;
+  n_personal?: number;
+  confidence: 'high' | 'medium' | 'low';
+  inferred?: boolean;
+  inference_method?: string;
+}
+
+export interface FullMatrix {
+  decks: string[];
+  matrix: Record<string, Record<string, MatrixCell>>;
+}
+
+export function blendMatchupRates(
+  untapped: MatchupSource | null,
+  tournament: MatchupSource | null,
+  personal: MatchupSource | null = null,
+  weights = { untapped: 0.7, tournament: 0.3 }
+): BlendResult {
+  // Blend in personal data whenever any games are logged. Weight scales with sample
+  // size up to a 0.4 cap at n=10, so a single game has small influence (n=1 → 0.04)
+  // while a well-sampled matchup carries the full weight.
+  if (personal && personal.n >= 1) {
+    const personalWeight = Math.min(0.4, personal.n * 0.04);
+    const baseWeight = 1 - personalWeight;
+    let baseRate: number;
+    let baseConfidence: 'high' | 'medium' | 'low';
+    if (untapped && tournament) {
+      const uFrac = weights.untapped / (weights.untapped + weights.tournament);
+      const tFrac = 1 - uFrac;
+      baseRate = untapped.rate * uFrac + tournament.rate * tFrac;
+      baseConfidence = 'high';
+    } else if (untapped) {
+      baseRate = untapped.rate;
+      baseConfidence = untapped.n >= 100 ? 'high' : 'medium';
+    } else if (tournament) {
+      baseRate = tournament.rate;
+      baseConfidence = tournament.n >= 30 ? 'medium' : 'low';
+    } else {
+      baseRate = 0.5;
+      baseConfidence = 'low';
+    }
+    const rate = baseRate * baseWeight + personal.rate * personalWeight;
+    const confidence = baseConfidence === 'low' ? 'medium' : baseConfidence;
+    return { rate, confidence };
+  }
+
+  if (!untapped && !tournament) return { rate: 0.5, confidence: 'low' };
+  if (!untapped) return { rate: tournament!.rate, confidence: tournament!.n >= 30 ? 'medium' : 'low' };
+  if (!tournament) return { rate: untapped.rate, confidence: untapped.n >= 100 ? 'high' : 'medium' };
+  const rate = untapped.rate * weights.untapped + tournament.rate * weights.tournament;
+  return { rate, confidence: 'high' };
+}
+
+/**
+ * Build the full NxN matchup matrix for tier 1-3 decks, blending data sources.
+ * When infer=true, fills gaps using ecosystem analysis (predator/prey relationships,
+ * inverse matchups, and win-rate estimation).
+ */
+export async function buildFullMatrix(
+  pool: Pool,
+  source: string = 'blended',
+  infer: boolean = false,
+  includePersonal: boolean = false
+): Promise<FullMatrix> {
+  const tier13 = (await queryAll(pool,
+    'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
+  ) as { name: string }[]).map((d) => d.name);
+  const ROGUE = 'Rogue';
+  const ROGUE_LOWER = ROGUE.toLowerCase();
+  const tier13Set = new Set(tier13.map((n) => n.toLowerCase()));
+  const decks = [...tier13, ROGUE];
+  const isRogueKey = (k: string) => k === ROGUE_LOWER || !tier13Set.has(k);
+
+  const rows = await queryAll(pool, 'SELECT * FROM matchup_sources') as {
+    deck_a: string; deck_b: string; source: string; win_rate: number; sample_size: number;
+  }[];
+
+  const legacyRows = await queryAll(pool, 'SELECT deck_a, deck_b, win_rate_a, sample_size FROM matchups') as {
+    deck_a: string; deck_b: string; win_rate_a: number; sample_size: number;
+  }[];
+
+  // Load personal spread if requested
+  type PersonalSpreadRow = { deck_played: string; opponent_deck: string; wins: number; total: number };
+  const personalRows: PersonalSpreadRow[] = includePersonal
+    ? await queryAll(pool, `
+        SELECT deck_played, opponent_deck,
+          SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END)::INTEGER AS wins,
+          COUNT(*)::INTEGER AS total
+        FROM personal_games
+        GROUP BY deck_played, opponent_deck
+      `)
+    : [];
+
+  // Sample-weighted aggregator over a list of {rate, n} so Rogue cells can fold in
+  // every off-meta opponent into one bucket.
+  const aggregate = (items: { rate: number; n: number }[]): MatchupSource | null => {
+    let totalN = 0, weighted = 0;
+    for (const it of items) { totalN += it.n; weighted += it.rate * it.n; }
+    if (totalN === 0) return null;
+    return { rate: weighted / totalN, n: totalN };
+  };
+
+  const matchRow = (rowA: string, rowB: string, al: string, bl: string): boolean => {
+    const ra = rowA.toLowerCase(), rb = rowB.toLowerCase();
+    const aMatch = al === ROGUE_LOWER ? isRogueKey(ra) : ra === al;
+    const bMatch = bl === ROGUE_LOWER ? isRogueKey(rb) : rb === bl;
+    return aMatch && bMatch;
+  };
+
+  const matrix: Record<string, Record<string, MatrixCell>> = {};
+
+  for (const a of decks) {
+    matrix[a] = {};
+    for (const b of decks) {
+      if (a === b) continue;
+
+      const al = a.toLowerCase(), bl = b.toLowerCase();
+
+      const untappedItems = rows
+        .filter((r) => r.source === 'untapped' && matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate, n: r.sample_size ?? 0 }));
+      const legacyItems = legacyRows
+        .filter((r) => matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate_a / 100, n: r.sample_size ?? 0 }));
+      const untappedData = aggregate(untappedItems) ?? aggregate(legacyItems);
+
+      const tournItems = rows
+        .filter((r) => r.source === 'tournament' && matchRow(r.deck_a, r.deck_b, al, bl))
+        .map((r) => ({ rate: r.win_rate, n: r.sample_size ?? 0 }));
+      const tournData = aggregate(tournItems);
+
+      const personalItems = personalRows
+        .filter((r) => matchRow(r.deck_played, r.opponent_deck, al, bl))
+        .map((r) => ({ rate: r.wins / r.total, n: r.total }));
+      const personalData = aggregate(personalItems);
+
+      if (!untappedData && !tournData && !personalData) continue;
+      if (source === 'tournament' && !tournData) continue;
+      if (source === 'untapped' && !untappedData) continue;
+
+      const blend = source === 'tournament'
+        ? blendMatchupRates(null, tournData, personalData)
+        : source === 'untapped'
+        ? blendMatchupRates(untappedData, null, personalData)
+        : blendMatchupRates(untappedData, tournData, personalData);
+
+      matrix[a][b] = {
+        rate: blend.rate,
+        n_untapped: untappedData?.n ?? 0,
+        n_tournament: tournData?.n ?? 0,
+        n_personal: personalData?.n ?? 0,
+        confidence: blend.confidence,
+      };
+    }
+  }
+
+  // Fill gaps with inferred data from ecosystem analysis
+  if (infer) {
+    await fillMatrixGaps(pool, decks, matrix, source);
+  }
+
+  return { decks, matrix };
+}
+
+/**
+ * Fill empty matrix cells using multiple inference strategies:
+ * 1. Inverse: if B vs A exists, A vs B = 1 - B_vs_A
+ * 2. Ecosystem predator/prey relationships (direct + tournament-correlated)
+ * 3. Win-rate estimation from overall deck strength
+ */
+async function fillMatrixGaps(
+  pool: Pool,
+  decks: string[],
+  matrix: Record<string, Record<string, MatrixCell>>,
+  source: string
+): Promise<void> {
+  // Pass 1: Inverse inference — if we have B vs A but not A vs B
+  for (const a of decks) {
+    for (const b of decks) {
+      if (a === b || matrix[a]?.[b]) continue;
+      const inverse = matrix[b]?.[a];
+      if (inverse) {
+        if (!matrix[a]) matrix[a] = {};
+        matrix[a][b] = {
+          rate: 1 - inverse.rate,
+          n_untapped: inverse.n_untapped,
+          n_tournament: inverse.n_tournament,
+          confidence: inverse.confidence,
+          inferred: true,
+          inference_method: 'inverse',
+        };
+      }
+    }
+  }
+
+  // Pass 2: Ecosystem relationships (predator/prey + anti-correlation)
+  try {
+    const ecosystem = await computeEcosystemAnalysis(pool, source);
+    const deckSet = new Set(decks.map((d) => d.toLowerCase()));
+
+    for (const profile of ecosystem.profiles) {
+      const aName = decks.find((d) => d.toLowerCase() === profile.deck.toLowerCase());
+      if (!aName) continue;
+
+      // From prey relationships: this deck beats prey
+      for (const rel of profile.prey) {
+        const bName = decks.find((d) => d.toLowerCase() === rel.prey.toLowerCase());
+        if (!bName || aName === bName) continue;
+        if (matrix[aName]?.[bName]) continue; // don't overwrite real data
+        if (!matrix[aName]) matrix[aName] = {};
+        matrix[aName][bName] = {
+          rate: rel.win_rate,
+          n_untapped: 0,
+          n_tournament: 0,
+          confidence: rel.confidence,
+          inferred: true,
+          inference_method: rel.mechanism === 'inferred' ? 'anti-correlation' : 'ecosystem',
+        };
+      }
+
+      // From predator relationships: this deck loses to predators
+      for (const rel of profile.predators) {
+        const bName = decks.find((d) => d.toLowerCase() === rel.predator.toLowerCase());
+        if (!bName || aName === bName) continue;
+        if (matrix[aName]?.[bName]) continue;
+        if (!matrix[aName]) matrix[aName] = {};
+        matrix[aName][bName] = {
+          rate: 1 - rel.win_rate, // flip: predator's win_rate is their advantage
+          n_untapped: 0,
+          n_tournament: 0,
+          confidence: rel.confidence,
+          inferred: true,
+          inference_method: rel.mechanism === 'inferred' ? 'anti-correlation' : 'ecosystem',
+        };
+      }
+    }
+
+    // Pass 3: Win-rate estimation for remaining gaps
+    // Estimate from overall win rates: E(A vs B) ≈ wrA / (wrA + wrB)
+    const wrMap = new Map<string, number>();
+    const powerMap = new Map<string, number>();
+    for (const p of ecosystem.profiles) {
+      if (p.win_rate != null) wrMap.set(p.deck.toLowerCase(), p.win_rate);
+      if (p.power != null) powerMap.set(p.deck.toLowerCase(), p.power);
+    }
+
+    for (const a of decks) {
+      for (const b of decks) {
+        if (a === b || matrix[a]?.[b]) continue;
+        const wrA = wrMap.get(a.toLowerCase());
+        const wrB = wrMap.get(b.toLowerCase());
+        if (wrA == null || wrB == null) continue;
+        // Bradley-Terry model: P(A beats B) ≈ wrA / (wrA + wrB)
+        const estimated = wrA / (wrA + wrB);
+        if (!matrix[a]) matrix[a] = {};
+        matrix[a][b] = {
+          rate: estimated,
+          n_untapped: 0,
+          n_tournament: 0,
+          confidence: 'low',
+          inferred: true,
+          inference_method: 'win-rate-model',
+        };
+      }
+    }
+
+    // Pass 4: Power-based estimation for decks with no win rate
+    // Use MDM power rating as a proxy: normalize to 0-1 range, apply Bradley-Terry
+    if (powerMap.size > 0) {
+      const maxPower = Math.max(...powerMap.values());
+      const minPower = Math.min(...powerMap.values());
+      const range = maxPower - minPower || 1;
+
+      for (const a of decks) {
+        for (const b of decks) {
+          if (a === b || matrix[a]?.[b]) continue;
+          // Use win rate if available, otherwise estimate from power
+          const sA = wrMap.get(a.toLowerCase()) ?? (powerMap.has(a.toLowerCase())
+            ? 0.45 + 0.10 * ((powerMap.get(a.toLowerCase())! - minPower) / range)
+            : null);
+          const sB = wrMap.get(b.toLowerCase()) ?? (powerMap.has(b.toLowerCase())
+            ? 0.45 + 0.10 * ((powerMap.get(b.toLowerCase())! - minPower) / range)
+            : null);
+          if (sA == null || sB == null) continue;
+          const estimated = sA / (sA + sB);
+          if (!matrix[a]) matrix[a] = {};
+          matrix[a][b] = {
+            rate: estimated,
+            n_untapped: 0,
+            n_tournament: 0,
+            confidence: 'low',
+            inferred: true,
+            inference_method: 'power-model',
+          };
+        }
+      }
+    }
+  } catch {
+    // If ecosystem computation fails, gaps remain unfilled
+  }
+}
+```
+
+## File: client/src/api/matchups.ts
+```typescript
+import api from './client';
+import type { Matchup, EcosystemAnalysis, DeckEcosystemResponse } from '../types/meta';
+
+export interface MatchupMatrixCell {
+  rate: number;
+  n_untapped: number;
+  n_tournament: number;
+  n_personal?: number;
+  confidence: 'high' | 'medium' | 'low';
+  inferred?: boolean;
+  inference_method?: string;
+}
+
+export interface MatchupMatrix {
+  decks: string[];
+  matrix: Record<string, Record<string, MatchupMatrixCell>>;
+}
+
+export interface AdvisorOpponent {
+  opponent: string;
+  field_pct: number;
+  win_rate: number;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface AdvisorResult {
+  deck: string;
+  opponents: AdvisorOpponent[];
+  weighted_win_rate: number;
+}
+
+export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<Matchup[]> {
+  const res = await api.get('/matchups', { params: deck ? { deck } : {}, signal });
+  return res.data;
+}
+
+export async function getMatchupMatrix(
+  source: 'blended' | 'untapped' | 'tournament' = 'blended',
+  infer: boolean = false,
+  signal?: AbortSignal,
+  includePersonal: boolean = false
+): Promise<MatchupMatrix> {
+  const params: Record<string, string> = { source };
+  if (infer) params.infer = 'true';
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/matrix', { params, signal });
+  return res.data;
+}
+
+export async function getMatchupAdvisor(deck: string, signal?: AbortSignal, includePersonal: boolean = false): Promise<AdvisorResult> {
+  const params: Record<string, string> = { deck };
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/advisor', { params, signal });
+  return res.data;
+}
+
+export interface LadderEvMatchup {
+  opponent: string;
+  win_rate: number;
+  play_rate: number;
+  confidence: 'high' | 'medium' | 'low';
+  inferred: boolean;
+}
+
+export interface LadderEvResult {
+  deck: string;
+  tier: number | null;
+  ev: number;
+  n_effective: number;
+  low_confidence_fraction: number;
+  top_good_matchups: LadderEvMatchup[];
+  top_bad_matchups: LadderEvMatchup[];
+  coverage: number;
+}
+
+export async function getLadderEv(
+  signal?: AbortSignal,
+  includePersonal: boolean = false
+): Promise<LadderEvResult[]> {
+  const params: Record<string, string> = {};
+  if (includePersonal) params.include_personal = 'true';
+  const res = await api.get('/matchups/ladder-ev', { params, signal });
+  return res.data;
+}
+
+export async function getEcosystemAnalysis(signal?: AbortSignal): Promise<EcosystemAnalysis> {
+  const res = await api.get('/matchups/ecosystem', { signal });
+  return res.data;
+}
+
+export async function getDeckEcosystem(deck: string, signal?: AbortSignal): Promise<DeckEcosystemResponse> {
+  const res = await api.get('/matchups/ecosystem', { params: { deck }, signal });
+  return res.data;
+}
+```
+
 ## File: server/src/routes/matchups.ts
 ```typescript
 import { Router, Request, Response } from 'express';
@@ -8586,6 +10946,7 @@ import { queryAll, run } from '../utils/dbHelpers.js';
 import * as mdm from '../services/mdmService.js';
 import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendService.js';
 import { computeEcosystemAnalysis } from '../services/ecosystemAnalysisService.js';
+import { computeLadderEv } from '../services/ladderEvService.js';
 
 const router = Router();
 
@@ -8619,8 +10980,9 @@ router.get('/matrix', async (req: Request, res: Response) => {
   try {
     const source = (req.query.source as string) || 'blended';
     const infer = req.query.infer === 'true';
+    const includePersonal = req.query.include_personal === 'true';
     const pool = getPool();
-    res.json(await buildFullMatrix(pool, source, infer));
+    res.json(await buildFullMatrix(pool, source, infer, includePersonal));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -8659,6 +11021,7 @@ router.get('/ecosystem', async (req: Request, res: Response) => {
 router.get('/advisor', async (req: Request, res: Response) => {
   try {
     const { deck } = req.query;
+    const includePersonal = req.query.include_personal === 'true';
     if (!deck) return res.status(400).json({ error: 'deck parameter required' });
 
     const pool = getPool();
@@ -8694,6 +11057,25 @@ router.get('/advisor', async (req: Request, res: Response) => {
       [deck as string]
     ) as { deck_b: string; win_rate_a: number; sample_size: number }[];
 
+    // Personal game spread (keyed by opponent name lowercase)
+    const personalSpread = new Map<string, { rate: number; n: number }>();
+    if (includePersonal) {
+      const personalRows = await queryAll(pool,
+        `SELECT opponent_deck,
+           SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END)::INTEGER AS wins,
+           COUNT(*)::INTEGER AS total
+         FROM personal_games
+         WHERE LOWER(deck_played) = LOWER($1)
+         GROUP BY opponent_deck`,
+        [deck as string]
+      ) as { opponent_deck: string; wins: number; total: number }[];
+      for (const r of personalRows) {
+        if (r.total > 0) {
+          personalSpread.set(r.opponent_deck.toLowerCase(), { rate: r.wins / r.total, n: r.total });
+        }
+      }
+    }
+
     const opponents = Object.entries(deckCounts)
       .filter(([name]) => name.toLowerCase() !== (deck as string).toLowerCase())
       .map(([name, count]) => {
@@ -8709,7 +11091,8 @@ router.get('/advisor', async (req: Request, res: Response) => {
           ? { rate: legacyRow.win_rate_a / 100, n: legacyRow.sample_size ?? 0 }
           : null;
         const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
-        const blend = blendMatchupRates(untappedData, tournData);
+        const personalData = includePersonal ? personalSpread.get(nl) ?? null : null;
+        const blend = blendMatchupRates(untappedData, tournData, personalData);
 
         return { opponent: name, field_pct: fieldPct, win_rate: blend.rate, confidence: blend.confidence };
       })
@@ -8719,6 +11102,20 @@ router.get('/advisor', async (req: Request, res: Response) => {
     const weightedWinRate = opponents.reduce((s, o) => s + o.win_rate * o.field_pct, 0) / totalWeight;
 
     res.json({ deck, opponents, weighted_win_rate: weightedWinRate });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// Ladder EV ranking
+router.get('/ladder-ev', async (req: Request, res: Response) => {
+  try {
+    const source = (req.query.source as string) || 'blended';
+    const infer = req.query.infer !== 'false'; // default true
+    const includePersonal = req.query.include_personal === 'true';
+    const pool = getPool();
+    const results = await computeLadderEv(pool, source, infer, includePersonal);
+    res.json(results);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -8922,291 +11319,6 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 export default router;
-```
-
-## File: client/src/pages/Matchups.tsx
-```typescript
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { getMatchups, getMatchupMatrix, type MatchupMatrix } from '../api/matchups';
-import { getDecks } from '../api/meta';
-import { getSyncStatus, type SyncRecord } from '../api/sync';
-import type { Matchup } from '../types/meta';
-import type { DeckType } from '../types/deck';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorBanner from '../components/common/ErrorBanner';
-import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
-import MetaAdvisor from '../components/matchups/MetaAdvisor';
-import EcosystemView from '../components/matchups/EcosystemView';
-import clsx from 'clsx';
-
-type MatrixSource = 'blended' | 'untapped' | 'tournament';
-
-function getWinRateColor(rate: number): string {
-  if (rate >= 0.60) return 'bg-md-green/30 text-md-green';
-  if (rate >= 0.55) return 'bg-md-green/15 text-md-green';
-  if (rate >= 0.45) return 'bg-md-textMuted/10 text-md-textMuted';
-  if (rate >= 0.40) return 'bg-md-red/15 text-md-red';
-  return 'bg-md-red/30 text-md-red';
-}
-
-function getRelationshipLabel(rate: number): string {
-  if (rate >= 0.60) return 'Hard Counter';
-  if (rate >= 0.55) return 'Soft Counter';
-  if (rate >= 0.48) return 'Neutral';
-  if (rate >= 0.40) return 'Unfavoured';
-  return 'Hard Countered';
-}
-
-function getRelationshipIcon(rate: number): string {
-  if (rate >= 0.60) return '\u{1F480}'; // skull
-  if (rate >= 0.55) return '\u{1F6E1}'; // shield
-  if (rate >= 0.48) return '\u2014';    // dash
-  if (rate >= 0.40) return '\u26A0';    // warning
-  return '\u{1F480}';                   // skull (you're the prey)
-}
-
-export default function Matchups() {
-  const [tab, setTab] = useState<'list' | 'matrix' | 'advisor' | 'ecosystem'>('matrix');
-  const [decks, setDecks] = useState<DeckType[]>([]);
-  const [selectedDeck, setSelectedDeck] = useState('');
-  const [matchups, setMatchups] = useState<Matchup[]>([]);
-  const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
-  const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
-  const [inferGaps, setInferGaps] = useState(true);
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    getSyncStatus().then(setSyncRecords).catch(() => {});
-    getDecks()
-      .then((d) => {
-        const filtered = d.filter((dk) => dk.tier != null && dk.tier <= 3);
-        setDecks(filtered);
-        if (filtered.length > 0) setSelectedDeck(filtered[0].name);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (tab !== 'matrix') return;
-    const controller = new AbortController();
-    setLoading(true);
-    getMatchupMatrix(matrixSource, inferGaps, controller.signal)
-      .then(setMatrix)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [tab, matrixSource, inferGaps]);
-
-  useEffect(() => {
-    if (tab !== 'list' || !selectedDeck) return;
-    const controller = new AbortController();
-    setLoading(true);
-    getMatchups(selectedDeck, controller.signal)
-      .then(setMatchups)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [tab, selectedDeck]);
-
-  const tabClass = (t: string) => clsx(
-    'px-4 py-2 text-sm font-semibold rounded-lg transition-colors',
-    tab === t
-      ? 'bg-md-blue/15 text-md-blue border border-md-blue/20'
-      : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/40'
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
-        <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} />
-      </div>
-
-      <div className="flex gap-2">
-        <button className={tabClass('matrix')} onClick={() => setTab('matrix')}>Matrix</button>
-        <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
-        <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
-        <button className={tabClass('list')} onClick={() => setTab('list')}>By Deck</button>
-      </div>
-
-      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
-
-      {tab === 'matrix' && (
-        <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
-          <div className="flex gap-2 items-center">
-            {(['blended', 'untapped', 'tournament'] as MatrixSource[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setMatrixSource(s)}
-                className={clsx(
-                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
-                  matrixSource === s
-                    ? 'bg-md-blue/15 text-md-blue border-md-blue/30'
-                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
-                )}
-              >
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-            <div className="ml-3 border-l border-md-border pl-3">
-              <button
-                onClick={() => setInferGaps(!inferGaps)}
-                className={clsx(
-                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
-                  inferGaps
-                    ? 'bg-md-purple/15 text-md-purple border-md-purple/30'
-                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
-                )}
-                title="Fill missing cells using ecosystem inference (inverse matchups, predator/prey, win-rate model)"
-              >
-                Infer Gaps
-              </button>
-            </div>
-          </div>
-
-          {loading ? <LoadingSpinner /> : matrix && matrix.decks.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="text-xs border-separate border-spacing-0.5">
-                <thead>
-                  <tr>
-                    <th className="text-left px-2 py-1 text-md-textMuted font-medium min-w-[120px]">vs →</th>
-                    {matrix.decks.map((d) => (
-                      <th key={d} className="px-1 py-1 text-md-textMuted font-medium text-center max-w-[80px] truncate" title={d}>
-                        {d.split(' ').slice(0, 2).join(' ')}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrix.decks.map((rowDeck) => (
-                    <tr key={rowDeck}>
-                      <td className="px-2 py-1 text-sm font-medium text-md-textSecondary whitespace-nowrap">{rowDeck}</td>
-                      {matrix.decks.map((colDeck) => {
-                        if (rowDeck === colDeck) {
-                          return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt rounded text-md-textMuted">—</td>;
-                        }
-                        const cell = matrix.matrix[rowDeck]?.[colDeck];
-                        if (!cell) {
-                          return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt/50 rounded text-md-textMuted text-xs">?</td>;
-                        }
-                        const pct = (cell.rate * 100).toFixed(0);
-                        const inferLabel = cell.inferred
-                          ? ` [${cell.inference_method ?? 'inferred'}]`
-                          : '';
-                        return (
-                          <td
-                            key={colDeck}
-                            title={`${getRelationshipLabel(cell.rate)}${inferLabel} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament} (${cell.confidence} confidence)`}
-                            className={clsx(
-                              'px-2 py-1 text-center rounded cursor-default',
-                              cell.inferred
-                                ? `${getWinRateColor(cell.rate)} opacity-60 italic border border-dashed border-md-border`
-                                : `${getWinRateColor(cell.rate)} font-semibold`
-                            )}
-                          >
-                            {pct}%
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="text-xs text-md-textMuted mt-2">
-                Hover a cell to see sample sizes.{' '}
-                {inferGaps
-                  ? <><span className="italic opacity-60">Italic/dashed</span> = inferred (inverse, ecosystem, or win-rate model).</>
-                  : <>? = insufficient data. Enable <strong>Infer Gaps</strong> to estimate.</>
-                }
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-md-textMuted py-4 text-center">
-              No matchup data in matrix yet. Use the <em>By Deck</em> tab to load individual matchups, or run a full sync.
-            </p>
-          )}
-        </div>
-      )}
-
-      {tab === 'ecosystem' && (
-        <EcosystemView deckNames={decks.map((d) => d.name)} />
-      )}
-
-      {tab === 'advisor' && (
-        <MetaAdvisor decks={decks.map((d) => d.name)} />
-      )}
-
-      {tab === 'list' && (
-        <>
-          <div className="bg-md-surface border border-md-border rounded-lg p-4">
-            <label className="text-sm text-md-textMuted block mb-2">Select Deck</label>
-            <select
-              value={selectedDeck}
-              onChange={(e) => setSelectedDeck(e.target.value)}
-              className="bg-md-bg border border-md-border rounded-lg px-3 py-2.5 text-sm text-md-text focus:outline-none focus:border-md-blue w-full max-w-sm"
-            >
-              {decks.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
-            </select>
-          </div>
-
-          {loading ? <LoadingSpinner /> : matchups.length > 0 ? (
-            <div className="bg-md-surface border border-md-border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-md-border">
-                    <th className="text-center px-2 py-3 text-sm font-medium text-md-textMuted w-8"></th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-md-textMuted">Opponent</th>
-                    <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Win Rate</th>
-                    <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Matchup</th>
-                    <th className="text-center px-4 py-3 text-sm font-medium text-md-textMuted">Sample Size</th>
-                    <th className="px-4 py-3 text-sm font-medium text-md-textMuted">Visual</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-md-border">
-                  {[...matchups]
-                    .sort((a, b) => b.win_rate_a - a.win_rate_a)
-                    .map((m) => (
-                      <tr key={m.deck_b} className="hover:bg-md-surfaceHover transition-colors">
-                        <td className="px-2 py-3 text-center" title={getRelationshipLabel(m.win_rate_a / 100)}>
-                          {getRelationshipIcon(m.win_rate_a / 100)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">{m.deck_b}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-1 rounded text-sm font-semibold ${getWinRateColor(m.win_rate_a / 100)}`}>
-                            {m.win_rate_a.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="text-xs text-md-textMuted">{getRelationshipLabel(m.win_rate_a / 100)}</span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-md-textMuted">{m.sample_size}</td>
-                        <td className="px-4 py-3">
-                          <div className="w-full h-2 bg-md-bg rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${m.win_rate_a >= 50 ? 'bg-md-green' : 'bg-md-red'}`}
-                              style={{ width: `${m.win_rate_a}%` }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="bg-md-surface border border-md-border rounded-lg p-8 text-center text-md-textMuted">
-              No matchup data available for this deck.
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 ```
 
 ## File: client/src/types/meta.ts
@@ -9880,5 +11992,561 @@ function deriveTier(power?: number | null): number | null {
   if (power >= 7) return 2;    // Tier 2: 7–12 (matches MDM definition)
   if (power >= 3) return 3;    // Tier 3: 3–7 (matches MDM definition)
   return null;                 // rogue: < 3
+}
+```
+
+## File: client/src/pages/Dashboard.tsx
+```typescript
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { getTierList, getFeaturedDecks, getDecks } from '../api/meta';
+import { getSyncStatus, type SyncRecord } from '../api/sync';
+import { logGame } from '../api/personalGames';
+import type { TierList } from '../types/meta';
+import type { DeckType } from '../types/deck';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorBanner from '../components/common/ErrorBanner';
+import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
+import TierListView from '../components/dashboard/TierListView';
+import MoversWidget from '../components/dashboard/MoversWidget';
+import ErrorBoundary from '../components/common/ErrorBoundary';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
+
+const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null;
+const subscribe = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
+const getSnapshot = () => smallQuery?.matches ?? false;
+function useIsSmall() { return useSyncExternalStore(subscribe, getSnapshot); }
+
+interface FeaturedDeck {
+  id: string;
+  name: string;
+  tier: number | null;
+  power: number | null;
+  power_trend: number | null;
+  thumbnail_image: string | null;
+  win_rate: number | null;
+  play_rate: number | null;
+  cards: Array<{ name: string; image: string | null }>;
+}
+
+export default function Dashboard() {
+  const isSmall = useIsSmall();
+  const [tierList, setTierList] = useState<TierList | null>(null);
+  const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
+  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
+  const [deckNames, setDeckNames] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Quick-entry form state
+  const [logDeck, setLogDeck] = useState('');
+  const [logOpponent, setLogOpponent] = useState('');
+  const [logResult, setLogResult] = useState<'win' | 'loss' | 'draw'>('win');
+  const [logFirst, setLogFirst] = useState<boolean | null>(null);
+  const [logSaving, setLogSaving] = useState(false);
+  const [logFlash, setLogFlash] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [data, feat, sync, decks] = await Promise.all([
+        getTierList(), getFeaturedDecks(), getSyncStatus(),
+        getDecks().catch(() => [] as DeckType[]),
+      ]);
+      setTierList(data);
+      setFeatured(Array.isArray(feat) ? feat : []);
+      setSyncRecords(sync);
+      const names = [...decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name), 'Rogue'];
+      setDeckNames(names);
+      if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
+    } catch (e: any) {
+      setError(e.message || 'Failed to load tier list');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleLogGame = async () => {
+    if (!logDeck || !logOpponent) return;
+    setLogSaving(true);
+    try {
+      await logGame({ deck_played: logDeck, opponent_deck: logOpponent, result: logResult, went_first: logFirst, notes: null });
+      setLogFlash(`✓ ${logResult.toUpperCase()} vs ${logOpponent} logged`);
+      setTimeout(() => setLogFlash(''), 3000);
+    } catch (e: any) {
+      console.error('logGame failed:', e?.response?.status, e?.response?.data, e);
+      const msg = e?.response?.data?.error || e?.message || 'unknown error';
+      setLogFlash(`Failed: ${msg}`);
+      setTimeout(() => setLogFlash(''), 5000);
+    } finally {
+      setLogSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="flex justify-center items-center py-20">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-md-blue/30 border-t-md-blue rounded-full animate-spin"></div>
+        <p className="text-md-textSecondary">Loading dashboard...</p>
+      </div>
+    </div>
+  );
+
+  if (error) return <ErrorBanner message={error} onRetry={load} />;
+  if (!tierList) return null;
+
+  const allDecks = [
+    ...(tierList['0'] ?? []).map(d => ({ ...d, tierKey: 0 })),
+    ...(tierList['1'] ?? []).map(d => ({ ...d, tierKey: 1 })),
+    ...(tierList['2'] ?? []).map(d => ({ ...d, tierKey: 2 })),
+    ...(tierList['3'] ?? []).map(d => ({ ...d, tierKey: 3 })),
+    ...(tierList.rogue ?? []).map(d => ({ ...d, tierKey: 4 })),
+  ];
+
+  const popularityData = allDecks
+    .filter(d => d.power != null)
+    .sort((a, b) => (b.power || 0) - (a.power || 0))
+    .slice(0, 12)
+    .map(d => ({ name: d.name, power: d.power, tier: d.tierKey }));
+
+  return (
+    <div className="space-y-8 pb-8">
+      {/* Hero header with gradient */}
+      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMCIvPjxwYXRoIGQ9Ik0wIDBINzAgTDIwIDEwMFoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAxKSIgc3Ryb2tlLXdpZHRoPSIxcHgiLz48L3N2Zz4=')] opacity-5"></div>
+        <div className="relative flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
+              Meta Dashboard
+            </h1>
+            <p className="text-md-textSecondary text-sm sm:text-base mt-2 max-w-2xl">
+              Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
+            </p>
+          </div>
+          <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments', 'untapped']} />
+        </div>
+      </div>
+
+      {/* Quick Game Log */}
+      {deckNames.length > 0 && (
+      <ErrorBoundary fallback={null}>
+        <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-4 border border-md-border/40">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-md-purple to-md-blue"></div>
+            <h3 className="text-sm font-bold text-md-text">Log a Game</h3>
+            {logFlash && <span className="text-xs text-md-green ml-2">{logFlash}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-md-textMuted">I played</label>
+              <select value={logDeck} onChange={(e) => setLogDeck(e.target.value)}
+                className="bg-md-bg border border-md-border rounded-lg px-2.5 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue min-w-[140px]">
+                {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-md-textMuted">vs</label>
+              <select value={logOpponent} onChange={(e) => setLogOpponent(e.target.value)}
+                className="bg-md-bg border border-md-border rounded-lg px-2.5 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue min-w-[140px]">
+                {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-1">
+              {(['win', 'loss', 'draw'] as const).map((r) => (
+                <button key={r} onClick={() => setLogResult(r)}
+                  className={`px-3 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                    logResult === r
+                      ? r === 'win' ? 'bg-md-green/20 text-md-green border-md-green/30'
+                        : r === 'loss' ? 'bg-md-red/20 text-md-red border-md-red/30'
+                        : 'bg-md-textMuted/20 text-md-textMuted border-md-border'
+                      : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                  }`}>
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {([true, false, null] as const).map((v) => (
+                <button key={String(v)} onClick={() => setLogFirst(logFirst === v ? null : v)}
+                  className={`px-2.5 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                    logFirst === v && v !== null
+                      ? 'bg-md-blue/15 text-md-blue border-md-blue/30'
+                      : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                  }`}>
+                  {v === true ? '1st' : v === false ? '2nd' : '?'}
+                </button>
+              ))}
+            </div>
+            <button onClick={handleLogGame} disabled={logSaving}
+              className="px-4 py-2 text-sm font-bold rounded-lg bg-md-blue/15 text-md-blue border border-md-blue/30 hover:bg-md-blue/25 transition-colors disabled:opacity-50">
+              {logSaving ? '...' : 'Log'}
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
+      )}
+
+      {/* Featured Decks Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-gold to-md-orange"></div>
+            <h2 className="text-2xl font-bold text-md-text">Top Performing Decks</h2>
+          </div>
+          <span className="text-xs text-md-textMuted bg-md-surface px-3 py-1.5 rounded-full border border-md-border font-medium">
+            Last 30 days
+          </span>
+        </div>
+
+        <TopArchetypesGrid featured={featured} />
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          { label: 'Tier 0', count: (tierList['0'] ?? []).length, color: 'text-tier-0', accent: '#ff2d55', desc: 'Dominant' },
+          { label: 'Tier 1', count: (tierList['1'] ?? []).length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Strong' },
+          { label: 'Tier 2', count: (tierList['2'] ?? []).length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Viable' },
+          { label: 'Total Tracked', count: allDecks.length, color: 'text-md-gold', accent: '#d4af37', desc: 'Decks' },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm group hover:shadow-lg hover:shadow-black/10 transition-all duration-300"
+          >
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${s.accent}10 0%, transparent 50%)` }}></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-md-textSecondary uppercase tracking-widest font-bold">{s.label}</p>
+                <p className={`text-3xl font-extrabold mt-1 tabular-nums ${s.color}`}>{s.count}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${s.accent}15` }}>
+                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: s.accent }}></div>
+              </div>
+            </div>
+            <p className="text-xs text-md-textMuted mt-3">{s.desc}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-px opacity-30" style={{ background: `linear-gradient(90deg, transparent, ${s.accent}, transparent)` }} />
+          </div>
+        ))}
+      </div>
+
+      {/* What's Moving widget */}
+      <MoversWidget />
+
+      {/* Data sources */}
+      <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-5 border border-md-border/40">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-md-blue animate-pulse"></div>
+            <h3 className="text-sm font-bold text-md-text">Data Sources</h3>
+          </div>
+          <span className="text-xs text-md-textMuted bg-md-surface px-2.5 py-1 rounded-full border border-md-border">
+            Real-time
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 mt-4">
+          <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/50">
+            <span className="text-sm font-semibold text-md-text">MasterDuelMeta</span>
+          </div>
+          <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/50">
+            <span className="text-sm font-semibold text-md-text">YGOProDeck</span>
+          </div>
+          {allDecks.some(d => d.win_rate != null) ? (
+            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-md-winRate/10 to-md-winRate/5 border border-md-winRate/30">
+              <span className="text-sm font-bold text-md-winRate">untapped.gg</span>
+            </div>
+          ) : (
+            <div className="px-4 py-2 rounded-xl bg-md-surface border border-md-border/30 opacity-50">
+              <span className="text-sm font-semibold text-md-textMuted">untapped.gg</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tier List Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-blue to-md-purple"></div>
+          <h2 className="text-2xl font-bold text-md-text">Complete Tier List</h2>
+        </div>
+
+        <TierListView tierList={tierList} />
+      </div>
+
+      {/* Power Rankings Chart */}
+      {popularityData.length > 0 && (
+        <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-green to-md-blue"></div>
+            <h3 className="text-lg font-bold text-md-text">Power Rankings</h3>
+            <span className="text-xs text-md-textMuted ml-auto">Top 12 decks</span>
+          </div>
+          <div className="h-64 sm:h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={popularityData} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
+                <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#a1a1aa"
+                  fontSize={12}
+                  width={isSmall ? 0 : 110}
+                  hide={isSmall}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#eceef4' }}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  contentStyle={{
+                    backgroundColor: '#18181b',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.65)',
+                    fontSize: 13,
+                  }}
+                  labelStyle={{ color: '#eceef4', fontWeight: 600 }}
+                  itemStyle={{ color: '#a1a1aa' }}
+                />
+                <Bar dataKey="power" radius={[0, 6, 6, 0]} barSize={20}>
+                  {popularityData.map((entry, i) => (
+                    <Cell key={i} fill={tierColors[entry.tier] || tierColors[4]} fillOpacity={0.85} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## File: client/src/pages/Matchups.tsx
+```typescript
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { getMatchupMatrix, type MatchupMatrix } from '../api/matchups';
+import { getDecks } from '../api/meta';
+import { getSyncStatus, type SyncRecord } from '../api/sync';
+import type { DeckType } from '../types/deck';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorBanner from '../components/common/ErrorBanner';
+import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import MetaAdvisor from '../components/matchups/MetaAdvisor';
+import EcosystemView from '../components/matchups/EcosystemView';
+import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
+import clsx from 'clsx';
+
+type MatrixSource = 'blended' | 'untapped' | 'tournament';
+
+function getWinRateColor(rate: number): string {
+  if (rate >= 0.60) return 'bg-md-green/30 text-md-green';
+  if (rate >= 0.55) return 'bg-md-green/15 text-md-green';
+  if (rate >= 0.45) return 'bg-md-textMuted/10 text-md-textMuted';
+  if (rate >= 0.40) return 'bg-md-red/15 text-md-red';
+  return 'bg-md-red/30 text-md-red';
+}
+
+function getRelationshipLabel(rate: number): string {
+  if (rate >= 0.60) return 'Hard Counter';
+  if (rate >= 0.55) return 'Soft Counter';
+  if (rate >= 0.48) return 'Neutral';
+  if (rate >= 0.40) return 'Unfavoured';
+  return 'Hard Countered';
+}
+
+function _getRelationshipIcon(rate: number): string {
+  if (rate >= 0.60) return '\u{1F480}'; // skull
+  if (rate >= 0.55) return '\u{1F6E1}'; // shield
+  if (rate >= 0.48) return '\u2014';    // dash
+  if (rate >= 0.40) return '\u26A0';    // warning
+  return '\u{1F480}';                   // skull (you're the prey)
+}
+
+export default function Matchups() {
+  const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
+  const [decks, setDecks] = useState<DeckType[]>([]);
+  const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
+  const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
+  const [inferGaps, setInferGaps] = useState(true);
+  const [includePersonal, setIncludePersonal] = useState(true);
+  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    getSyncStatus().then(setSyncRecords).catch(() => {});
+    getDecks()
+      .then((d) => {
+        const filtered = d.filter((dk) => dk.tier != null && dk.tier <= 3);
+        setDecks(filtered);
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (tab !== 'matrix') return;
+    const controller = new AbortController();
+    setLoading(true);
+    getMatchupMatrix(matrixSource, inferGaps, controller.signal, includePersonal)
+      .then(setMatrix)
+      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [tab, matrixSource, inferGaps, includePersonal]);
+
+  const tabClass = (t: string) => clsx(
+    'px-4 py-2 text-sm font-semibold rounded-lg transition-colors',
+    tab === t
+      ? 'bg-md-blue/15 text-md-blue border border-md-blue/20'
+      : 'text-md-textMuted hover:text-md-textSecondary hover:bg-md-surfaceHover/40'
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
+        <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button className={tabClass('matrix')} onClick={() => setTab('matrix')}>Matrix</button>
+        <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
+        <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
+        <button className={tabClass('my-spread')} onClick={() => setTab('my-spread')}>My Spread</button>
+      </div>
+
+      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+
+      {tab === 'matrix' && (
+        <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
+          <div className="flex flex-wrap gap-2 items-center">
+            {(['blended', 'untapped', 'tournament'] as MatrixSource[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setMatrixSource(s)}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  matrixSource === s
+                    ? 'bg-md-blue/15 text-md-blue border-md-blue/30'
+                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                )}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+            <div className="sm:ml-3 sm:border-l sm:border-md-border sm:pl-3 flex gap-2">
+              <button
+                onClick={() => setInferGaps(!inferGaps)}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  inferGaps
+                    ? 'bg-md-purple/15 text-md-purple border-md-purple/30'
+                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                )}
+                title="Fill missing cells using ecosystem inference (inverse matchups, predator/prey, win-rate model)"
+              >
+                Infer Gaps
+              </button>
+              <button
+                onClick={() => setIncludePersonal(!includePersonal)}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  includePersonal
+                    ? 'bg-md-gold/15 text-md-gold border-md-gold/30'
+                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
+                )}
+                title="Blend your personal game results into matchup rates. Influence scales with how many games you've logged for each pairing (capped at 40% weight at 10+ games)."
+              >
+                My Games
+              </button>
+            </div>
+          </div>
+
+          {loading ? <LoadingSpinner /> : matrix && matrix.decks.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="text-xs border-separate border-spacing-0.5">
+                <thead>
+                  <tr>
+                    <th className="text-left px-2 py-1 text-md-textMuted font-medium min-w-[120px]">vs →</th>
+                    {matrix.decks.map((d) => (
+                      <th key={d} className="px-1 py-1 text-md-textMuted font-medium text-center max-w-[80px] truncate" title={d}>
+                        {d.split(' ').slice(0, 2).join(' ')}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.decks.map((rowDeck) => (
+                    <tr key={rowDeck}>
+                      <td className="px-2 py-1 text-sm font-medium text-md-textSecondary whitespace-nowrap">{rowDeck}</td>
+                      {matrix.decks.map((colDeck) => {
+                        if (rowDeck === colDeck) {
+                          return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt rounded text-md-textMuted">—</td>;
+                        }
+                        const cell = matrix.matrix[rowDeck]?.[colDeck];
+                        if (!cell) {
+                          return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt/50 rounded text-md-textMuted text-xs">?</td>;
+                        }
+                        const pct = (cell.rate * 100).toFixed(0);
+                        const inferLabel = cell.inferred
+                          ? ` [${cell.inference_method ?? 'inferred'}]`
+                          : '';
+                        return (
+                          <td
+                            key={colDeck}
+                            title={`${getRelationshipLabel(cell.rate)}${inferLabel} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament}${cell.n_personal ? ` Personal n=${cell.n_personal}` : ''} (${cell.confidence} confidence)`}
+                            className={clsx(
+                              'px-2 py-1 text-center rounded cursor-default',
+                              cell.inferred
+                                ? `${getWinRateColor(cell.rate)} opacity-60 italic border border-dashed border-md-border`
+                                : `${getWinRateColor(cell.rate)} font-semibold`
+                            )}
+                          >
+                            {pct}%
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-md-textMuted mt-2">
+                Hover a cell to see sample sizes.{' '}
+                {inferGaps
+                  ? <><span className="italic opacity-60">Italic/dashed</span> = inferred (inverse, ecosystem, or win-rate model).</>
+                  : <>? = insufficient data. Enable <strong>Infer Gaps</strong> to estimate.</>
+                }
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-md-textMuted py-4 text-center">
+              No matchup data in matrix yet. Run a full sync to populate.
+            </p>
+          )}
+        </div>
+      )}
+
+      {tab === 'ecosystem' && (
+        <EcosystemView deckNames={decks.map((d) => d.name)} />
+      )}
+
+      {tab === 'advisor' && (
+        <MetaAdvisor decks={[...decks.map((d) => d.name), 'Rogue']} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
+      )}
+
+      {tab === 'my-spread' && (
+        <MyMatchupSpread deckNames={[...decks.map((d) => d.name), 'Rogue']} />
+      )}
+    </div>
+  );
 }
 ```
