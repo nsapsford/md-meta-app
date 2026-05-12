@@ -17,6 +17,7 @@ export function getPool(): Pool {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL environment variable is required');
     }
+    // DATABASE_URL MUST point at Neon's pooled endpoint (host contains "-pooler") with sslmode=require.
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 5,
