@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import clsx from 'clsx';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
+import MobileBottomNav from './components/layout/MobileBottomNav';
 import SyncStatusBanner from './components/common/SyncStatusBanner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
@@ -13,9 +15,11 @@ import MetaTrends from './pages/MetaTrends';
 import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
 import Admin from './pages/Admin';
+import { useIsNative } from './hooks/useIsNative';
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isNative = useIsNative();
 
   return (
     <BrowserRouter>
@@ -23,14 +27,19 @@ export default function App() {
         <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
         <SyncStatusBanner />
         <div className="flex">
-          {sidebarOpen && (
+          {!isNative && sidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-40 md:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          <main className="flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow">
+          {!isNative && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+          <main
+            className={clsx(
+              'flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow',
+              isNative && 'pb-20'
+            )}
+          >
             <div className="max-w-[1400px] mx-auto animate-fade-in">
               <ErrorBoundary>
                 <Routes>
@@ -48,6 +57,7 @@ export default function App() {
             </div>
           </main>
         </div>
+        {isNative && <MobileBottomNav />}
       </div>
     </BrowserRouter>
   );

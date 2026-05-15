@@ -10,6 +10,8 @@ import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
 import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
+import MobileMatchupFocus from '../components/matchups/MobileMatchupFocus';
+import { useIsNative } from '../hooks/useIsNative';
 import clsx from 'clsx';
 
 type MatrixSource = 'blended' | 'untapped' | 'tournament';
@@ -39,6 +41,7 @@ function _getRelationshipIcon(rate: number): string {
 }
 
 export default function Matchups() {
+  const isNative = useIsNative();
   const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
@@ -140,6 +143,9 @@ export default function Matchups() {
           </div>
 
           {loading ? <LoadingSpinner /> : matrix && matrix.decks.length > 0 ? (
+            isNative ? (
+              <MobileMatchupFocus matrix={matrix} inferGaps={inferGaps} />
+            ) : (
             <div className="overflow-x-auto">
               <table className="text-xs border-separate border-spacing-0.5">
                 <thead>
@@ -195,6 +201,7 @@ export default function Matchups() {
                 }
               </p>
             </div>
+            )
           ) : (
             <p className="text-sm text-md-textMuted py-4 text-center">
               No matchup data in matrix yet. Run a full sync to populate.

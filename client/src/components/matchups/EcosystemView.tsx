@@ -10,6 +10,7 @@ import type {
 } from '../../types/meta';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
+import { useIsNative } from '../../hooks/useIsNative';
 import clsx from 'clsx';
 
 // ── Helpers ──
@@ -73,9 +74,35 @@ function nashDeviationLabel(d: number): { label: string; color: string } {
 
 // ── Sub-components ──
 
-function RelationshipRow({ rel, side }: { rel: PredatorPreyRelationship; side: 'prey' | 'predator' }) {
+function RelationshipRow({ rel, side, isNative }: { rel: PredatorPreyRelationship; side: 'prey' | 'predator'; isNative: boolean }) {
   const deckName = side === 'prey' ? rel.prey : rel.predator;
   const pct = (rel.win_rate * 100).toFixed(1);
+
+  if (isNative) {
+    return (
+      <div className="py-2 px-3 hover:bg-md-surfaceHover/40 transition-colors rounded">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${confidenceDot(rel.confidence)}`} title={`${rel.confidence} confidence`} />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium break-words leading-tight">{deckName}</div>
+              {rel.mechanism === 'inferred' && (
+                <div className="text-[10px] italic text-md-textMuted mt-0.5">(inferred)</div>
+              )}
+            </div>
+          </div>
+          <span className={`text-sm font-bold tabular-nums flex-shrink-0 ${winRateColor(side === 'prey' ? rel.win_rate : 1 - rel.win_rate)}`}>
+            {pct}%
+          </span>
+        </div>
+        <div className="mt-1.5 pl-3.5">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${strengthColor(rel.strength)}`}>
+            {strengthLabel(rel.strength)}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between py-2 px-3 hover:bg-md-surfaceHover/40 transition-colors rounded">
@@ -417,6 +444,7 @@ interface Props {
 }
 
 export default function EcosystemView({ deckNames }: Props) {
+  const isNative = useIsNative();
   const [analysis, setAnalysis] = useState<EcosystemAnalysis | null>(null);
   const [selectedDeck, setSelectedDeck] = useState('');
   const [loading, setLoading] = useState(true);
@@ -549,7 +577,7 @@ export default function EcosystemView({ deckNames }: Props) {
             </h4>
             <div className="bg-md-green/5 border border-md-green/10 rounded-lg divide-y divide-md-border">
               {profile.prey.length > 0 ? profile.prey.map((r) => (
-                <RelationshipRow key={r.prey} rel={r} side="prey" />
+                <RelationshipRow key={r.prey} rel={r} side="prey" isNative={isNative} />
               )) : (
                 <p className="text-xs text-md-textMuted p-3">No favourable matchups found</p>
               )}
@@ -561,7 +589,7 @@ export default function EcosystemView({ deckNames }: Props) {
             </h4>
             <div className="bg-md-red/5 border border-md-red/10 rounded-lg divide-y divide-md-border">
               {profile.predators.length > 0 ? profile.predators.map((r) => (
-                <RelationshipRow key={r.predator} rel={r} side="predator" />
+                <RelationshipRow key={r.predator} rel={r} side="predator" isNative={isNative} />
               )) : (
                 <p className="text-xs text-md-textMuted p-3">No significant threats found</p>
               )}
@@ -570,10 +598,23 @@ export default function EcosystemView({ deckNames }: Props) {
         </div>
 
         {profile.neutral.length > 0 && (
-          <div className="text-xs text-md-textMuted">
-            <span className="font-medium">Even matchups:</span>{' '}
-            {profile.neutral.join(', ')}
-          </div>
+          isNative ? (
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-md-textMuted">Even matchups:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.neutral.map((d) => (
+                  <span key={d} className="px-2 py-1 text-[11px] rounded-md bg-md-surfaceAlt/60 border border-md-border text-md-textSecondary">
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-md-textMuted">
+              <span className="font-medium">Even matchups:</span>{' '}
+              {profile.neutral.join(', ')}
+            </div>
+          )
         )}
 
         {/* Metrics row */}

@@ -6,6 +6,7 @@ import type { MetaSnapshot } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useIsNative } from '../hooks/useIsNative';
 
 const COLORS = ['#ff4d5e', '#ff9147', '#ffd60a', '#3dd975', '#4a8eff', '#8b6cff', '#ff6b9d', '#00d4aa', '#f97316', '#d4af37'];
 
@@ -50,6 +51,7 @@ export default function MetaTrends() {
   const [timeRange, setTimeRange] = useState(7);
   const [deckImages, setDeckImages] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
+  const isNative = useIsNative();
 
   useEffect(() => {
     getMetaTrends()
@@ -201,10 +203,19 @@ export default function MetaTrends() {
         <span className="text-xs text-md-textMuted whitespace-nowrap">All</span>
       </div>
 
-      <div className="bg-md-surface border border-md-border rounded-xl p-5">
-        <ResponsiveContainer width="100%" height={420}>
-          <LineChart data={visibleData}>
-            <XAxis dataKey="date" stroke="#6b7694" fontSize={11} tickLine={false} axisLine={false} />
+      <div className="bg-md-surface border border-md-border rounded-xl p-5 overflow-x-auto">
+        <ResponsiveContainer width="100%" height={isNative ? 380 : 420}>
+          <LineChart data={visibleData} margin={isNative ? { top: 5, right: 10, left: -20, bottom: 60 } : { top: 5, right: 30, left: 0, bottom: 5 }}>
+            <XAxis
+              dataKey="date"
+              stroke="#6b7694"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              angle={isNative ? -45 : 0}
+              textAnchor={isNative ? "end" : "middle"}
+              height={isNative ? 80 : 30}
+            />
             <YAxis
               stroke="#6b7694"
               fontSize={11}
