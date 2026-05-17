@@ -2,10 +2,21 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 import { syncDeckTypes } from '../services/syncService.js';
-import { getCached, setCache } from '../services/cacheService.js';
 
-const CACHE_KEY = 'tier_list_v1';
-const CACHE_TTL = 300; // 5 minutes
+// In-memory process cache — instant lookup, no DB round-trip
+let memCache: Record<string, any[]> | null = null;
+let memCacheAt = 0;
+const MEM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Cached archetype→cards map (large dataset, rarely changes)
+let archetypeCardsCache: Map<string, Set<string>> | null = null;
+let archetypeCardsCacheAt = 0;
+const ARCH_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+export function invalidateTierListCache() {
+  memCache = null;
+  archetypeCardsCache = null;
+}
 
 // Manual overrides for MDM deck names → YGOProDeck archetype keys
 const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
@@ -29,9 +40,10 @@ const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    // Serve from cache if available
-    const cached = await getCached<Record<string, any[]>>(CACHE_KEY);
-    if (cached) return res.json(cached);
+    // Serve from in-memory cache — zero DB round-trips
+    if (memCache && (Date.now() - memCacheAt) < MEM_CACHE_TTL_MS) {
+      return res.json(memCache);
+    }
 
     const pool = getPool();
     let deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
@@ -41,16 +53,20 @@ router.get('/', async (_req: Request, res: Response) => {
       deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
     }
 
-    // --- BATCH 1: load all archetype→card mappings in one query ---
-    const archetypeCards = new Map<string, Set<string>>();
-    const allArchCards = await queryAll(pool,
-      `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
-    );
-    for (const c of allArchCards) {
-      const key = (c.archetype as string).toLowerCase();
-      if (!archetypeCards.has(key)) archetypeCards.set(key, new Set());
-      archetypeCards.get(key)!.add(c.name as string);
+    // --- BATCH 1: archetype→card mappings (process-cached for 30 min) ---
+    if (!archetypeCardsCache || (Date.now() - archetypeCardsCacheAt) > ARCH_CACHE_TTL_MS) {
+      const allArchCards = await queryAll(pool,
+        `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
+      );
+      archetypeCardsCache = new Map<string, Set<string>>();
+      for (const c of allArchCards) {
+        const key = (c.archetype as string).toLowerCase();
+        if (!archetypeCardsCache.has(key)) archetypeCardsCache.set(key, new Set());
+        archetypeCardsCache.get(key)!.add(c.name as string);
+      }
+      archetypeCardsCacheAt = Date.now();
     }
+    const archetypeCards = archetypeCardsCache;
 
     // --- BATCH 2: load top 20 decks for ALL deck types in one query ---
     const allTopDecks = await queryAll(pool,
@@ -183,7 +199,8 @@ router.get('/', async (_req: Request, res: Response) => {
       });
     }
 
-    await setCache(CACHE_KEY, grouped, CACHE_TTL);
+    memCache = grouped;
+    memCacheAt = Date.now();
     res.json(grouped);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

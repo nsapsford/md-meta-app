@@ -53,19 +53,25 @@ export default function Dashboard() {
     setLoading(true);
     setError('');
     try {
-      const [data, feat, sync, decks] = await Promise.all([
-        getTierList(), getFeaturedDecks(), getSyncStatus(),
-        getDecks().catch(() => [] as DeckType[]),
-      ]);
+      // Critical path: tier list only — show the page as soon as this resolves
+      const data = await getTierList();
       setTierList(data);
-      setFeatured(Array.isArray(feat) ? feat : []);
-      setSyncRecords(sync);
-      const names = [...decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name), 'Rogue'];
-      setDeckNames(names);
-      if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
+      setLoading(false);
+
+      // Background: load supplementary data without blocking render
+      Promise.all([
+        getFeaturedDecks().catch(() => [] as FeaturedDeck[]),
+        getSyncStatus().catch(() => [] as SyncRecord[]),
+        getDecks().catch(() => [] as DeckType[]),
+      ]).then(([feat, sync, decks]) => {
+        setFeatured(Array.isArray(feat) ? feat : []);
+        setSyncRecords(sync);
+        const names = [...decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name), 'Rogue'];
+        setDeckNames(names);
+        if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
+      });
     } catch (e: any) {
       setError(e.message || 'Failed to load tier list');
-    } finally {
       setLoading(false);
     }
   };

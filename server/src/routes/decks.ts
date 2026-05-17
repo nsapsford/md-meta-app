@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
-import { getCached, setCache } from '../services/cacheService.js';
 
-const FEATURED_CACHE_KEY = 'featured_decks_v1';
-const FEATURED_CACHE_TTL = 300; // 5 minutes
+let featuredMemCache: any[] | null = null;
+let featuredMemCacheAt = 0;
+const FEATURED_MEM_TTL_MS = 5 * 60 * 1000;
+
+export function invalidateFeaturedCache() { featuredMemCache = null; }
 
 const router = Router();
 
@@ -30,8 +32,9 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/decks/featured — top 3 archetypes with most-used card images for dashboard
 router.get('/featured', async (_req: Request, res: Response) => {
   try {
-    const cached = await getCached<any[]>(FEATURED_CACHE_KEY);
-    if (cached) return res.json(cached);
+    if (featuredMemCache && (Date.now() - featuredMemCacheAt) < FEATURED_MEM_TTL_MS) {
+      return res.json(featuredMemCache);
+    }
 
     const pool = getPool();
     const top3 = await queryAll(pool,
@@ -130,7 +133,8 @@ router.get('/featured', async (_req: Request, res: Response) => {
       return { ...deck, cards };
     });
 
-    await setCache(FEATURED_CACHE_KEY, result, FEATURED_CACHE_TTL);
+    featuredMemCache = result;
+    featuredMemCacheAt = Date.now();
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
