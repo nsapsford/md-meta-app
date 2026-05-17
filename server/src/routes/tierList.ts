@@ -2,6 +2,10 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 import { syncDeckTypes } from '../services/syncService.js';
+import { getCached, setCache } from '../services/cacheService.js';
+
+const CACHE_KEY = 'tier_list_v1';
+const CACHE_TTL = 300; // 5 minutes
 
 // Manual overrides for MDM deck names → YGOProDeck archetype keys
 const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
@@ -25,6 +29,10 @@ const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
+    // Serve from cache if available
+    const cached = await getCached<Record<string, any[]>>(CACHE_KEY);
+    if (cached) return res.json(cached);
+
     const pool = getPool();
     let deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
 
@@ -33,7 +41,7 @@ router.get('/', async (_req: Request, res: Response) => {
       deckTypes = await queryAll(pool, 'SELECT * FROM deck_types ORDER BY tier ASC, power DESC');
     }
 
-    // Build archetype → card-names map (same logic as /decks/featured)
+    // --- BATCH 1: load all archetype→card mappings in one query ---
     const archetypeCards = new Map<string, Set<string>>();
     const allArchCards = await queryAll(pool,
       `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
@@ -44,15 +52,29 @@ router.get('/', async (_req: Request, res: Response) => {
       archetypeCards.get(key)!.add(c.name as string);
     }
 
-    const grouped: Record<string, any[]> = { '0': [], '1': [], '2': [], '3': [], rogue: [] };
-    for (const d of deckTypes) {
-      const key = d.tier != null ? String(d.tier) : 'rogue';
-      if (!grouped[key]) grouped[key] = [];
+    // --- BATCH 2: load top 20 decks for ALL deck types in one query ---
+    const allTopDecks = await queryAll(pool,
+      `SELECT deck_type_name, main_deck_json FROM (
+         SELECT deck_type_name, main_deck_json,
+                ROW_NUMBER() OVER (PARTITION BY LOWER(deck_type_name) ORDER BY created_at DESC) AS rn
+         FROM top_decks
+         WHERE main_deck_json IS NOT NULL
+       ) t WHERE rn <= 20`
+    );
+    // Group by deck name (lowercased)
+    const topDecksByName = new Map<string, Array<{ main_deck_json: string }>>();
+    for (const row of allTopDecks) {
+      const k = (row.deck_type_name as string).toLowerCase();
+      if (!topDecksByName.has(k)) topDecksByName.set(k, []);
+      topDecksByName.get(k)!.push(row);
+    }
 
+    // --- PASS 1: compute top 3 card names per deck (CPU-only, no DB) ---
+    const deckTopCardNames = new Map<string, string[]>(); // deck id → card names
+    for (const d of deckTypes) {
       const deckNameLower = (d.name as string).toLowerCase();
       const deckArchetypeNames = new Set<string>();
 
-      // Step 0: Check manual overrides first
       const overrideKeys = ARCHETYPE_OVERRIDES[deckNameLower];
       if (overrideKeys) {
         for (const ok of overrideKeys) {
@@ -60,8 +82,6 @@ router.get('/', async (_req: Request, res: Response) => {
           if (cardSet) for (const name of cardSet) deckArchetypeNames.add(name);
         }
       }
-
-      // Step 1: Substring match against all archetypes
       if (deckArchetypeNames.size === 0) {
         for (const [archKey, cardSet] of archetypeCards) {
           if (deckNameLower.includes(archKey) || archKey.includes(deckNameLower)) {
@@ -70,18 +90,9 @@ router.get('/', async (_req: Request, res: Response) => {
         }
       }
 
-      // Step 2: Get recent top decks for card frequency
-      const topDecks = await queryAll(pool,
-        `SELECT main_deck_json FROM top_decks
-         WHERE LOWER(deck_type_name) = LOWER($1)
-         ORDER BY created_at DESC LIMIT 20`,
-        [d.name]
-      );
-
-      // Step 3: Aggregate card frequencies — prefer archetype-matched cards
+      const topDecks = topDecksByName.get(deckNameLower) ?? [];
       const freq = new Map<string, number>();
       for (const td of topDecks) {
-        if (!td.main_deck_json) continue;
         try {
           const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
           for (const c of cards) {
@@ -91,11 +102,9 @@ router.get('/', async (_req: Request, res: Response) => {
           }
         } catch { /* skip */ }
       }
-
-      // Step 3b: Fallback — use most-played cards overall from top_decks
+      // Fallback: use all cards if archetype match gave nothing
       if (freq.size === 0) {
         for (const td of topDecks) {
-          if (!td.main_deck_json) continue;
           try {
             const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
             for (const c of cards) {
@@ -107,73 +116,63 @@ router.get('/', async (_req: Request, res: Response) => {
         }
       }
 
-      // Step 4: Build cards array from frequency data
-      const topCardNames = [...freq.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([name]) => name);
+      let topNames = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
 
-      const cards: Array<{ name: string; image: string | null }> = [];
-      for (const cardName of topCardNames) {
-        const card = await queryOne(pool,
-          `SELECT name, image_cropped_url, image_small_url FROM cards WHERE LOWER(name) = LOWER($1) LIMIT 1`,
-          [cardName]
-        );
-        if (card) {
-          cards.push({
-            name: card.name as string,
-            image: (card.image_cropped_url || card.image_small_url || null) as string | null,
-          });
-        }
+      // Fuzzy fallback if still empty
+      if (topNames.length === 0 && deckArchetypeNames.size > 0) {
+        topNames = [...deckArchetypeNames].slice(0, 3);
       }
-
-      // Step 5: If no top_decks data but archetype cards were found, use archetype cards directly
-      if (cards.length === 0 && deckArchetypeNames.size > 0) {
-        const archNames = [...deckArchetypeNames].slice(0, 50);
-        const placeholders = archNames.map((_, i) => `$${i + 1}`).join(',');
-        const archCards = await queryAll(pool,
-          `SELECT name, image_cropped_url, image_small_url FROM cards
-           WHERE LOWER(name) IN (${placeholders})
-             AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
-           LIMIT 3`,
-          archNames.map(n => n.toLowerCase())
-        );
-        for (const card of archCards) {
-          cards.push({
-            name: card.name as string,
-            image: (card.image_cropped_url || card.image_small_url || null) as string | null,
-          });
-        }
-      }
-
-      // Step 6: Fuzzy fallback — word-overlap scoring against all archetypes (up to 3 cards)
-      if (cards.length === 0) {
-        const deckWords = (d.name as string).toLowerCase().split(/[\s\-]+/).filter((w: string) => w.length >= 3);
-        let bestMatch: string | null = null;
-        let bestScore = 0;
+      if (topNames.length === 0) {
+        const deckWords = deckNameLower.split(/[\s\-]+/).filter((w: string) => w.length >= 3);
+        let bestMatch: string | null = null, bestScore = 0;
         for (const [archKey] of archetypeCards) {
           const archWords = archKey.split(/[\s\-]+/);
           const score = deckWords.filter((w: string) => archWords.some((aw: string) => aw.includes(w) || w.includes(aw))).length;
           if (score > bestScore) { bestScore = score; bestMatch = archKey; }
         }
         if (bestMatch && bestScore > 0) {
-          const matchedCardNames = [...archetypeCards.get(bestMatch)!];
-          for (const cardName of matchedCardNames) {
-            if (cards.length >= 3) break;
-            const card = await queryOne(pool,
-              `SELECT name, image_cropped_url, image_small_url FROM cards
-               WHERE LOWER(name) = LOWER($1) AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)
-               LIMIT 1`,
-              [cardName]
-            );
-            if (card) {
-              cards.push({
-                name: card.name as string,
-                image: (card.image_cropped_url || card.image_small_url || null) as string | null,
-              });
-            }
-          }
+          topNames = [...archetypeCards.get(bestMatch)!].slice(0, 3);
         }
+      }
+
+      deckTopCardNames.set(d.id as string, topNames);
+    }
+
+    // --- BATCH 3: load all card images in ONE query ---
+    const allCardNamesNeeded = new Set<string>();
+    for (const names of deckTopCardNames.values()) {
+      for (const n of names) allCardNamesNeeded.add(n.toLowerCase());
+    }
+    const cardImageMap = new Map<string, { name: string; image: string | null }>();
+    if (allCardNamesNeeded.size > 0) {
+      const nameArr = [...allCardNamesNeeded];
+      const placeholders = nameArr.map((_, i) => `$${i + 1}`).join(',');
+      const cardRows = await queryAll(pool,
+        `SELECT name, image_cropped_url, image_small_url FROM cards
+         WHERE LOWER(name) IN (${placeholders})
+           AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)`,
+        nameArr
+      );
+      for (const row of cardRows) {
+        cardImageMap.set((row.name as string).toLowerCase(), {
+          name: row.name as string,
+          image: (row.image_cropped_url || row.image_small_url || null) as string | null,
+        });
+      }
+    }
+
+    // --- PASS 2: assemble response (CPU-only) ---
+    const grouped: Record<string, any[]> = { '0': [], '1': [], '2': [], '3': [], rogue: [] };
+    for (const d of deckTypes) {
+      const key = d.tier != null ? String(d.tier) : 'rogue';
+      if (!grouped[key]) grouped[key] = [];
+
+      const topNames = deckTopCardNames.get(d.id as string) ?? [];
+      const cards: Array<{ name: string; image: string | null }> = [];
+      for (const n of topNames) {
+        const info = cardImageMap.get(n.toLowerCase());
+        if (info) cards.push(info);
+        if (cards.length >= 3) break;
       }
 
       grouped[key].push({
@@ -184,6 +183,7 @@ router.get('/', async (_req: Request, res: Response) => {
       });
     }
 
+    await setCache(CACHE_KEY, grouped, CACHE_TTL);
     res.json(grouped);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

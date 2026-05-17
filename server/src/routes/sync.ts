@@ -74,6 +74,8 @@ router.post('/all', async (_req: Request, res: Response) => {
   let step = 'init';
   try {
     await clearCache('mdm');
+    await clearCache('tier_list_v1');
+    await clearCache('featured_decks_v1');
     step = 'syncCards';
     const cardCount = await syncCards();
     await syncArchetypes();
@@ -130,6 +132,8 @@ router.post('/run/:source', async (req: Request, res: Response) => {
         break;
       case 'mdm_deck_types':
         await clearCache('mdm');
+        await clearCache('tier_list_v1');
+        await clearCache('featured_decks_v1');
         await syncDeckTypes();
         await syncTopDecks();
         await updateTiersFromScrape();
