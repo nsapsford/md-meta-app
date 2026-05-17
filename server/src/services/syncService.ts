@@ -509,6 +509,184 @@ export async function syncCardNegateEffectiveness(): Promise<number> {
   return updated;
 }
 
+// Manual overrides for MDM deck names → YGOProDeck archetype keys
+// (mirrors the overrides in tierList.ts — kept in sync here for pre-computation)
+const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
+  'vanquish soul k9': ['vanquish soul'],
+  'solfachord yummy': ['solfachord'],
+  'mitsurugi yummy': ['mitsurugi'],
+  'crystron k9': ['crystron'],
+  'white forest azamina': ['white forest', 'azamina'],
+  'ryzeal mitsurugi': ['ryzeal', 'mitsurugi'],
+  'dinos': ['dinomorphia', 'dinosaur'],
+  'earth machine': ['machina', 'infinitrack'],
+  'zombies': ['zombie'],
+  'telefon combo': ['telefon'],
+  'mitsurugi engine': ['mitsurugi'],
+  'yummy engine': ['yummy'],
+  'k9 engine': ['k9'],
+};
+
+/**
+ * Pre-computes the top card images for every deck type and stores them in
+ * deck_types.computed_cards_json.  This runs after syncDeckTypes + syncTopDecks
+ * so the tier-list and featured endpoints only need a single SELECT query.
+ */
+export async function computeDeckTypeCards(): Promise<number> {
+  const pool = getPool();
+
+  // 1. All deck types (id + name only)
+  const deckTypes = await queryAll(pool, 'SELECT id, name FROM deck_types');
+  if (deckTypes.length === 0) return 0;
+
+  // 2. Archetype → card-name mapping
+  const allArchCards = await queryAll(pool,
+    `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
+  );
+  const archetypeCards = new Map<string, Set<string>>();
+  for (const c of allArchCards) {
+    const key = (c.archetype as string).toLowerCase();
+    if (!archetypeCards.has(key)) archetypeCards.set(key, new Set());
+    archetypeCards.get(key)!.add(c.name as string);
+  }
+
+  // 3. Top-20 decks per deck type — one query
+  const allTopDecks = await queryAll(pool,
+    `SELECT deck_type_name, main_deck_json FROM (
+       SELECT deck_type_name, main_deck_json,
+              ROW_NUMBER() OVER (PARTITION BY LOWER(deck_type_name) ORDER BY created_at DESC) AS rn
+       FROM top_decks WHERE main_deck_json IS NOT NULL
+     ) t WHERE rn <= 20`
+  );
+  const topDecksByName = new Map<string, any[]>();
+  for (const row of allTopDecks) {
+    const k = (row.deck_type_name as string).toLowerCase();
+    if (!topDecksByName.has(k)) topDecksByName.set(k, []);
+    topDecksByName.get(k)!.push(row);
+  }
+
+  // 4. Compute top 5 card names per deck type (CPU only)
+  const deckTopCardNames = new Map<string, string[]>();
+  for (const d of deckTypes) {
+    const deckNameLower = (d.name as string).toLowerCase();
+    const deckArchetypeNames = new Set<string>();
+
+    const overrideKeys = ARCHETYPE_OVERRIDES[deckNameLower];
+    if (overrideKeys) {
+      for (const ok of overrideKeys) {
+        const cardSet = archetypeCards.get(ok);
+        if (cardSet) for (const name of cardSet) deckArchetypeNames.add(name);
+      }
+    }
+    if (deckArchetypeNames.size === 0) {
+      for (const [archKey, cardSet] of archetypeCards) {
+        if (deckNameLower.includes(archKey) || archKey.includes(deckNameLower)) {
+          for (const name of cardSet) deckArchetypeNames.add(name);
+        }
+      }
+    }
+
+    const topDecks = topDecksByName.get(deckNameLower) ?? [];
+    const freq = new Map<string, number>();
+    for (const td of topDecks) {
+      try {
+        const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
+        for (const c of cards) {
+          if (c.cardName && c.cardName !== 'Unknown' && deckArchetypeNames.has(c.cardName)) {
+            freq.set(c.cardName, (freq.get(c.cardName) || 0) + 1);
+          }
+        }
+      } catch { /* skip */ }
+    }
+    // Fallback: all cards by frequency if archetype match gave nothing
+    if (freq.size === 0) {
+      for (const td of topDecks) {
+        try {
+          const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
+          for (const c of cards) {
+            if (c.cardName && c.cardName !== 'Unknown') {
+              freq.set(c.cardName, (freq.get(c.cardName) || 0) + (c.amount || 1));
+            }
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    let topNames = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n);
+    if (topNames.length === 0 && deckArchetypeNames.size > 0) {
+      topNames = [...deckArchetypeNames].slice(0, 5);
+    }
+    // Fuzzy word-match fallback
+    if (topNames.length === 0) {
+      const deckWords = deckNameLower.split(/[\s\-]+/).filter((w: string) => w.length >= 3);
+      let bestMatch: string | null = null, bestScore = 0;
+      for (const [archKey] of archetypeCards) {
+        const archWords = archKey.split(/[\s\-]+/);
+        const score = deckWords.filter((w: string) => archWords.some((aw: string) => aw.includes(w) || w.includes(aw))).length;
+        if (score > bestScore) { bestScore = score; bestMatch = archKey; }
+      }
+      if (bestMatch && bestScore > 0) {
+        topNames = [...archetypeCards.get(bestMatch)!].slice(0, 5);
+      }
+    }
+
+    deckTopCardNames.set(d.id as string, topNames);
+  }
+
+  // 5. Batch-fetch all card images in one query
+  const allNeeded = new Set<string>();
+  for (const names of deckTopCardNames.values()) for (const n of names) allNeeded.add(n.toLowerCase());
+  const cardImageMap = new Map<string, { name: string; image: string | null }>();
+  if (allNeeded.size > 0) {
+    const arr = [...allNeeded];
+    const ph = arr.map((_: any, i: number) => `$${i + 1}`).join(',');
+    const rows = await queryAll(pool,
+      `SELECT name, image_cropped_url, image_small_url FROM cards
+       WHERE LOWER(name) IN (${ph}) AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)`,
+      arr
+    );
+    for (const row of rows) {
+      cardImageMap.set((row.name as string).toLowerCase(), {
+        name: row.name as string,
+        image: (row.image_cropped_url || row.image_small_url || null) as string | null,
+      });
+    }
+  }
+
+  // 6. Write computed_cards_json back to deck_types in batches
+  const BATCH = 50;
+  const entries = [...deckTypes];
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const slice = entries.slice(i, i + BATCH);
+    // Build a single UPDATE ... SET computed_cards_json = CASE WHEN id = $n THEN $v ... END
+    const setCases: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+    for (const d of slice) {
+      const topNames = deckTopCardNames.get(d.id as string) ?? [];
+      const cards: Array<{ name: string; image: string | null }> = [];
+      for (const n of topNames) {
+        const info = cardImageMap.get(n.toLowerCase());
+        if (info) cards.push(info);
+        if (cards.length >= 5) break;
+      }
+      setCases.push(`WHEN id = $${idx} THEN $${idx + 1}`);
+      params.push(d.id, JSON.stringify(cards));
+      idx += 2;
+    }
+    const ids = slice.map(d => d.id);
+    const idPh = ids.map((_: any, i: number) => `$${idx + i}`).join(',');
+    params.push(...ids);
+    await run(pool,
+      `UPDATE deck_types SET computed_cards_json = CASE ${setCases.join(' ')} END WHERE id IN (${idPh})`,
+      params
+    );
+  }
+
+  console.log(`[Sync] Computed card images for ${deckTypes.length} deck types`);
+  return deckTypes.length;
+}
+
 function deriveTier(power?: number | null): number | null {
   if (power == null || power <= 0) return null;
   if (power >= 12) return 1;   // Tier 1: power >= 12 (matches MDM definition)

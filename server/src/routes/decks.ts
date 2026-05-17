@@ -38,6 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/decks/featured — top 3 archetypes with most-used card images for dashboard
+// Uses pre-computed computed_cards_json so this is a single SELECT — no joins, no batch queries
 router.get('/featured', async (_req: Request, res: Response) => {
   try {
     if (featuredMemCache && (Date.now() - featuredMemCacheAt) < FEATURED_MEM_TTL_MS) {
@@ -46,99 +47,19 @@ router.get('/featured', async (_req: Request, res: Response) => {
 
     const pool = getPool();
     const top3 = await queryAll(pool,
-      `SELECT id, name, tier, power, power_trend, thumbnail_image, win_rate, play_rate
+      `SELECT id, name, tier, power, power_trend, thumbnail_image, win_rate, play_rate, computed_cards_json
        FROM deck_types
        WHERE power IS NOT NULL AND power > 0
        ORDER BY power DESC
        LIMIT 3`
     );
 
-    // BATCH: archetype → card names
-    const archetypeCards = new Map<string, Set<string>>();
-    const allArchCards = await queryAll(pool,
-      `SELECT name, archetype FROM cards WHERE archetype IS NOT NULL AND archetype != ''`
-    );
-    for (const c of allArchCards) {
-      const key = (c.archetype as string).toLowerCase();
-      if (!archetypeCards.has(key)) archetypeCards.set(key, new Set());
-      archetypeCards.get(key)!.add(c.name as string);
-    }
-
-    // BATCH: top decks for all 3 featured decks in one query
-    const deckNames = top3.map((d: any) => (d.name as string).toLowerCase());
-    const placeholdersNames = deckNames.map((_: any, i: number) => `$${i + 1}`).join(',');
-    const allTopDecks = deckNames.length > 0 ? await queryAll(pool,
-      `SELECT deck_type_name, main_deck_json FROM (
-         SELECT deck_type_name, main_deck_json,
-                ROW_NUMBER() OVER (PARTITION BY LOWER(deck_type_name) ORDER BY created_at DESC) AS rn
-         FROM top_decks
-         WHERE LOWER(deck_type_name) IN (${placeholdersNames}) AND main_deck_json IS NOT NULL
-       ) t WHERE rn <= 20`,
-      deckNames
-    ) : [];
-    const topDecksByName = new Map<string, any[]>();
-    for (const row of allTopDecks) {
-      const k = (row.deck_type_name as string).toLowerCase();
-      if (!topDecksByName.has(k)) topDecksByName.set(k, []);
-      topDecksByName.get(k)!.push(row);
-    }
-
-    // Compute top card names per deck (CPU-only)
-    const deckTopNames = new Map<string, string[]>();
-    for (const deck of top3) {
-      const deckNameLower = (deck.name as string).toLowerCase();
-      const deckArchetypeNames = new Set<string>();
-      for (const [archKey, cardSet] of archetypeCards) {
-        if (deckNameLower.includes(archKey) || archKey.includes(deckNameLower)) {
-          for (const name of cardSet) deckArchetypeNames.add(name);
-        }
-      }
-      const topDecks = topDecksByName.get(deckNameLower) ?? [];
-      const freq = new Map<string, number>();
-      for (const td of topDecks) {
-        try {
-          const cards = JSON.parse(td.main_deck_json) as Array<{ cardName: string; amount: number }>;
-          for (const c of cards) {
-            if (c.cardName && c.cardName !== 'Unknown' && deckArchetypeNames.has(c.cardName)) {
-              freq.set(c.cardName, (freq.get(c.cardName) || 0) + 1);
-            }
-          }
-        } catch { /* skip */ }
-      }
-      let topNames = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n);
-      if (topNames.length === 0) topNames = [...deckArchetypeNames].slice(0, 5);
-      deckTopNames.set(deck.id as string, topNames);
-    }
-
-    // BATCH: fetch all needed card images in one query
-    const allNeeded = new Set<string>();
-    for (const names of deckTopNames.values()) for (const n of names) allNeeded.add(n.toLowerCase());
-    const cardImageMap = new Map<string, { name: string; image: string | null }>();
-    if (allNeeded.size > 0) {
-      const arr = [...allNeeded];
-      const ph = arr.map((_: any, i: number) => `$${i + 1}`).join(',');
-      const rows = await queryAll(pool,
-        `SELECT name, image_cropped_url, image_small_url FROM cards
-         WHERE LOWER(name) IN (${ph}) AND (image_cropped_url IS NOT NULL OR image_small_url IS NOT NULL)`,
-        arr
-      );
-      for (const row of rows) {
-        cardImageMap.set((row.name as string).toLowerCase(), {
-          name: row.name as string,
-          image: (row.image_cropped_url || row.image_small_url || null) as string | null,
-        });
-      }
-    }
-
     const result = top3.map((deck: any) => {
-      const topNames = deckTopNames.get(deck.id as string) ?? [];
-      const cards: Array<{ name: string; image: string | null }> = [];
-      for (const n of topNames) {
-        const info = cardImageMap.get(n.toLowerCase());
-        if (info) cards.push(info);
-        if (cards.length >= 5) break;
-      }
-      return { ...deck, cards };
+      const cards: Array<{ name: string; image: string | null }> = deck.computed_cards_json
+        ? JSON.parse(deck.computed_cards_json)
+        : [];
+      const { computed_cards_json: _omit, ...rest } = deck;
+      return { ...rest, cards };
     });
 
     featuredMemCache = result;

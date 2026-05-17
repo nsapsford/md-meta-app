@@ -137,6 +137,11 @@ CREATE TABLE IF NOT EXISTS personal_games (
 CREATE INDEX IF NOT EXISTS idx_personal_games_played_at ON personal_games(played_at);
 CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_played, opponent_deck);
 
+-- Pre-computed card images per deck type (populated by computeDeckTypeCards during sync)
+-- Stored as JSON array: [{name, image}] up to 5 entries
+-- This allows the tier-list endpoint to run as a single SELECT with no joins
+ALTER TABLE deck_types ADD COLUMN IF NOT EXISTS computed_cards_json TEXT;
+
 -- Indexes for tier-list performance (window function + card image lookups)
 CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type_name));
 CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);

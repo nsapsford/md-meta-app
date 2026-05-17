@@ -16,7 +16,7 @@ import tournamentsRouter from './routes/tournaments.js';
 import deckBuilderRouter from './routes/deckBuilder.js';
 import syncRouter from './routes/sync.js';
 import personalGamesRouter from './routes/personalGames.js';
-import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped } from './services/syncService.js';
+import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped, computeDeckTypeCards } from './services/syncService.js';
 import { updateTiersFromScrape } from './services/tierListService.js';
 import { recordSync } from './services/syncStatusService.js';
 
@@ -78,7 +78,17 @@ async function main() {
         await syncTopDecks();
         await syncTournaments();
         await updateTiersFromScrape();
+        await computeDeckTypeCards();
         console.log('[Startup] Meta sync complete');
+      } else {
+        // Ensure computed_cards_json is populated (handles first deploy with new column)
+        const uncomputed = await queryOne(pool,
+          'SELECT COUNT(*) as c FROM deck_types WHERE computed_cards_json IS NULL');
+        if (uncomputed && uncomputed.c > 0) {
+          console.log(`[Startup] Computing card images for ${uncomputed.c} deck types...`);
+          computeDeckTypeCards().catch((e: any) =>
+            console.error('[Startup] computeDeckTypeCards failed:', e?.message));
+        }
       }
     } catch (err) {
       console.error('[Startup] Initial sync failed:', err);
@@ -92,6 +102,7 @@ async function main() {
       await syncDeckTypes();
       await syncTopDecks();
       await updateTiersFromScrape();
+      await computeDeckTypeCards();
       await recordSync('mdm_deck_types', 'success');
     } catch (err: any) {
       await recordSync('mdm_deck_types', 'failed', String(err?.message || err));
