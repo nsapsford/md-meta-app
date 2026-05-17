@@ -136,3 +136,9 @@ CREATE TABLE IF NOT EXISTS personal_games (
 
 CREATE INDEX IF NOT EXISTS idx_personal_games_played_at ON personal_games(played_at);
 CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_played, opponent_deck);
+
+-- Indexes for tier-list performance (window function + card image lookups)
+CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type_name));
+CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cards_name_lower ON cards(LOWER(name));
+CREATE INDEX IF NOT EXISTS idx_cards_archetype_lower ON cards(LOWER(archetype));

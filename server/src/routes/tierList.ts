@@ -18,6 +18,14 @@ export function invalidateTierListCache() {
   archetypeCardsCache = null;
 }
 
+export async function warmTierListCache(): Promise<void> {
+  if (memCache && (Date.now() - memCacheAt) < MEM_CACHE_TTL_MS) return;
+  const { default: axios } = await import('axios');
+  const port = process.env.PORT || 3000;
+  await axios.get(`http://localhost:${port}/api/tier-list`, { timeout: 30000 });
+  console.log('[Warmup] tier-list cache built');
+}
+
 // Manual overrides for MDM deck names → YGOProDeck archetype keys
 const ARCHETYPE_OVERRIDES: Record<string, string[]> = {
   'vanquish soul k9': ['vanquish soul'],
@@ -192,10 +200,17 @@ router.get('/', async (_req: Request, res: Response) => {
       }
 
       grouped[key].push({
-        ...d,
-        cards,
+        id: d.id,
+        name: d.name,
+        tier: d.tier,
+        power: d.power,
+        power_trend: d.power_trend,
+        pop_rank: d.pop_rank,
+        win_rate: d.win_rate,
+        play_rate: d.play_rate,
         thumbnail_image: d.thumbnail_image || (cards.length > 0 ? cards[0].image : null),
-        breakdown_json: d.breakdown_json ? JSON.parse(d.breakdown_json) : null,
+        cards,
+        // breakdown_json intentionally omitted — only needed in /decks/:name
       });
     }
 

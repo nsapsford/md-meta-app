@@ -7,8 +7,8 @@ import 'dotenv/config';
 import { initDb, getPool } from './db/connection.js';
 import { queryOne } from './utils/dbHelpers.js';
 import cardsRouter from './routes/cards.js';
-import tierListRouter from './routes/tierList.js';
-import decksRouter from './routes/decks.js';
+import tierListRouter, { warmTierListCache } from './routes/tierList.js';
+import decksRouter, { warmFeaturedCache } from './routes/decks.js';
 import matchupsRouter from './routes/matchups.js';
 import banListRouter from './routes/banList.js';
 import metaTrendsRouter from './routes/metaTrends.js';
@@ -51,6 +51,13 @@ async function main() {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
+
+  // Warm tier-list + featured caches immediately after startup (non-blocking)
+  // This ensures the first real user request hits in-memory cache, not cold DB
+  setTimeout(() => {
+    warmTierListCache().catch((e: any) => console.error('[Warmup] tier-list failed:', e?.message));
+    warmFeaturedCache().catch((e: any) => console.error('[Warmup] featured failed:', e?.message));
+  }, 2000); // 2s delay so DB connection pool is fully ready
 
   // Initial data sync on startup (non-blocking)
   (async () => {

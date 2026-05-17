@@ -8,6 +8,14 @@ const FEATURED_MEM_TTL_MS = 5 * 60 * 1000;
 
 export function invalidateFeaturedCache() { featuredMemCache = null; }
 
+export async function warmFeaturedCache(): Promise<void> {
+  if (featuredMemCache && (Date.now() - featuredMemCacheAt) < FEATURED_MEM_TTL_MS) return;
+  const { default: axios } = await import('axios');
+  const port = process.env.PORT || 3000;
+  await axios.get(`http://localhost:${port}/api/decks/featured`, { timeout: 30000 });
+  console.log('[Warmup] featured cache built');
+}
+
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
