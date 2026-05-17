@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom';
 import { syncAll } from '../../api/meta';
 import { useState } from 'react';
+import clsx from 'clsx';
+import { useIsNative } from '../../hooks/useIsNative';
+import { useScrollDirection } from '../../hooks/useScrollDirection';
 
 export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const isNative = useIsNative();
+  const scrollDir = useScrollDirection();
+  const collapsed = isNative && scrollDir === 'down';
 
   const handleSync = async () => {
     setSyncing(true);
@@ -21,24 +27,47 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
-      <div className="flex items-center justify-between px-4 md:px-6 h-16">
-        <button onClick={onToggleSidebar} className="md:hidden p-2 -ml-2 mr-1 text-md-textSecondary hover:text-md-text rounded-lg">
+    <header
+      className={clsx(
+        'sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10 transition-all duration-300',
+        collapsed ? 'h-11' : 'h-16'
+      )}
+    >
+      <div className={clsx('flex items-center justify-between px-4 md:px-6 h-full')}>
+        <button
+          onClick={onToggleSidebar}
+          className={clsx(
+            'p-2 -ml-2 mr-1 text-md-textSecondary hover:text-md-text rounded-lg',
+            isNative ? 'hidden' : 'md:hidden'
+          )}
+        >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold group-hover:from-md-gold/40 group-hover:to-md-gold/20 group-hover:shadow-glow-gold transition-all duration-300 transform group-hover:scale-105">
-            <span className="text-md-gold font-extrabold text-lg tracking-tighter">MD</span>
+          <div
+            className={clsx(
+              'rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold transition-all duration-300',
+              collapsed ? 'w-8 h-8' : 'w-10 h-10'
+            )}
+          >
+            <span className={clsx('text-md-gold font-extrabold tracking-tighter', collapsed ? 'text-sm' : 'text-lg')}>MD</span>
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent">
+            <h1
+              className={clsx(
+                'font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent transition-all',
+                collapsed ? 'text-base' : 'text-xl'
+              )}
+            >
               MD Meta
             </h1>
-            <p className="hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
-              Master Duel Analysis
-            </p>
+            {!collapsed && (
+              <p className="hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
+                Master Duel Analysis
+              </p>
+            )}
           </div>
         </Link>
         <div className="flex items-center gap-2">
@@ -51,17 +80,20 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             onClick={handleSync}
             disabled={syncing}
             title="Sync all data sources including untapped.gg"
-            className="flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl transition-all duration-300 disabled:opacity-40
-              bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue"
+            className={clsx(
+              'flex items-center gap-2 font-bold rounded-xl transition-all duration-300 disabled:opacity-40',
+              'bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue',
+              collapsed ? 'px-2 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'
+            )}
           >
             {syncing ? (
               <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
             ) : (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={clsx('shrink-0', collapsed ? 'w-3.5 h-3.5' : 'w-4 h-4')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+            {!collapsed && <span>{syncing ? 'Syncing...' : 'Sync'}</span>}
           </button>
         </div>
       </div>

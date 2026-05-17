@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import TierBadge from '../common/TierBadge';
 import type { TierList, DeckTierEntry } from '../../types/meta';
+import { useIsNative } from '../../hooks/useIsNative';
 
 interface TierListViewProps {
   tierList: TierList;
 }
 
 export default function TierListView({ tierList }: TierListViewProps) {
+  const isNative = useIsNative();
   return (
     <div className="space-y-6">
       {(['0', '1', '2', '3', 'rogue'] as const).map((tierKey) => {
@@ -17,7 +20,7 @@ export default function TierListView({ tierList }: TierListViewProps) {
         return (
           <div key={tierKey} className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 rounded-2xl border border-md-border/40 overflow-hidden backdrop-blur-sm shadow-lg shadow-black/5">
             {/* Tier header with enhanced styling */}
-            <div className="px-6 py-5 border-b border-md-border/30 flex items-center gap-4 bg-md-surface/40">
+            <div className={clsx('border-b border-md-border/30 flex items-center gap-4 bg-md-surface/40', isNative ? 'px-3 py-3' : 'px-6 py-5')}>
               <TierBadge tier={tierNum} size="lg" />
               <span className="text-md-textMuted text-sm font-medium tabular-nums">
                 {decks.length} deck{decks.length !== 1 ? 's' : ''}
@@ -34,10 +37,15 @@ export default function TierListView({ tierList }: TierListViewProps) {
                 <Link
                   key={deck.id}
                   to={`/decks/${encodeURIComponent(deck.name)}`}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4 hover:bg-md-surfaceHover/30 transition-all duration-200 group"
+                  className={clsx(
+                    'hover:bg-md-surfaceHover/30 transition-all duration-200 group',
+                    isNative
+                      ? 'flex flex-col gap-2 px-3 py-3'
+                      : 'grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4'
+                  )}
                 >
                   {/* Card images — overlapping thumbnails */}
-                  <div className="flex items-center min-w-[8rem]">
+                  <div className={clsx('flex items-center overflow-hidden', isNative ? 'w-full' : 'min-w-[8rem]')}>
                     {deck.cards && deck.cards.length > 0 ? (
                       deck.cards.map((card, index) => (
                         <div
@@ -111,8 +119,8 @@ export default function TierListView({ tierList }: TierListViewProps) {
                   </div>
 
                   {/* Right: stats + arrow */}
-                  <div className="flex items-center gap-5 flex-shrink-0">
-                    <div className="flex flex-col items-end gap-1 text-sm tabular-nums">
+                  <div className={clsx('flex items-center flex-shrink-0', isNative ? 'gap-3 justify-between w-full' : 'gap-5')}>
+                    <div className={clsx('text-sm tabular-nums', isNative ? 'flex flex-row items-center gap-3' : 'flex flex-col items-end gap-1')}>
                       {typeof deck.win_rate === 'number' && (
                         <span className={`font-bold ${deck.win_rate >= 55 ? 'text-md-winRate' : deck.win_rate <= 45 ? 'text-md-red' : 'text-md-text'}`}>
                           {deck.win_rate.toFixed(1)}%<span className="text-md-textMuted font-normal ml-1 text-xs">win</span>
