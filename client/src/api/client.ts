@@ -16,6 +16,8 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Preserve cancellation identity so callers' axios.isCancel(err) checks keep working.
+    if (axios.isCancel(err)) return Promise.reject(err);
     const body = err.response?.data;
     const message =
       (typeof body === 'object' && body?.error) ||

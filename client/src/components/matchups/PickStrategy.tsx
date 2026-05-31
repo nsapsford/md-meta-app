@@ -302,17 +302,20 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
 
   useEffect(() => {
     const controller = new AbortController();
+    let cancelled = false;
     setLoading(true);
     getLadderEv(controller.signal, includePersonal, { reinforce: true })
-      .then(setResults)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
+      .then((data) => { if (!cancelled) setResults(data); })
+      .catch((e) => { if (!cancelled && !axios.isCancel(e)) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; controller.abort(); };
   }, [includePersonal]);
 
   useEffect(() => {
     if (!includePersonal) { setSpread([]); return; }
-    getSpread().then(setSpread).catch(() => {});
+    let cancelled = false;
+    getSpread().then((data) => { if (!cancelled) setSpread(data); }).catch(() => {});
+    return () => { cancelled = true; };
   }, [includePersonal]);
 
   const comfortMap = useMemo(() => {
