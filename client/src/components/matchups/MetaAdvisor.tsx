@@ -7,6 +7,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
 import DataValue from '../common/DataValue';
 import TierBadge from '../common/TierBadge';
+import PickStrategy from './PickStrategy';
 import axios from 'axios';
 import clsx from 'clsx';
 
@@ -40,7 +41,7 @@ interface Props {
 }
 
 export default function MetaAdvisor({ decks, includePersonal = false, onTogglePersonal }: Props) {
-  const [mode, setMode] = useState<'ev' | 'deck'>('ev');
+  const [mode, setMode] = useState<'ev' | 'deck' | 'pick'>('ev');
   const [selectedDeck, setSelectedDeck] = useState('');
   const [advisorResult, setAdvisorResult] = useState<AdvisorResult | null>(null);
   const [evResults, setEvResults] = useState<LadderEvResult[]>([]);
@@ -102,6 +103,16 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
             })}
           >
             By Deck
+          </button>
+          <button
+            onClick={() => setMode('pick')}
+            className={clsx('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors', {
+              'bg-md-blue/15 text-md-blue border-md-blue/30': mode === 'pick',
+              'text-md-textMuted border-md-border hover:border-md-borderLight': mode !== 'pick',
+            })}
+          >
+            <span className="sm:hidden">Pick</span>
+            <span className="hidden sm:inline">Pick Strategy</span>
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -269,6 +280,11 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
             <p className="text-sm text-md-textMuted">No tournament field data available yet. Run a sync to populate.</p>
           ) : null}
         </>
+      )}
+
+      {/* Pick Strategy mode */}
+      {mode === 'pick' && (
+        <PickStrategy decks={decks} includePersonal={includePersonal} />
       )}
     </div>
   );
