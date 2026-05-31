@@ -1,6 +1,7 @@
 import type { Pool } from '@neondatabase/serverless';
 import { queryAll } from '../utils/dbHelpers.js';
 import { computeEcosystemAnalysis } from './ecosystemAnalysisService.js';
+import { getInteractionProfiles, computeInteractionDelta } from './cardInteractionService.js';
 
 export interface MatchupSource {
   rate: number;
@@ -20,6 +21,10 @@ export interface MatrixCell {
   confidence: 'high' | 'medium' | 'low';
   inferred?: boolean;
   inference_method?: string;
+  // Card-interaction reinforcement (only populated when buildFullMatrix is called with reinforce=true)
+  interaction_rationale?: string;   // human-readable "why" for this matchup
+  interaction_adjusted?: boolean;    // rate was nudged (inferred/low-confidence cells only)
+  reinforced?: boolean;              // real-data cell whose card evidence agrees with the statistical edge
 }
 
 export interface FullMatrix {
@@ -77,7 +82,8 @@ export async function buildFullMatrix(
   pool: Pool,
   source: string = 'blended',
   infer: boolean = false,
-  includePersonal: boolean = false
+  includePersonal: boolean = false,
+  reinforce: boolean = false
 ): Promise<FullMatrix> {
   const tier13 = (await queryAll(pool,
     'SELECT name FROM deck_types WHERE tier IS NOT NULL AND tier <= 3 ORDER BY tier, name'
@@ -176,7 +182,48 @@ export async function buildFullMatrix(
     await fillMatrixGaps(pool, decks, matrix, source);
   }
 
+  // Card-interaction reinforcement: attach rationale to every cell, but only nudge
+  // the rate of inferred / low-confidence cells. Real-data cells keep their rate and
+  // are flagged when the card evidence agrees with the statistical edge.
+  if (reinforce) {
+    await reinforceMatrix(pool, decks, matrix);
+  }
+
   return { decks, matrix };
+}
+
+async function reinforceMatrix(
+  pool: Pool,
+  decks: string[],
+  matrix: Record<string, Record<string, MatrixCell>>
+): Promise<void> {
+  try {
+    const profiles = await getInteractionProfiles(pool);
+    for (const a of decks) {
+      for (const b of decks) {
+        if (a === b) continue;
+        const cell = matrix[a]?.[b];
+        if (!cell) continue;
+        const { delta, rationale } = computeInteractionDelta(
+          profiles[a.toLowerCase()], profiles[b.toLowerCase()]
+        );
+        if (delta === 0 && !rationale) continue;
+        if (rationale) cell.interaction_rationale = rationale;
+
+        if (cell.inferred || cell.confidence === 'low') {
+          if (delta !== 0) {
+            cell.rate = Math.max(0, Math.min(1, cell.rate + delta));
+            cell.interaction_adjusted = true;
+          }
+        } else if (delta !== 0) {
+          // Real data: don't move the rate; flag agreement with the statistical edge.
+          cell.reinforced = Math.sign(delta) === Math.sign(cell.rate - 0.5);
+        }
+      }
+    }
+  } catch {
+    // Reinforcement is best-effort; never break the matrix on card-data issues.
+  }
 }
 
 /**

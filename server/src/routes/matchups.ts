@@ -171,8 +171,11 @@ router.get('/ladder-ev', async (req: Request, res: Response) => {
     const source = (req.query.source as string) || 'blended';
     const infer = req.query.infer !== 'false'; // default true
     const includePersonal = req.query.include_personal === 'true';
+    const reinforce = req.query.reinforce === 'true';
+    const cwRaw = parseFloat(req.query.counter_weight as string);
+    const counterWeight = Number.isFinite(cwRaw) ? Math.max(0, Math.min(1, cwRaw)) : 0.35;
     const pool = getPool();
-    const results = await computeLadderEv(pool, source, infer, includePersonal);
+    const results = await computeLadderEv(pool, source, infer, includePersonal, counterWeight, reinforce);
     res.json(results);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

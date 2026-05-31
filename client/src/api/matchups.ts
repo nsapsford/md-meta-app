@@ -9,6 +9,9 @@ export interface MatchupMatrixCell {
   confidence: 'high' | 'medium' | 'low';
   inferred?: boolean;
   inference_method?: string;
+  interaction_rationale?: string;
+  interaction_adjusted?: boolean;
+  reinforced?: boolean;
 }
 
 export interface MatchupMatrix {
@@ -62,6 +65,15 @@ export interface LadderEvMatchup {
   inferred: boolean;
 }
 
+export interface DeckInteractionSummary {
+  strategy_class: string;
+  hand_traps: number;
+  floodgates: number;
+  board_breakers: number;
+  engines: { name: string; card_count: number }[];
+  vs_top3_rationale: string;
+}
+
 export interface LadderEvResult {
   deck: string;
   tier: number | null;
@@ -71,14 +83,21 @@ export interface LadderEvResult {
   top_good_matchups: LadderEvMatchup[];
   top_bad_matchups: LadderEvMatchup[];
   coverage: number;
+  popularity: number;
+  ev_vs_top3: number | null;
+  pick_score: number;
+  interaction?: DeckInteractionSummary;
 }
 
 export async function getLadderEv(
   signal?: AbortSignal,
-  includePersonal: boolean = false
+  includePersonal: boolean = false,
+  opts?: { counterWeight?: number; reinforce?: boolean }
 ): Promise<LadderEvResult[]> {
   const params: Record<string, string> = {};
   if (includePersonal) params.include_personal = 'true';
+  if (opts?.reinforce) params.reinforce = 'true';
+  if (opts?.counterWeight != null) params.counter_weight = String(opts.counterWeight);
   const res = await api.get('/matchups/ladder-ev', { params, signal });
   return res.data;
 }
