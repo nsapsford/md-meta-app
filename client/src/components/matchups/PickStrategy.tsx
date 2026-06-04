@@ -195,7 +195,7 @@ function PickCard({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs text-md-textMuted tabular-nums w-5 shrink-0">#{rank}</span>
           <TierBadge tier={r.tier} size="sm" />
-          <span className="text-sm font-semibold truncate">{r.deck}</span>
+          <span className="text-sm font-semibold min-w-0 break-words">{r.deck}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={clsx('px-1.5 py-0.5 rounded text-[10px] font-semibold border', q.cls)}>{q.label}</span>
