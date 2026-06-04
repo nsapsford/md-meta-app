@@ -27,13 +27,13 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   };
 
   return (
-    <header
-      className={clsx(
-        'sticky top-0 z-50 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10 transition-all duration-300',
-        collapsed ? 'h-11' : 'h-16'
-      )}
-    >
-      <div className={clsx('flex items-center justify-between px-4 md:px-6 h-full')}>
+    <header className="sticky top-0 z-50 h-16 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
+      <div
+        className={clsx(
+          'flex items-center justify-between px-4 md:px-6 h-full origin-left will-change-transform transition-transform duration-300',
+          collapsed && 'scale-[0.9]'
+        )}
+      >
         <button
           onClick={onToggleSidebar}
           className={clsx(
@@ -46,28 +46,21 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
           </svg>
         </button>
         <Link to="/" className="flex items-center gap-3 group">
-          <div
-            className={clsx(
-              'rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold transition-all duration-300',
-              collapsed ? 'w-8 h-8' : 'w-10 h-10'
-            )}
-          >
-            <span className={clsx('text-md-gold font-extrabold tracking-tighter', collapsed ? 'text-sm' : 'text-lg')}>MD</span>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold">
+            <span className="text-md-gold font-extrabold tracking-tighter text-lg">MD</span>
           </div>
           <div className="flex flex-col">
-            <h1
-              className={clsx(
-                'font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent transition-all',
-                collapsed ? 'text-base' : 'text-xl'
-              )}
-            >
+            <h1 className="font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent text-xl">
               MD Meta
             </h1>
-            {!collapsed && (
-              <p className="hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold">
-                Master Duel Analysis
-              </p>
-            )}
+            <p
+              className={clsx(
+                'hidden sm:block text-[11px] text-md-textMuted mt-0.5 tracking-wider uppercase font-semibold transition-opacity duration-300',
+                collapsed ? 'opacity-0' : 'opacity-100'
+              )}
+            >
+              Master Duel Analysis
+            </p>
           </div>
         </Link>
         <div className="flex items-center gap-2">
@@ -81,19 +74,18 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             disabled={syncing}
             title="Sync all data sources including untapped.gg"
             className={clsx(
-              'flex items-center gap-2 font-bold rounded-xl transition-all duration-300 disabled:opacity-40',
-              'bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue',
-              collapsed ? 'px-2 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'
+              'flex items-center gap-2 font-bold rounded-xl px-3 py-2 text-xs disabled:opacity-40',
+              'bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue'
             )}
           >
             {syncing ? (
               <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
             ) : (
-              <svg className={clsx('shrink-0', collapsed ? 'w-3.5 h-3.5' : 'w-4 h-4')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            {!collapsed && <span>{syncing ? 'Syncing...' : 'Sync'}</span>}
+            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
           </button>
         </div>
       </div>
