@@ -72,95 +72,41 @@ router.post('/negate', async (_req: Request, res: Response) => {
   }
 });
 
-interface SyncStage {
-  key: 'cards' | 'deckTypes' | 'topDecks' | 'tournaments' | 'untappedArchetypes' | 'cardNegateEffectiveness';
-  label: string;
-  failSource: SyncSource;
-  run: () => Promise<number>;
-}
-
-// Ordered stages of a full sync. Each resolves to a count and is reported as one
-// progress tick so the client can render an accurate progress bar.
-const FULL_SYNC_STAGES: SyncStage[] = [
-  {
-    key: 'cards', label: 'Cards', failSource: 'ygoprodeck',
-    run: async () => { const c = await syncCards(); await syncArchetypes(); await recordSync('ygoprodeck', 'success'); return c; },
-  },
-  { key: 'deckTypes', label: 'Deck types', failSource: 'mdm_deck_types', run: () => syncDeckTypes() },
-  {
-    key: 'topDecks', label: 'Top decks', failSource: 'mdm_deck_types',
-    run: async () => { const c = await syncTopDecks(); await recordSync('mdm_deck_types', 'success'); return c; },
-  },
-  {
-    key: 'tournaments', label: 'Tournaments', failSource: 'mdm_tournaments',
-    run: async () => { const c = await syncTournaments(); await recordSync('mdm_tournaments', 'success'); return c; },
-  },
-  {
-    key: 'untappedArchetypes', label: 'Untapped archetypes', failSource: 'untapped',
-    run: async () => { const c = await syncUntapped(); await recordSync('untapped', 'success'); return c; },
-  },
-  { key: 'cardNegateEffectiveness', label: 'Card negate data', failSource: 'ygoprodeck', run: () => syncCardNegateEffectiveness() },
-];
-
-export interface FullSyncProgress { index: number; total: number; label: string; key: SyncStage['key'] }
-
-async function runFullSync(onProgress?: (p: FullSyncProgress) => void): Promise<Record<string, number>> {
-  await clearCache('mdm');
-  invalidateTierListCache();
-  invalidateFeaturedCache();
-
-  const total = FULL_SYNC_STAGES.length;
-  const results: Record<string, number> = {};
-  for (let i = 0; i < total; i++) {
-    const stage = FULL_SYNC_STAGES[i];
-    try {
-      results[stage.key] = await stage.run();
-    } catch (err: any) {
-      await recordSync(stage.failSource, 'failed', String(err?.message || err));
-      throw Object.assign(err instanceof Error ? err : new Error(String(err)), { stageLabel: stage.label });
-    }
-    onProgress?.({ index: i + 1, total, label: stage.label, key: stage.key });
-  }
-  return results;
-}
-
 router.post('/all', async (_req: Request, res: Response) => {
+  let step = 'init';
   try {
-    const r = await runFullSync();
+    await clearCache('mdm');
+    invalidateTierListCache();
+    invalidateFeaturedCache();
+    step = 'syncCards';
+    const cardCount = await syncCards();
+    await syncArchetypes();
+    await recordSync('ygoprodeck', 'success');
+    step = 'syncDeckTypes';
+    const dtCount = await syncDeckTypes();
+    step = 'syncTopDecks';
+    const tdCount = await syncTopDecks();
+    await recordSync('mdm_deck_types', 'success');
+    step = 'syncTournaments';
+    const tCount = await syncTournaments();
+    await recordSync('mdm_tournaments', 'success');
+    step = 'syncUntapped';
+    const uCount = await syncUntapped();
+    await recordSync('untapped', 'success');
+    step = 'syncNegate';
+    const nCount = await syncCardNegateEffectiveness();
     res.json({
       message: 'Full sync complete',
-      cards: r.cards, deckTypes: r.deckTypes, topDecks: r.topDecks,
-      tournaments: r.tournaments, untappedArchetypes: r.untappedArchetypes,
-      cardNegateEffectiveness: r.cardNegateEffectiveness,
+      cards: cardCount, deckTypes: dtCount, topDecks: tdCount,
+      tournaments: tCount, untappedArchetypes: uCount, cardNegateEffectiveness: nCount,
     });
   } catch (err: any) {
+    const source: SyncSource =
+      step === 'syncTournaments' ? 'mdm_tournaments' :
+      step === 'syncUntapped'    ? 'untapped'        :
+      (step === 'syncDeckTypes' || step === 'syncTopDecks') ? 'mdm_deck_types' : 'ygoprodeck';
+    await recordSync(source, 'failed', String(err?.message || err));
     res.status(500).json({ error: err.message });
-  }
-});
-
-// Server-Sent Events variant of /all that streams per-stage progress so the
-// client can render an accurate progress bar. EventSource only issues GET.
-router.get('/all/stream', async (_req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // disable proxy buffering (e.g. nginx)
-  res.flushHeaders?.();
-
-  const send = (event: string, data: unknown) => {
-    if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  };
-
-  // Prime the stream so the client shows 0% immediately.
-  send('progress', { index: 0, total: FULL_SYNC_STAGES.length, label: 'Starting', key: 'cards' });
-
-  try {
-    const r = await runFullSync((p) => send('progress', p));
-    send('done', { message: 'Full sync complete', ...r });
-  } catch (err: any) {
-    send('syncerror', { error: String(err?.message || err), stage: err?.stageLabel });
-  } finally {
-    res.end();
   }
 });
 
