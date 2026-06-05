@@ -1,9 +1,19 @@
 name: Build Android APK
 
-# Builds the Capacitor Android debug APK on GitHub-hosted runners (which have
-# full access to Google's Android SDK / Maven servers) and uploads it as a
-# downloadable artifact. Runs on pushes to master, on PRs touching the app, and
-# can be triggered manually from the Actions tab.
+# Builds the Capacitor Android APK on GitHub-hosted runners (which have full
+# access to Google's Android SDK / Maven servers) and uploads it as a
+# downloadable artifact. Always builds an unsigned debug APK; additionally
+# builds a signed release APK when the signing secrets are configured (see
+# below). Runs on pushes to master, on PRs touching the app, and can be
+# triggered manually from the Actions tab.
+#
+# Release signing — add these repository secrets (Settings -> Secrets and
+# variables -> Actions) to produce a consistently-signed release APK that can
+# update previous installs:
+#   ANDROID_KEYSTORE_BASE64    base64 of your release keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD  keystore (store) password
+#   ANDROID_KEY_ALIAS          key alias inside the keystore
+#   ANDROID_KEY_PASSWORD       key password for that alias
 on:
   push:
     branches: [master]
@@ -23,6 +33,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Surfaced to step `if:` conditions so release steps only run when the
+      # keystore secret is present (e.g. forks/PRs without secret access skip it).
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     defaults:
       run:
         working-directory: client
@@ -69,4 +83,28 @@ jobs:
         with:
           name: md-meta-app-debug-apk
           path: client/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Decode release keystore
+        if: env.KEYSTORE_B64 != ''
+        run: echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed release APK
+        if: env.KEYSTORE_B64 != ''
+        working-directory: client/android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload signed release APK
+        if: env.KEYSTORE_B64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: md-meta-app-release-apk
+          path: client/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
