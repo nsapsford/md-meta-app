@@ -7,8 +7,15 @@ android {
         applicationId "com.mdmeta.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Version can be overridden by CI (e.g. release tags via APP_VERSION_*);
+        // defaults keep local/debug builds stable. APP_VERSION_NAME may carry a
+        // leading "v" from the git tag, which is stripped here.
+        def envVersionCode = System.getenv("APP_VERSION_CODE")
+        def envVersionName = System.getenv("APP_VERSION_NAME")
+        def resolvedVersionCode = (envVersionCode?.trim()) ? envVersionCode.trim().toInteger() : 1
+        def resolvedVersionName = (envVersionName?.trim()) ? envVersionName.trim().replaceFirst(/^v/, "") : "1.0"
+        versionCode resolvedVersionCode
+        versionName resolvedVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
