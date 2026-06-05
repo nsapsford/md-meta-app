@@ -110,42 +110,6 @@ export async function syncAll() {
   return res.data;
 }
 
-export interface SyncProgress {
-  index: number;
-  total: number;
-  label: string;
-}
-
-/**
- * Runs a full sync while streaming per-stage progress via Server-Sent Events,
- * so callers can render an accurate progress bar. Resolves with the final
- * summary payload (or rejects if the sync fails / the stream drops).
- */
-export function syncAllStream(onProgress: (p: SyncProgress) => void): Promise<{ message?: string } & Record<string, unknown>> {
-  const base = api.defaults.baseURL ?? '';
-  return new Promise((resolve, reject) => {
-    const es = new EventSource(`${base}/sync/all/stream`);
-    let settled = false;
-    const finish = (fn: () => void) => { if (!settled) { settled = true; es.close(); fn(); } };
-
-    es.addEventListener('progress', (e) => {
-      try { onProgress(JSON.parse((e as MessageEvent).data)); } catch { /* ignore malformed tick */ }
-    });
-    es.addEventListener('done', (e) => {
-      finish(() => { try { resolve(JSON.parse((e as MessageEvent).data)); } catch { resolve({}); } });
-    });
-    es.addEventListener('syncerror', (e) => {
-      finish(() => {
-        let msg = 'Sync failed';
-        try { msg = JSON.parse((e as MessageEvent).data).error || msg; } catch { /* keep default */ }
-        reject(new Error(msg));
-      });
-    });
-    // Native EventSource error = connection failure (no app-level data).
-    es.onerror = () => finish(() => reject(new Error('Sync connection lost')));
-  });
-}
-
 export async function syncUntapped() {
   const res = await api.post('/sync/untapped');
   return res.data;

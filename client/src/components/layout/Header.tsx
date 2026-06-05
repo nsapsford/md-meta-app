@@ -1,31 +1,13 @@
 import { Link } from 'react-router-dom';
-import { syncAllStream } from '../../api/meta';
+import { syncAll } from '../../api/meta';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { useIsNative } from '../../hooks/useIsNative';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
 
-/** Determinate circular progress indicator sized to match a 16px icon. */
-function ProgressRing({ value }: { value: number }) {
-  const r = 6.5;
-  const circumference = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(1, value));
-  return (
-    <svg className="shrink-0 w-4 h-4 -rotate-90" viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="8" cy="8" r={r} fill="none" stroke="currentColor" strokeOpacity={0.25} strokeWidth={2} />
-      <circle
-        cx="8" cy="8" r={r} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"
-        strokeDasharray={circumference} strokeDashoffset={circumference * (1 - clamped)}
-        style={{ transition: 'stroke-dashoffset 300ms ease' }}
-      />
-    </svg>
-  );
-}
-
 export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
-  const [progress, setProgress] = useState(0);
   const isNative = useIsNative();
   const scrollDir = useScrollDirection();
   const collapsed = isNative && scrollDir === 'down';
@@ -33,16 +15,12 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   const handleSync = async () => {
     setSyncing(true);
     setSyncMsg('');
-    setProgress(0);
     try {
-      const res = await syncAllStream((p) => setProgress(p.total ? p.index / p.total : 0));
-      setProgress(1);
+      const res = await syncAll();
       setSyncMsg(res.message || 'Done');
       setTimeout(() => setSyncMsg(''), 4000);
     } catch (e) {
       console.error('Sync failed:', e);
-      setSyncMsg('Sync failed');
-      setTimeout(() => setSyncMsg(''), 4000);
     } finally {
       setSyncing(false);
     }
@@ -101,13 +79,13 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             )}
           >
             {syncing ? (
-              <ProgressRing value={progress} />
+              <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
             ) : (
               <svg className="shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <span className="tabular-nums">{syncing ? `${Math.round(progress * 100)}%` : 'Sync'}</span>
+            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
           </button>
         </div>
       </div>
