@@ -125,7 +125,7 @@ function CardSection({ label, cards, totalCards }: { label: string; cards: Enric
       <h4 className="text-xs font-semibold text-md-textMuted uppercase tracking-wider mb-2">
         {label} <span className="text-md-text">({total})</span>
       </h4>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-x-[3px] gap-y-1.5">
         {cards.map((card, i) => (
           <DeckCardCell key={`${card.cardName}-${i}`} card={card} />
         ))}
