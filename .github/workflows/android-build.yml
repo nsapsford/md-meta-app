@@ -1,0 +1,72 @@
+name: Build Android APK
+
+# Builds the Capacitor Android debug APK on GitHub-hosted runners (which have
+# full access to Google's Android SDK / Maven servers) and uploads it as a
+# downloadable artifact. Runs on pushes to master, on PRs touching the app, and
+# can be triggered manually from the Actions tab.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'client/**'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    paths:
+      - 'client/**'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Capacitor sync (Android)
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: client/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: md-meta-app-debug-apk
+          path: client/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
