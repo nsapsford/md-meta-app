@@ -42,10 +42,10 @@ jobs:
           echo "::error::ANDROID_KEYSTORE_BASE64 is not set — cannot build a signed release APK. Add the signing secrets first."
           exit 1
 
-      - name: Checkout (at the tag)
+      # For tag pushes this checks out the tag; for manual dispatch it checks out
+      # the selected branch (the tag is created by the release step below).
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -97,6 +97,9 @@ jobs:
         with:
           tag_name: ${{ env.APP_VERSION_NAME }}
           name: ${{ env.APP_VERSION_NAME }}
+          # When triggered manually the tag may not exist yet; create it at the
+          # checked-out commit. Ignored when the tag already exists (tag push).
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: ${{ runner.temp }}/md-meta-app-${{ env.APP_VERSION_NAME }}.apk
