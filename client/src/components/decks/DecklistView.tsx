@@ -79,11 +79,11 @@ function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
   return (
     <div
       ref={cellRef}
-      className={`relative border-l-2 ${borderClass} rounded overflow-hidden`}
+      className={`relative border-l-2 ${borderClass} rounded overflow-hidden w-full aspect-[3/4]`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHovered(false)}
     >
-      <CardImage src={card.imageUrl || null} alt={card.cardName} size="md" />
+      <CardImage src={card.imageUrl || null} alt={card.cardName} size="md" className="!w-full !h-full" />
       {card.amount > 1 && (
         <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
           x{card.amount}
@@ -125,7 +125,7 @@ function CardSection({ label, cards, totalCards }: { label: string; cards: Enric
       <h4 className="text-xs font-semibold text-md-textMuted uppercase tracking-wider mb-2">
         {label} <span className="text-md-text">({total})</span>
       </h4>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
         {cards.map((card, i) => (
           <DeckCardCell key={`${card.cardName}-${i}`} card={card} />
         ))}

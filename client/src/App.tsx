@@ -4,7 +4,6 @@ import clsx from 'clsx';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import MobileBottomNav from './components/layout/MobileBottomNav';
-import SyncStatusBanner from './components/common/SyncStatusBanner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import DeckProfile from './pages/DeckProfile';
@@ -25,7 +24,6 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-md-bg">
         <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
-        <SyncStatusBanner />
         <div className="flex">
           {!isNative && sidebarOpen && (
             <div
