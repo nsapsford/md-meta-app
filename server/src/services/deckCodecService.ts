@@ -28,3 +28,14 @@ export function parseYdk(text: string): DeckPasscodes {
 
   return deck;
 }
+
+export function buildYdk(deck: DeckPasscodes): string {
+  const lines: string[] = ['#created by MD Meta', '#main'];
+  for (const id of deck.main) lines.push(String(id));
+  lines.push('#extra');
+  for (const id of deck.extra) lines.push(String(id));
+  lines.push('!side');
+  for (const id of deck.side) lines.push(String(id));
+  lines.push(''); // trailing newline
+  return lines.join('\n');
+}
