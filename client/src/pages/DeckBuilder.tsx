@@ -8,6 +8,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import type { Card } from '../types/card';
 
 interface DeckCard {
+  id: number;
   name: string;
   count: number;
   image_small_url: string;
@@ -23,6 +24,7 @@ export default function DeckBuilder() {
   const [searchResults, setSearchResults] = useState<Card[]>([]);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
+  const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
   const [score, setScore] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
   const [searching, setSearching] = useState(false);
@@ -41,9 +43,8 @@ export default function DeckBuilder() {
     return () => controller.abort();
   }, [debouncedQuery]);
 
-  const addCard = useCallback((card: Card) => {
-    const isExtra = isExtraDeck(card.type);
-    const setter = isExtra ? setExtraDeck : setMainDeck;
+  const addCard = useCallback((card: Card, toSide = false) => {
+    const setter = toSide ? setSideDeck : (isExtraDeck(card.type) ? setExtraDeck : setMainDeck);
 
     setter((prev) => {
       const existing = prev.find((c) => c.name === card.name);
@@ -51,12 +52,12 @@ export default function DeckBuilder() {
         if (existing.count >= 3) return prev;
         return prev.map((c) => c.name === card.name ? { ...c, count: c.count + 1 } : c);
       }
-      return [...prev, { name: card.name, count: 1, image_small_url: card.image_small_url, type: card.type }];
+      return [...prev, { id: card.id, name: card.name, count: 1, image_small_url: card.image_small_url, type: card.type }];
     });
   }, []);
 
-  const removeCard = useCallback((name: string, isExtra: boolean) => {
-    const setter = isExtra ? setExtraDeck : setMainDeck;
+  const removeCard = useCallback((name: string, section: 'main' | 'extra' | 'side') => {
+    const setter = section === 'side' ? setSideDeck : section === 'extra' ? setExtraDeck : setMainDeck;
     setter((prev) => {
       const card = prev.find((c) => c.name === name);
       if (!card) return prev;
@@ -67,6 +68,7 @@ export default function DeckBuilder() {
 
   const mainCount = mainDeck.reduce((s, c) => s + c.count, 0);
   const extraCount = extraDeck.reduce((s, c) => s + c.count, 0);
+  const sideCount = sideDeck.reduce((s, c) => s + c.count, 0);
 
   // Score deck
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function DeckBuilder() {
           {searchResults.map((card) => (
             <button
               key={card.id}
-              onClick={() => addCard(card)}
+              onClick={(e) => addCard(card, e.shiftKey)}
               className="w-full flex items-center gap-2 p-2 rounded hover:bg-md-surfaceHover transition-colors text-left"
             >
               {card.image_small_url && (
@@ -144,7 +146,7 @@ export default function DeckBuilder() {
               {mainDeck.map((card) => (
                 <button
                   key={card.name}
-                  onClick={() => removeCard(card.name, false)}
+                  onClick={() => removeCard(card.name, 'main')}
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
@@ -175,7 +177,7 @@ export default function DeckBuilder() {
               {extraDeck.map((card) => (
                 <button
                   key={card.name}
-                  onClick={() => removeCard(card.name, true)}
+                  onClick={() => removeCard(card.name, 'extra')}
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
@@ -188,6 +190,27 @@ export default function DeckBuilder() {
                   <div className="absolute inset-0 bg-md-red/50 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-white text-xs font-bold">-1</span>
                   </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Side Deck */}
+        <div className="bg-md-surface border border-md-border rounded-lg p-4">
+          <h3 className="font-semibold mb-3">
+            Side Deck <span className={`text-sm ${sideCount > 15 ? 'text-md-red' : 'text-md-textMuted'}`}>({sideCount}/15)</span>
+          </h3>
+          {sideDeck.length === 0 ? (
+            <p className="text-sm text-md-textMuted text-center py-4">Shift-click a search result to add it here</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {sideDeck.map((card) => (
+                <button key={card.name} onClick={() => removeCard(card.name, 'side')} className="relative group" title={`${card.name} (click to remove)`}>
+                  <img src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
+                  {card.count > 1 && (
+                    <span className="absolute -top-1 -right-1 bg-md-green text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{card.count}</span>
+                  )}
                 </button>
               ))}
             </div>
