@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { searchCards } from '../api/cards';
 import { scoreDeck, validateDeck } from '../api/meta';
 import { useDebounce } from '../hooks/useDebounce';
 import SearchInput from '../components/common/SearchInput';
 import ErrorBanner from '../components/common/ErrorBanner';
+import DeckImportExport from '../components/decks/DeckImportExport';
+import type { ResolvedCard } from '../api/deckIO';
 import type { Card } from '../types/card';
 
 interface DeckCard {
@@ -29,6 +32,7 @@ export default function DeckBuilder() {
   const [validation, setValidation] = useState<any>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  const [ioOpen, setIoOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -64,6 +68,24 @@ export default function DeckBuilder() {
       if (card.count > 1) return prev.map((c) => c.name === name ? { ...c, count: c.count - 1 } : c);
       return prev.filter((c) => c.name !== name);
     });
+  }, []);
+
+  const loadImported = useCallback((cards: ResolvedCard[], sections: { main: number[]; extra: number[]; side: number[] }) => {
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const build = (ids: number[]): DeckCard[] => {
+      const counts = new Map<number, number>();
+      for (const id of ids) counts.set(id, (counts.get(id) || 0) + 1);
+      const out: DeckCard[] = [];
+      for (const [id, count] of counts) {
+        const info = byId.get(id);
+        if (!info) continue; // unresolved already reported by the modal
+        out.push({ id, name: info.name, count, image_small_url: info.image_small_url || '', type: info.type || '' });
+      }
+      return out;
+    };
+    setMainDeck(build(sections.main));
+    setExtraDeck(build(sections.extra));
+    setSideDeck(build(sections.side));
   }, []);
 
   const mainCount = mainDeck.reduce((s, c) => s + c.count, 0);
@@ -115,6 +137,8 @@ export default function DeckBuilder() {
         {/* Score & Validation */}
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
+          <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded">Import / Export</button>
+          <Link to="/my-decks" className="text-sm text-md-textMuted hover:text-md-text underline">My Decks</Link>
           {score && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-md-textMuted">Meta Score:</span>
@@ -238,6 +262,15 @@ export default function DeckBuilder() {
           </div>
         )}
       </div>
+
+      <DeckImportExport
+        open={ioOpen}
+        onClose={() => setIoOpen(false)}
+        main={mainDeck}
+        extra={extraDeck}
+        side={sideDeck}
+        onImport={loadImported}
+      />
     </div>
   );
 }
