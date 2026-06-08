@@ -1,3 +1,6 @@
+import type { Pool } from '@neondatabase/serverless';
+import { queryAll } from '../utils/dbHelpers.js';
+
 export interface DeckPasscodes {
   main: number[];
   extra: number[];
@@ -38,4 +41,48 @@ export function buildYdk(deck: DeckPasscodes): string {
   for (const id of deck.side) lines.push(String(id));
   lines.push(''); // trailing newline
   return lines.join('\n');
+}
+
+export interface ResolvedCard {
+  id: number;            // passcode
+  name: string;
+  type: string | null;
+  image_small_url: string | null;
+}
+
+export interface ResolveResult {
+  cards: ResolvedCard[];     // de-duplicated card info, in DB order
+  unresolved: number[];      // passcodes with no matching card row
+}
+
+/** Map passcodes -> card info. Unknown passcodes returned in `unresolved`. */
+export async function resolvePasscodes(pool: Pool, passcodes: number[]): Promise<ResolveResult> {
+  const unique = [...new Set(passcodes)];
+  if (unique.length === 0) return { cards: [], unresolved: [] };
+  const rows = await queryAll(pool,
+    'SELECT id, name, type, image_small_url FROM cards WHERE id = ANY($1)',
+    [unique]
+  );
+  const found = new Set<number>(rows.map((r: any) => Number(r.id)));
+  const unresolved = unique.filter((p) => !found.has(p));
+  return { cards: rows as ResolvedCard[], unresolved };
+}
+
+export interface NameResolveResult {
+  resolved: Record<string, number>; // lowercased name -> passcode
+  unresolved: string[];
+}
+
+/** Exact (case-insensitive) name -> passcode. */
+export async function resolveNames(pool: Pool, names: string[]): Promise<NameResolveResult> {
+  const unique = [...new Set(names.map((n) => n.toLowerCase()))];
+  if (unique.length === 0) return { resolved: {}, unresolved: [] };
+  const rows = await queryAll(pool,
+    'SELECT id, name FROM cards WHERE LOWER(name) = ANY($1)',
+    [unique]
+  );
+  const resolved: Record<string, number> = {};
+  for (const r of rows as any[]) resolved[r.name.toLowerCase()] = Number(r.id);
+  const unresolved = unique.filter((n) => !(n in resolved));
+  return { resolved, unresolved };
 }
