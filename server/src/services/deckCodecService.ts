@@ -59,13 +59,13 @@ export interface ResolveResult {
 export async function resolvePasscodes(pool: Pool, passcodes: number[]): Promise<ResolveResult> {
   const unique = [...new Set(passcodes)];
   if (unique.length === 0) return { cards: [], unresolved: [] };
-  const rows = await queryAll(pool,
-    'SELECT id, name, type, image_small_url FROM cards WHERE id = ANY($1)',
+  const rows = await queryAll<ResolvedCard>(pool,
+    'SELECT id, name, type, image_small_url FROM cards WHERE id = ANY($1::int[])',
     [unique]
   );
-  const found = new Set<number>(rows.map((r: any) => Number(r.id)));
+  const found = new Set<number>(rows.map((r) => Number(r.id)));
   const unresolved = unique.filter((p) => !found.has(p));
-  return { cards: rows as ResolvedCard[], unresolved };
+  return { cards: rows, unresolved };
 }
 
 export interface NameResolveResult {
@@ -77,12 +77,12 @@ export interface NameResolveResult {
 export async function resolveNames(pool: Pool, names: string[]): Promise<NameResolveResult> {
   const unique = [...new Set(names.map((n) => n.toLowerCase()))];
   if (unique.length === 0) return { resolved: {}, unresolved: [] };
-  const rows = await queryAll(pool,
-    'SELECT id, name FROM cards WHERE LOWER(name) = ANY($1)',
+  const rows = await queryAll<{ id: number; name: string }>(pool,
+    'SELECT id, name FROM cards WHERE LOWER(name) = ANY($1::text[])',
     [unique]
   );
   const resolved: Record<string, number> = {};
-  for (const r of rows as any[]) resolved[r.name.toLowerCase()] = Number(r.id);
+  for (const r of rows) resolved[r.name.toLowerCase()] = Number(r.id);
   const unresolved = unique.filter((n) => !(n in resolved));
   return { resolved, unresolved };
 }
