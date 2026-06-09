@@ -7,6 +7,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import SearchInput from '../components/common/SearchInput';
 import ErrorBanner from '../components/common/ErrorBanner';
 import DeckImportExport from '../components/decks/DeckImportExport';
+import SaveDeckDialog from '../components/decks/SaveDeckDialog';
 import type { ResolvedCard } from '../api/deckIO';
 import type { Card } from '../types/card';
 
@@ -33,6 +34,8 @@ export default function DeckBuilder() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [ioOpen, setIoOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [savedMsg, setSavedMsg] = useState('');
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -138,7 +141,15 @@ export default function DeckBuilder() {
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
           <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded">Import / Export</button>
+          <button
+            onClick={() => setSaveOpen(true)}
+            disabled={mainDeck.length + extraDeck.length + sideDeck.length === 0}
+            className="bg-md-green text-white text-sm font-semibold px-3 py-1.5 rounded disabled:opacity-40"
+          >
+            Save Deck
+          </button>
           <Link to="/my-decks" className="text-sm text-md-textMuted hover:text-md-text underline">My Decks</Link>
+          {savedMsg && <span className="text-sm text-md-green">{savedMsg}</span>}
           {score && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-md-textMuted">Meta Score:</span>
@@ -270,6 +281,18 @@ export default function DeckBuilder() {
         extra={extraDeck}
         side={sideDeck}
         onImport={loadImported}
+      />
+
+      <SaveDeckDialog
+        open={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        main={mainDeck}
+        extra={extraDeck}
+        side={sideDeck}
+        onSaved={(name) => {
+          setSavedMsg(`Saved "${name}" to My Decks`);
+          setTimeout(() => setSavedMsg(''), 4000);
+        }}
       />
     </div>
   );
