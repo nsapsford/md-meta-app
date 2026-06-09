@@ -13,6 +13,7 @@ import BanList from './pages/BanList';
 import MetaTrends from './pages/MetaTrends';
 import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
+import MyDecks from './pages/MyDecks';
 import Admin from './pages/Admin';
 import { useIsNative } from './hooks/useIsNative';
 
@@ -49,6 +50,7 @@ export default function App() {
                   <Route path="/trends" element={<MetaTrends />} />
                   <Route path="/tournaments" element={<Tournaments />} />
                   <Route path="/deck-builder" element={<DeckBuilder />} />
+                  <Route path="/my-decks" element={<MyDecks />} />
                   <Route path="/admin" element={<Admin />} />
                 </Routes>
               </ErrorBoundary>

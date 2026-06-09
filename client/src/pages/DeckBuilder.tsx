@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { searchCards } from '../api/cards';
 import { scoreDeck, validateDeck } from '../api/meta';
 import { useDebounce } from '../hooks/useDebounce';
 import SearchInput from '../components/common/SearchInput';
 import ErrorBanner from '../components/common/ErrorBanner';
+import DeckImportExport from '../components/decks/DeckImportExport';
+import type { ResolvedCard } from '../api/deckIO';
 import type { Card } from '../types/card';
 
 interface DeckCard {
+  id: number;
   name: string;
   count: number;
   image_small_url: string;
@@ -23,10 +27,12 @@ export default function DeckBuilder() {
   const [searchResults, setSearchResults] = useState<Card[]>([]);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
+  const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
   const [score, setScore] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  const [ioOpen, setIoOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -41,9 +47,8 @@ export default function DeckBuilder() {
     return () => controller.abort();
   }, [debouncedQuery]);
 
-  const addCard = useCallback((card: Card) => {
-    const isExtra = isExtraDeck(card.type);
-    const setter = isExtra ? setExtraDeck : setMainDeck;
+  const addCard = useCallback((card: Card, toSide = false) => {
+    const setter = toSide ? setSideDeck : (isExtraDeck(card.type) ? setExtraDeck : setMainDeck);
 
     setter((prev) => {
       const existing = prev.find((c) => c.name === card.name);
@@ -51,12 +56,12 @@ export default function DeckBuilder() {
         if (existing.count >= 3) return prev;
         return prev.map((c) => c.name === card.name ? { ...c, count: c.count + 1 } : c);
       }
-      return [...prev, { name: card.name, count: 1, image_small_url: card.image_small_url, type: card.type }];
+      return [...prev, { id: card.id, name: card.name, count: 1, image_small_url: card.image_small_url, type: card.type }];
     });
   }, []);
 
-  const removeCard = useCallback((name: string, isExtra: boolean) => {
-    const setter = isExtra ? setExtraDeck : setMainDeck;
+  const removeCard = useCallback((name: string, section: 'main' | 'extra' | 'side') => {
+    const setter = section === 'side' ? setSideDeck : section === 'extra' ? setExtraDeck : setMainDeck;
     setter((prev) => {
       const card = prev.find((c) => c.name === name);
       if (!card) return prev;
@@ -65,8 +70,27 @@ export default function DeckBuilder() {
     });
   }, []);
 
+  const loadImported = useCallback((cards: ResolvedCard[], sections: { main: number[]; extra: number[]; side: number[] }) => {
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const build = (ids: number[]): DeckCard[] => {
+      const counts = new Map<number, number>();
+      for (const id of ids) counts.set(id, (counts.get(id) || 0) + 1);
+      const out: DeckCard[] = [];
+      for (const [id, count] of counts) {
+        const info = byId.get(id);
+        if (!info) continue; // unresolved already reported by the modal
+        out.push({ id, name: info.name, count, image_small_url: info.image_small_url || '', type: info.type || '' });
+      }
+      return out;
+    };
+    setMainDeck(build(sections.main));
+    setExtraDeck(build(sections.extra));
+    setSideDeck(build(sections.side));
+  }, []);
+
   const mainCount = mainDeck.reduce((s, c) => s + c.count, 0);
   const extraCount = extraDeck.reduce((s, c) => s + c.count, 0);
+  const sideCount = sideDeck.reduce((s, c) => s + c.count, 0);
 
   // Score deck
   useEffect(() => {
@@ -91,7 +115,7 @@ export default function DeckBuilder() {
           {searchResults.map((card) => (
             <button
               key={card.id}
-              onClick={() => addCard(card)}
+              onClick={(e) => addCard(card, e.shiftKey)}
               className="w-full flex items-center gap-2 p-2 rounded hover:bg-md-surfaceHover transition-colors text-left"
             >
               {card.image_small_url && (
@@ -113,6 +137,8 @@ export default function DeckBuilder() {
         {/* Score & Validation */}
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
+          <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded">Import / Export</button>
+          <Link to="/my-decks" className="text-sm text-md-textMuted hover:text-md-text underline">My Decks</Link>
           {score && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-md-textMuted">Meta Score:</span>
@@ -144,7 +170,7 @@ export default function DeckBuilder() {
               {mainDeck.map((card) => (
                 <button
                   key={card.name}
-                  onClick={() => removeCard(card.name, false)}
+                  onClick={() => removeCard(card.name, 'main')}
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
@@ -175,7 +201,7 @@ export default function DeckBuilder() {
               {extraDeck.map((card) => (
                 <button
                   key={card.name}
-                  onClick={() => removeCard(card.name, true)}
+                  onClick={() => removeCard(card.name, 'extra')}
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
@@ -188,6 +214,27 @@ export default function DeckBuilder() {
                   <div className="absolute inset-0 bg-md-red/50 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-white text-xs font-bold">-1</span>
                   </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Side Deck */}
+        <div className="bg-md-surface border border-md-border rounded-lg p-4">
+          <h3 className="font-semibold mb-3">
+            Side Deck <span className={`text-sm ${sideCount > 15 ? 'text-md-red' : 'text-md-textMuted'}`}>({sideCount}/15)</span>
+          </h3>
+          {sideDeck.length === 0 ? (
+            <p className="text-sm text-md-textMuted text-center py-4">Shift-click a search result to add it here</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {sideDeck.map((card) => (
+                <button key={card.name} onClick={() => removeCard(card.name, 'side')} className="relative group" title={`${card.name} (click to remove)`}>
+                  <img src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
+                  {card.count > 1 && (
+                    <span className="absolute -top-1 -right-1 bg-md-green text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{card.count}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -215,6 +262,15 @@ export default function DeckBuilder() {
           </div>
         )}
       </div>
+
+      <DeckImportExport
+        open={ioOpen}
+        onClose={() => setIoOpen(false)}
+        main={mainDeck}
+        extra={extraDeck}
+        side={sideDeck}
+        onImport={loadImported}
+      />
     </div>
   );
 }

@@ -147,3 +147,15 @@ CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type
 CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cards_name_lower ON cards(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_cards_archetype_lower ON cards(LOWER(archetype));
+
+CREATE TABLE IF NOT EXISTS user_decks (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT NOT NULL,
+  archetype   TEXT,
+  main_json   TEXT NOT NULL,   -- JSON: [{ "passcode": <int>, "count": <int> }]
+  extra_json  TEXT,
+  side_json   TEXT,
+  source      TEXT,            -- 'manual' | 'ydk' | 'neuron-url' | 'ocr'
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
