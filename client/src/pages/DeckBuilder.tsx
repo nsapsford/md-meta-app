@@ -106,11 +106,11 @@ export default function DeckBuilder() {
   }, [mainDeck, extraDeck]);
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-3.5rem)]">
       {/* Search Panel */}
-      <div className="w-72 flex-shrink-0 bg-md-surface border-r border-md-border p-3 overflow-y-auto">
+      <div className="w-full lg:w-72 flex-shrink-0 bg-md-surface lg:border-r border-md-border rounded-lg lg:rounded-none p-3 lg:overflow-y-auto">
         <SearchInput value={query} onChange={setQuery} placeholder="Search cards to add..." />
-        <div className="mt-3 space-y-1">
+        <div className="mt-3 space-y-1 max-h-[45vh] overflow-y-auto lg:max-h-none lg:overflow-visible">
           {searching && <p className="text-xs text-md-textMuted text-center py-2">Searching...</p>}
           {searchResults.map((card) => (
             <button
@@ -131,11 +131,11 @@ export default function DeckBuilder() {
       </div>
 
       {/* Deck Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 lg:overflow-y-auto p-1 lg:p-4 space-y-4">
         {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
 
         {/* Score & Validation */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
           <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded">Import / Export</button>
           <Link to="/my-decks" className="text-sm text-md-textMuted hover:text-md-text underline">My Decks</Link>
