@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { parseYdk, exportYdk, createSavedDeck, type ResolvedCard } from '../../api/deckIO';
 import { copyText, shareYdk } from '../../utils/deckShare';
+import { buildYdke } from '../../utils/ydke';
+
+// Konami Card Database "My Deck" — decks saved here (while logged into your
+// Konami ID) sync into the Neuron app. The deck-transfer browser extension
+// adds an "import from YDKE" button on this page.
+const KCD_MY_DECK_URL = 'https://www.db.yugioh-card.com/yugiohdb/member_deck.action?request_locale=en';
 
 export interface BuilderCard {
   id: number;
@@ -63,6 +69,24 @@ export default function DeckImportExport({ open, onClose, main, extra, side, onI
     }
   };
 
+  const ydkeUrl = () => buildYdke(flatten(main), flatten(extra), flatten(side));
+
+  const copyYdke = async () => {
+    setStatus('');
+    try {
+      await copyText(ydkeUrl());
+      setStatus('YDKE copied. Paste it into the Konami DB deck editor (with the deck-transfer extension) to send it to Neuron.');
+    } catch (e: any) {
+      setStatus(e.message || 'Copy failed');
+    }
+  };
+
+  const openKonamiDb = async () => {
+    try { await copyText(ydkeUrl()); } catch { /* clipboard may be blocked; still open KCD */ }
+    setStatus('YDKE copied to clipboard. Opening the Konami Card Database — create/edit a deck, import the YDKE, then Save to sync into Neuron.');
+    window.open(KCD_MY_DECK_URL, '_blank');
+  };
+
   const handleSave = async () => {
     const name = window.prompt('Deck name?');
     if (!name) return;
@@ -110,9 +134,16 @@ export default function DeckImportExport({ open, onClose, main, extra, side, onI
           <div className="space-y-3">
             <textarea readOnly value={ydkOutput} rows={8} className="w-full bg-md-bg border border-md-border rounded p-2 text-xs font-mono" />
             <div className="flex flex-wrap gap-2">
-              <button disabled={busy} onClick={() => copyText(ydkOutput)} className="bg-md-surfaceHover text-sm px-3 py-2 rounded">Copy</button>
+              <button disabled={busy} onClick={() => copyText(ydkOutput)} className="bg-md-surfaceHover text-sm px-3 py-2 rounded">Copy .ydk</button>
               <button disabled={busy} onClick={() => shareYdk(ydkOutput)} className="bg-md-surfaceHover text-sm px-3 py-2 rounded">Share / Download</button>
               <button disabled={busy} onClick={handleSave} className="bg-md-blue text-white text-sm font-semibold px-3 py-2 rounded ml-auto">Save to My Decks</button>
+            </div>
+            <div className="border-t border-md-border pt-3">
+              <p className="text-xs text-md-textMuted mb-2">Send to Konami Neuron (via the Konami Card Database):</p>
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy} onClick={copyYdke} className="bg-md-surfaceHover text-sm px-3 py-2 rounded">Copy YDKE</button>
+                <button disabled={busy} onClick={openKonamiDb} className="bg-md-gold text-black text-sm font-semibold px-3 py-2 rounded">Open Konami DB →</button>
+              </div>
             </div>
           </div>
         )}
