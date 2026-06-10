@@ -148,6 +148,16 @@ CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cards_name_lower ON cards(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_cards_archetype_lower ON cards(LOWER(archetype));
 
+CREATE TABLE IF NOT EXISTS users (
+  id            SERIAL PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE,
+  display_name  TEXT NOT NULL,
+  password_hash TEXT NOT NULL,   -- scrypt, format: salt_hex:hash_hex
+  created_at    INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
+
 CREATE TABLE IF NOT EXISTS user_decks (
   id          SERIAL PRIMARY KEY,
   name        TEXT NOT NULL,

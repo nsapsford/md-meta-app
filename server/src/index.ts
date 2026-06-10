@@ -17,6 +17,7 @@ import deckBuilderRouter from './routes/deckBuilder.js';
 import syncRouter from './routes/sync.js';
 import personalGamesRouter from './routes/personalGames.js';
 import deckIORouter from './routes/deckIO.js';
+import authRouter from './routes/auth.js';
 import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped, computeDeckTypeCards } from './services/syncService.js';
 import { updateTiersFromScrape } from './services/tierListService.js';
 import { recordSync } from './services/syncStatusService.js';
@@ -52,6 +53,7 @@ async function main() {
   app.use('/api/sync', syncRouter);
   app.use('/api/personal-games', personalGamesRouter);
   app.use('/api/decks-io', deckIORouter);
+  app.use('/api/auth', authRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {
