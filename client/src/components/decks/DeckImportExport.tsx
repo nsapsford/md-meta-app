@@ -109,23 +109,34 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
   const copyYdke = () => copyWithFeedback(ydkeUrl(), 'YDKE');
 
   const sendToKonami = async () => {
-    // Open first, before any await — clipboard prompts can void the user
-    // activation that popup blockers require.
-    openDeckPortal(buildKonamiDeepLink(flatten(main), flatten(extra), flatten(side)));
-    const opened = isNative ? 'Sent to Firefox' : 'Opened Konami DB';
+    // Kick off the open before any await — clipboard prompts can void the
+    // user activation that popup blockers require.
+    const portal = openDeckPortal(buildKonamiDeepLink(flatten(main), flatten(extra), flatten(side)));
+
+    // The storm-access hash can't carry a name, so ride the clipboard:
+    // the deck itself travels in the URL, leaving the clipboard free.
+    let copied: 'name' | 'ydke' | null = null;
     try {
-      // The storm-access hash can't carry a name, so ride the clipboard:
-      // the deck itself travels in the URL, leaving the clipboard free.
-      if (deckName) {
-        await copyText(deckName);
-        ok(`${opened}. The deck list fills in automatically — paste the copied name ("${deckName}") and hit Save.`);
-      } else {
-        await copyText(ydkeUrl());
-        ok(`${opened}. The deck list fills in automatically — name it and hit Save. (YDKE also copied as a backup.)`);
-      }
+      await copyText(deckName || ydkeUrl());
+      copied = deckName ? 'name' : 'ydke';
     } catch {
-      ok(`${opened}. The deck list fills in automatically — name it and hit Save.`);
+      // Clipboard is best-effort.
     }
+
+    const target = await portal;
+    if (target === 'none') {
+      err('No browser could be opened. Install Firefox for Android, or copy the YDKE and import it on the Konami DB manually.');
+      return;
+    }
+    const opened =
+      target === 'firefox' ? 'Sent to Firefox'
+      : target === 'default' ? 'Firefox not found — opened your default browser instead (auto-fill needs Firefox with the extension from step 1)'
+      : 'Opened Konami DB';
+    const fillNote =
+      copied === 'name' ? `The deck list fills in automatically — paste the copied name ("${deckName}") and hit Save.`
+      : copied === 'ydke' ? 'The deck list fills in automatically — name it and hit Save. (YDKE also copied as a backup.)'
+      : 'The deck list fills in automatically — name it and hit Save.';
+    ok(`${opened}. ${fillNote}`);
   };
 
   const handleSave = async () => {

@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Clipboard } from '@capacitor/clipboard';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -29,19 +29,31 @@ export async function shareYdk(ydk: string, filename = 'deck.ydk'): Promise<void
   }
 }
 
+interface BrowserLauncher {
+  openInFirefox(options: { url: string }): Promise<{ browser: 'firefox' | 'default' | 'none' }>;
+}
+const BrowserLauncher = registerPlugin<BrowserLauncher>('BrowserLauncher');
+
+/** Where openDeckPortal actually landed the URL. */
+export type PortalTarget = 'firefox' | 'default' | 'none' | 'web';
+
 /**
  * Open the Konami DB handoff link. The deck-transfer extension only runs in
- * extension-capable browsers, so natively we hand the URL to Firefox for
- * Android via its `firefox://open?url=` scheme (Capacitor routes non-http
- * schemes to an Android VIEW intent) instead of the system default browser.
- * On the web a normal new tab suffices.
+ * extension-capable browsers, so natively we pin the VIEW intent to Firefox
+ * for Android (the firefox:// deep-link scheme is silently ignored by some
+ * builds), falling back to the default browser if no Firefox is installed.
+ * On the web a normal new tab suffices. Callers that also touch the
+ * clipboard should invoke this before any await: on the web window.open must
+ * run inside the click's user activation, and the body here is synchronous
+ * up to the native bridge call.
  */
-export function openDeckPortal(url: string): void {
+export async function openDeckPortal(url: string): Promise<PortalTarget> {
   if (isNative()) {
-    window.location.href = `firefox://open?url=${encodeURIComponent(url)}`;
-  } else {
-    window.open(url, '_blank', 'noopener');
+    const { browser } = await BrowserLauncher.openInFirefox({ url });
+    return browser;
   }
+  window.open(url, '_blank', 'noopener');
+  return 'web';
 }
 
 /** Web-only: trigger a browser download of the `.ydk` text. */
