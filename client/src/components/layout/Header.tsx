@@ -4,10 +4,12 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { useIsNative } from '../../hooks/useIsNative';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const { status } = useAuth();
   const isNative = useIsNative();
   const scrollDir = useScrollDirection();
   const collapsed = isNative && scrollDir === 'down';
@@ -87,6 +89,20 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             )}
             <span>{syncing ? 'Syncing...' : 'Sync'}</span>
           </button>
+          <Link
+            to={status === 'authenticated' ? '/account' : '/login'}
+            title={status === 'authenticated' ? 'My Account' : 'Sign In'}
+            className={clsx(
+              'p-2 rounded-xl border',
+              status === 'authenticated'
+                ? 'text-md-gold border-md-gold/30 bg-md-gold/10 hover:bg-md-gold/20'
+                : 'text-md-textSecondary border-md-border hover:text-md-text hover:bg-md-surfaceHover'
+            )}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </Link>
         </div>
       </div>
     </header>

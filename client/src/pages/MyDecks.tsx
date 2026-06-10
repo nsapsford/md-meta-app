@@ -1,39 +1,48 @@
-import { useEffect, useState } from 'react';
-import { getSavedDecks, deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
+import { useState } from 'react';
+import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
 import ErrorBanner from '../components/common/ErrorBanner';
+import { useOfflineQuery } from '../hooks/useOfflineQuery';
+import { useOfflineCache } from '../offline/OfflineCacheContext';
+import { savedDecksResource } from '../offline/resources';
 
 const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
   rows.flatMap((r) => Array(r.count).fill(r.passcode));
 
 export default function MyDecks() {
-  const [decks, setDecks] = useState<SavedDeck[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  const load = () => {
-    setLoading(true);
-    getSavedDecks().then(setDecks).catch((e) => setError(e.message)).finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+  const { enabled: cachingEnabled } = useOfflineCache();
+  // Offline-first: renders instantly from the local cache (when enabled) and
+  // silently revalidates against the server.
+  const { data, loading, error: loadError, refresh, source } =
+    useOfflineQuery(savedDecksResource, cachingEnabled);
+  const [actionError, setActionError] = useState('');
+  const decks = data ?? [];
+  const error = actionError || loadError || '';
 
   const remove = async (id: number) => {
     if (!window.confirm('Delete this deck?')) return;
-    try { await deleteSavedDeck(id); setDecks((d) => d.filter((x) => x.id !== id)); }
-    catch (e: any) { setError(e.message); }
+    try { await deleteSavedDeck(id); await refresh(); }
+    catch (e) { setActionError(e instanceof Error ? e.message : String(e)); }
   };
 
   const exportDeck = async (deck: SavedDeck, action: 'copy' | 'share') => {
     try {
       const ydk = await exportYdk(flatten(deck.main_json), flatten(deck.extra_json), flatten(deck.side_json));
       if (action === 'copy') await copyText(ydk); else await shareYdk(ydk, `${deck.name}.ydk`);
-    } catch (e: any) { setError(e.message); }
+    } catch (e) { setActionError(e instanceof Error ? e.message : String(e)); }
   };
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-md-gold">My Decks</h2>
-      {error && <ErrorBanner message={error} onRetry={() => { setError(''); load(); }} />}
+      <div className="flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-md-gold">My Decks</h2>
+        {source === 'cache' && (
+          <span className="text-[10px] uppercase font-semibold text-md-textMuted border border-md-border rounded px-1.5 py-0.5">
+            Offline copy
+          </span>
+        )}
+      </div>
+      {error && <ErrorBanner message={error} onRetry={() => { setActionError(''); void refresh(); }} />}
       {loading ? (
         <p className="text-sm text-md-textMuted">Loading…</p>
       ) : decks.length === 0 ? (

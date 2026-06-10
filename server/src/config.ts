@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 // Known MD Forbidden & Limited list dates (YYYY-MM-DD). Used to badge movers that
 // crossed a banlist boundary in the requested window.
 export const MD_BANLIST_DATES: string[] = [
@@ -13,6 +15,10 @@ export const MD_BANLIST_DATES: string[] = [
 export const config = {
   port: parseInt(process.env.PORT || '3001'),
   adminToken: process.env.ADMIN_TOKEN || '',
+  // HMAC key for auth tokens. Falling back to a random key means tokens are
+  // invalidated on restart, so set AUTH_SECRET in any real deployment.
+  authSecret: process.env.AUTH_SECRET || randomBytes(32).toString('hex'),
+  authTokenTtl: 60 * 60 * 24 * 30, // 30 days, in seconds
   ygoprodeckBaseUrl: 'https://db.ygoprodeck.com/api/v7',
   mdmBaseUrl: 'https://www.masterduelmeta.com/api/v1',
   mdmSiteUrl: 'https://www.masterduelmeta.com',

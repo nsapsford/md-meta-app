@@ -15,6 +15,12 @@ import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
 import MyDecks from './pages/MyDecks';
 import Admin from './pages/Admin';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import MyAccount from './pages/MyAccount';
+import RequireAuth from './components/auth/RequireAuth';
+import { AuthProvider } from './auth/AuthContext';
+import { OfflineCacheProvider } from './offline/OfflineCacheContext';
 import { useIsNative } from './hooks/useIsNative';
 
 export default function App() {
@@ -22,43 +28,57 @@ export default function App() {
   const isNative = useIsNative();
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-md-bg">
-        <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
-        <div className="flex">
-          {!isNative && sidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-          {!isNative && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
-          <main
-            className={clsx(
-              'flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow',
-              isNative && 'pb-20'
-            )}
-          >
-            <div className="max-w-[1400px] mx-auto animate-fade-in">
-              <ErrorBoundary>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/decks/:name" element={<DeckProfile />} />
-                  <Route path="/cards" element={<CardSearch />} />
-                  <Route path="/matchups" element={<Matchups />} />
-                  <Route path="/ban-list" element={<BanList />} />
-                  <Route path="/trends" element={<MetaTrends />} />
-                  <Route path="/tournaments" element={<Tournaments />} />
-                  <Route path="/deck-builder" element={<DeckBuilder />} />
-                  <Route path="/my-decks" element={<MyDecks />} />
-                  <Route path="/admin" element={<Admin />} />
-                </Routes>
-              </ErrorBoundary>
+    <AuthProvider>
+      <OfflineCacheProvider>
+        <BrowserRouter>
+          <div className="min-h-screen bg-md-bg">
+            <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
+            <div className="flex">
+              {!isNative && sidebarOpen && (
+                <div
+                  className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              {!isNative && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+              <main
+                className={clsx(
+                  'flex-1 p-3 md:p-6 overflow-x-hidden bg-hero-glow',
+                  isNative && 'pb-20'
+                )}
+              >
+                <div className="max-w-[1400px] mx-auto animate-fade-in">
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/decks/:name" element={<DeckProfile />} />
+                      <Route path="/cards" element={<CardSearch />} />
+                      <Route path="/matchups" element={<Matchups />} />
+                      <Route path="/ban-list" element={<BanList />} />
+                      <Route path="/trends" element={<MetaTrends />} />
+                      <Route path="/tournaments" element={<Tournaments />} />
+                      <Route path="/deck-builder" element={<DeckBuilder />} />
+                      <Route path="/my-decks" element={<MyDecks />} />
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route
+                        path="/account"
+                        element={
+                          <RequireAuth>
+                            <MyAccount />
+                          </RequireAuth>
+                        }
+                      />
+                    </Routes>
+                  </ErrorBoundary>
+                </div>
+              </main>
             </div>
-          </main>
-        </div>
-        {isNative && <MobileBottomNav />}
-      </div>
-    </BrowserRouter>
+            {isNative && <MobileBottomNav />}
+          </div>
+        </BrowserRouter>
+      </OfflineCacheProvider>
+    </AuthProvider>
   );
 }
