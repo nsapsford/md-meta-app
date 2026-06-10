@@ -36,6 +36,7 @@ export default function DeckBuilder() {
   const [ioOpen, setIoOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
+  const [deckName, setDeckName] = useState('');
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -280,7 +281,9 @@ export default function DeckBuilder() {
         main={mainDeck}
         extra={extraDeck}
         side={sideDeck}
+        deckName={deckName || undefined}
         onImport={loadImported}
+        onSaved={setDeckName}
       />
 
       <SaveDeckDialog
@@ -290,6 +293,7 @@ export default function DeckBuilder() {
         extra={extraDeck}
         side={sideDeck}
         onSaved={(name) => {
+          setDeckName(name);
           setSavedMsg(`Saved "${name}" to My Decks`);
           setTimeout(() => setSavedMsg(''), 4000);
         }}
