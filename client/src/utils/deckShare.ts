@@ -29,6 +29,21 @@ export async function shareYdk(ydk: string, filename = 'deck.ydk'): Promise<void
   }
 }
 
+/**
+ * Open the Konami DB handoff link. The deck-transfer extension only runs in
+ * extension-capable browsers, so natively we hand the URL to Firefox for
+ * Android via its `firefox://open?url=` scheme (Capacitor routes non-http
+ * schemes to an Android VIEW intent) instead of the system default browser.
+ * On the web a normal new tab suffices.
+ */
+export function openDeckPortal(url: string): void {
+  if (isNative()) {
+    window.location.href = `firefox://open?url=${encodeURIComponent(url)}`;
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 /** Web-only: trigger a browser download of the `.ydk` text. */
 export function downloadYdk(ydk: string, filename = 'deck.ydk'): void {
   const blob = new Blob([ydk], { type: 'text/plain' });
