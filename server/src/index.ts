@@ -29,9 +29,13 @@ async function main() {
 
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
-  const allowedOrigins = process.env.CORS_ORIGIN
+  const allowedOrigins: (string | RegExp)[] = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')
     : ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://localhost', 'capacitor://localhost'];
+  // Vercel preview deployments get a unique per-branch subdomain, which an
+  // exact-match CORS_ORIGIN list can never cover — accept this project's
+  // preview origins (md-meta-app-*-nsapsfords-projects.vercel.app) as well.
+  allowedOrigins.push(/^https:\/\/md-meta-app-[a-z0-9-]+-nsapsfords-projects\.vercel\.app$/);
   app.use(cors({ origin: allowedOrigins }));
 
   app.use(express.json());
