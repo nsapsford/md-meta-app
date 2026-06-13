@@ -1,13 +1,24 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
 import ErrorBanner from '../components/common/ErrorBanner';
+import CardFan from '../components/common/CardFan';
 import { useOfflineQuery } from '../hooks/useOfflineQuery';
 import { useOfflineCache } from '../offline/OfflineCacheContext';
 import { savedDecksResource } from '../offline/resources';
 
 const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
   rows.flatMap((r) => Array(r.count).fill(r.passcode));
+
+// YGOPRODeck serves small card art keyed by passcode; the same CDN the server
+// stores in `image_small_url`. Saved decks only persist passcodes, so we derive
+// the fan images directly rather than round-tripping through the card API.
+const cardImageSmall = (passcode: number): string =>
+  `https://images.ygoprodeck.com/images/cards_small/${passcode}.jpg`;
+
+const fanCardsFor = (deck: SavedDeck) =>
+  deck.main_json.slice(0, 3).map((c) => ({ name: String(c.passcode), image: cardImageSmall(c.passcode) }));
 
 export default function MyDecks() {
   const { enabled: cachingEnabled } = useOfflineCache();
@@ -41,25 +52,45 @@ export default function MyDecks() {
             Offline copy
           </span>
         )}
+        <Link
+          to="/build-deck"
+          className="ml-auto bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-md-blueLight"
+        >
+          Build a deck
+        </Link>
       </div>
       {error && <ErrorBanner message={error} onRetry={() => { setActionError(''); void refresh(); }} />}
       {loading ? (
         <p className="text-sm text-md-textMuted">Loading…</p>
       ) : decks.length === 0 ? (
-        <p className="text-sm text-md-textMuted">No saved decks yet. Build one and use Import / Export → Save.</p>
+        <p className="text-sm text-md-textMuted">
+          No saved decks yet. Use <Link to="/build-deck" className="text-md-blue underline">Build a deck</Link> to create one.
+        </p>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {decks.map((deck) => {
             const total = deck.main_json.reduce((s, c) => s + c.count, 0);
             return (
-              <div key={deck.id} className="bg-md-surface border border-md-border rounded-lg p-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{deck.name}</p>
-                  <p className="text-xs text-md-textMuted">{total} main · {deck.source ?? 'manual'}</p>
+              <div
+                key={deck.id}
+                className="group featured-card rounded-2xl overflow-hidden card-hover p-5 flex flex-col"
+              >
+                {/* Fanned cards — same visual language as the Dashboard */}
+                <CardFan cards={fanCardsFor(deck)} />
+
+                {/* Name + meta — matches the Dashboard deck-name styling */}
+                <div className="mt-4 text-center">
+                  <p className="font-bold text-md-text group-hover:text-md-gold transition-colors duration-300 truncate text-lg">
+                    {deck.name}
+                  </p>
+                  <p className="text-xs text-md-textMuted mt-1">{total} main · {deck.source ?? 'manual'}</p>
                 </div>
-                <button onClick={() => exportDeck(deck, 'copy')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Copy</button>
-                <button onClick={() => exportDeck(deck, 'share')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Share</button>
-                <button onClick={() => remove(deck.id)} className="text-xs text-md-red px-2 py-1 rounded hover:bg-md-red/10">Delete</button>
+
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <button onClick={() => exportDeck(deck, 'copy')} className="text-xs bg-md-surfaceHover px-2.5 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Copy</button>
+                  <button onClick={() => exportDeck(deck, 'share')} className="text-xs bg-md-surfaceHover px-2.5 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Share</button>
+                  <button onClick={() => remove(deck.id)} className="text-xs text-md-red px-2.5 py-1 rounded hover:bg-md-red/10">Delete</button>
+                </div>
               </div>
             );
           })}

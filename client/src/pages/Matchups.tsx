@@ -142,7 +142,7 @@ export default function Matchups() {
             </div>
           </div>
 
-          {loading ? <LoadingSpinner /> : matrix && matrix.decks.length > 0 ? (
+          {loading || !matrix ? <LoadingSpinner /> : matrix.decks.length > 0 ? (
             isNative ? (
               <MobileMatchupFocus matrix={matrix} inferGaps={inferGaps} />
             ) : (
