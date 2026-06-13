@@ -12,8 +12,7 @@ import TierListView from '../components/dashboard/TierListView';
 import MoversWidget from '../components/dashboard/MoversWidget';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
-const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
+import { TIER_COLORS, ROGUE_INDEX } from '../constants/tierColors';
 
 const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null;
 const subscribe = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
@@ -322,7 +321,7 @@ export default function Dashboard() {
                 />
                 <Bar dataKey="power" radius={[0, 6, 6, 0]} barSize={20}>
                   {popularityData.map((entry, i) => (
-                    <Cell key={i} fill={tierColors[entry.tier] || tierColors[4]} fillOpacity={0.85} />
+                    <Cell key={i} fill={TIER_COLORS[entry.tier] || TIER_COLORS[ROGUE_INDEX]} fillOpacity={0.85} />
                   ))}
                 </Bar>
               </BarChart>

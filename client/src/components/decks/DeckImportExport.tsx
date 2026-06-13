@@ -161,11 +161,11 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-md-surface border border-md-border rounded-lg w-full max-w-lg p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel bg-md-surface border border-md-border rounded-xl shadow-surface-lg w-full max-w-lg p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => switchTab('import')} className={`text-sm font-semibold ${tab === 'import' ? 'text-md-gold' : 'text-md-textMuted'}`}>Import</button>
-          <button onClick={() => switchTab('export')} className={`text-sm font-semibold ${tab === 'export' ? 'text-md-gold' : 'text-md-textMuted'}`}>Export</button>
+          <button onClick={() => switchTab('import')} className={`text-sm font-semibold ${tab === 'import' ? 'text-md-gold' : 'text-md-textMuted hover:text-md-text'}`}>Import</button>
+          <button onClick={() => switchTab('export')} className={`text-sm font-semibold ${tab === 'export' ? 'text-md-gold' : 'text-md-textMuted hover:text-md-text'}`}>Export</button>
           <button onClick={onClose} className="ml-auto text-md-textMuted hover:text-md-text">✕</button>
         </div>
 
@@ -176,7 +176,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
               value={ydkInput}
               onChange={(e) => setYdkInput(e.target.value)}
               rows={8}
-              className="w-full bg-md-bg border border-md-border rounded p-2 text-xs font-mono"
+              className="input-field text-xs font-mono"
               placeholder={'#main\n10497636\n...'}
             />
             <button disabled={busy || !ydkInput.trim()} onClick={handleImport} className="bg-md-blue text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50">
@@ -186,7 +186,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
         ) : (
           <div className="space-y-3">
             {deckEmpty && <p className="text-xs text-md-textMuted">The builder is empty — add cards before exporting.</p>}
-            <textarea readOnly value={ydkOutput} rows={8} className="w-full bg-md-bg border border-md-border rounded p-2 text-xs font-mono" />
+            <textarea readOnly value={ydkOutput} rows={8} className="input-field text-xs font-mono" />
             <div className="flex flex-wrap gap-2">
               <button disabled={busy || deckEmpty} onClick={() => copyWithFeedback(ydkOutput, '.ydk')} className="bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Copy .ydk</button>
               <button disabled={busy || deckEmpty} onClick={() => shareYdk(ydkOutput)} className="bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Share / Download</button>

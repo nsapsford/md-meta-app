@@ -13,7 +13,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 const CARD_TYPES = ['Effect Monster', 'Normal Monster', 'Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster', 'Ritual Monster', 'Spell Card', 'Trap Card'];
 const ATTRIBUTES = ['DARK', 'LIGHT', 'WATER', 'FIRE', 'EARTH', 'WIND', 'DIVINE'];
 
-const selectClass = "bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors";
+const selectClass = "select-field";
 
 function negateColorClass(value: number): string {
   if (value > 8) return 'text-md-red border-md-red/20 bg-md-red/10';
@@ -61,7 +61,7 @@ export default function CardSearch() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold tracking-tight"><span className="text-shimmer">Card Search</span></h2>
+      <h2 className="page-title">Card Search</h2>
 
       {/* Filters */}
       <div className="bg-md-surface border border-md-border rounded-xl p-4">
@@ -136,11 +136,11 @@ export default function CardSearch() {
       {/* Card Detail Modal */}
       {selectedCard && (
         <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="modal-backdrop"
           onClick={() => setSelectedCard(null)}
         >
           <div
-            className="bg-md-surface border border-md-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-surface-lg animate-slide-up"
+            className="modal-panel bg-md-surface border border-md-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-surface-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex gap-6">

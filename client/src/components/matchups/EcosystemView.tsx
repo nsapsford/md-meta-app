@@ -12,6 +12,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
 import { useIsNative } from '../../hooks/useIsNative';
 import clsx from 'clsx';
+import { tierHex } from '../../constants/tierColors';
 
 // ── Helpers ──
 
@@ -47,11 +48,7 @@ function metricLabel(value: number, low: string, mid: string, high: string): str
 }
 
 function tierColor(tier: number | null): string {
-  if (tier === 0) return '#f59e0b';
-  if (tier === 1) return '#3b82f6';
-  if (tier === 2) return '#8b5cf6';
-  if (tier === 3) return '#6b7280';
-  return '#404040';
+  return tierHex(tier);
 }
 
 function strategyLabel(s: GameTheoryProfile['strategy_type']): { label: string; color: string } {

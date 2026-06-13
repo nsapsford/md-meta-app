@@ -35,7 +35,7 @@ export default function MyDecks() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-2xl font-bold text-md-gold">My Decks</h2>
+        <h2 className="page-title">My Decks</h2>
         {source === 'cache' && (
           <span className="text-[10px] uppercase font-semibold text-md-textMuted border border-md-border rounded px-1.5 py-0.5">
             Offline copy
@@ -57,9 +57,9 @@ export default function MyDecks() {
                   <p className="font-semibold truncate">{deck.name}</p>
                   <p className="text-xs text-md-textMuted">{total} main · {deck.source ?? 'manual'}</p>
                 </div>
-                <button onClick={() => exportDeck(deck, 'copy')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded">Copy</button>
-                <button onClick={() => exportDeck(deck, 'share')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded">Share</button>
-                <button onClick={() => remove(deck.id)} className="text-xs text-md-red px-2 py-1 rounded">Delete</button>
+                <button onClick={() => exportDeck(deck, 'copy')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Copy</button>
+                <button onClick={() => exportDeck(deck, 'share')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Share</button>
+                <button onClick={() => remove(deck.id)} className="text-xs text-md-red px-2 py-1 rounded hover:bg-md-red/10">Delete</button>
               </div>
             );
           })}
