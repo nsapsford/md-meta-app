@@ -61,7 +61,7 @@ export default function CardSearch() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold tracking-tight"><span className="text-shimmer">Card Search</span></h2>
+      <h2 className="page-title">Card Search</h2>
 
       {/* Filters */}
       <div className="bg-md-surface border border-md-border rounded-xl p-4">

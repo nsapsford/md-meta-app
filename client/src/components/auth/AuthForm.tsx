@@ -43,7 +43,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
 
   return (
     <div className="max-w-sm mx-auto mt-8 space-y-4">
-      <h2 className="text-2xl font-bold text-md-gold">
+      <h2 className="page-title">
         {mode === 'login' ? 'Sign In' : 'Create Account'}
       </h2>
       {error && <ErrorBanner message={error} />}

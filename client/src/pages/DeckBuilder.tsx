@@ -140,12 +140,12 @@ export default function DeckBuilder() {
 
         {/* Score & Validation */}
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-bold text-md-gold">Deck Builder</h2>
-          <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded">Import / Export</button>
+          <h2 className="page-title">Deck Builder</h2>
+          <button onClick={() => setIoOpen(true)} className="bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-md-blueLight">Import / Export</button>
           <button
             onClick={() => setSaveOpen(true)}
             disabled={mainDeck.length + extraDeck.length + sideDeck.length === 0}
-            className="bg-md-green text-white text-sm font-semibold px-3 py-1.5 rounded disabled:opacity-40"
+            className="bg-md-green text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-md-green/80 disabled:opacity-40"
           >
             Save Deck
           </button>

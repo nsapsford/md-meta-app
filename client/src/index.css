@@ -206,6 +206,11 @@ html {
            focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors duration-200;
   }
 
+  /* Page title styling */
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-md-gold;
+  }
+
   /* Soft pulse animation */
   .animate-pulse-soft {
     animation: pulseSoft 3s ease-in-out infinite;
