@@ -13,7 +13,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 const CARD_TYPES = ['Effect Monster', 'Normal Monster', 'Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster', 'Ritual Monster', 'Spell Card', 'Trap Card'];
 const ATTRIBUTES = ['DARK', 'LIGHT', 'WATER', 'FIRE', 'EARTH', 'WIND', 'DIVINE'];
 
-const selectClass = "bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors";
+const selectClass = "select-field";
 
 function negateColorClass(value: number): string {
   if (value > 8) return 'text-md-red border-md-red/20 bg-md-red/10';

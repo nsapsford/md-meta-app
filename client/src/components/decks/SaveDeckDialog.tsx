@@ -59,7 +59,7 @@ export default function SaveDeckDialog({ open, onClose, main, extra, side, onSav
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
           placeholder="Deck name"
-          className="w-full bg-md-bg border border-md-border rounded p-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-md-blue"
+          className="input-field mb-3"
         />
         {error && <p className="text-xs text-md-red mb-2">{error}</p>}
         <div className="flex gap-2 justify-end">

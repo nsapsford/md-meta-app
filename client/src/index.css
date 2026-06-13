@@ -193,6 +193,19 @@ html {
     @apply animate-slide-up;
   }
 
+  /* Form input/select standardization */
+  .input-field {
+    @apply w-full bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text placeholder-md-textMuted/60 hover:border-md-borderLight
+           focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors duration-200;
+  }
+  .input-field-gold {
+    @apply focus:border-md-gold/60 focus:ring-md-gold/20;
+  }
+  .select-field {
+    @apply bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text cursor-pointer hover:border-md-borderLight
+           focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors duration-200;
+  }
+
   /* Soft pulse animation */
   .animate-pulse-soft {
     animation: pulseSoft 3s ease-in-out infinite;

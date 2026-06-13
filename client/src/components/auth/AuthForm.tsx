@@ -39,8 +39,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
     }
   };
 
-  const inputClass =
-    'w-full bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text placeholder-md-textMuted focus:outline-none focus:border-md-gold/60';
+  const inputClass = 'input-field input-field-gold';
 
   return (
     <div className="max-w-sm mx-auto mt-8 space-y-4">
