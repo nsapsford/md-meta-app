@@ -12,13 +12,17 @@ const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
   rows.flatMap((r) => Array(r.count).fill(r.passcode));
 
 // YGOPRODeck serves small card art keyed by passcode; the same CDN the server
-// stores in `image_small_url`. Saved decks only persist passcodes, so we derive
-// the fan images directly rather than round-tripping through the card API.
+// stores in `image_small_url`. Used as a fallback when the server hasn't supplied
+// resolved signature cards (e.g. an older offline-cached response).
 const cardImageSmall = (passcode: number): string =>
   `https://images.ygoprodeck.com/images/cards_small/${passcode}.jpg`;
 
+// Prefer the server-chosen signature (boss/archetype) cards; fall back to the
+// first few main-deck passcodes if they aren't available.
 const fanCardsFor = (deck: SavedDeck) =>
-  deck.main_json.slice(0, 3).map((c) => ({ name: String(c.passcode), image: cardImageSmall(c.passcode) }));
+  deck.signature_cards && deck.signature_cards.length > 0
+    ? deck.signature_cards
+    : deck.main_json.slice(0, 3).map((c) => ({ name: String(c.passcode), image: cardImageSmall(c.passcode) }));
 
 export default function MyDecks() {
   const { enabled: cachingEnabled } = useOfflineCache();

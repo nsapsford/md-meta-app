@@ -25,6 +25,8 @@ export interface SavedDeck {
   source: string | null;
   created_at: number;
   updated_at: number;
+  /** Representative boss/archetype cards chosen server-side for the deck fan. */
+  signature_cards?: Array<{ name: string; image: string | null }>;
 }
 
 export interface DeckPayload {
