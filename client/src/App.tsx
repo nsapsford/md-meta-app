@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import clsx from 'clsx';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -11,7 +11,6 @@ import CardSearch from './pages/CardSearch';
 import Matchups from './pages/Matchups';
 import BanList from './pages/BanList';
 import MetaTrends from './pages/MetaTrends';
-import Tournaments from './pages/Tournaments';
 import DeckBuilder from './pages/DeckBuilder';
 import MyDecks from './pages/MyDecks';
 import Admin from './pages/Admin';
@@ -56,8 +55,9 @@ export default function App() {
                       <Route path="/matchups" element={<Matchups />} />
                       <Route path="/ban-list" element={<BanList />} />
                       <Route path="/trends" element={<MetaTrends />} />
-                      <Route path="/tournaments" element={<Tournaments />} />
-                      <Route path="/deck-builder" element={<DeckBuilder />} />
+                      {/* Deck area lands on My Decks; the builder lives at /build-deck */}
+                      <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
+                      <Route path="/build-deck" element={<DeckBuilder />} />
                       <Route path="/my-decks" element={<MyDecks />} />
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/login" element={<Login />} />

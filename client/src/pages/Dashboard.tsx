@@ -38,6 +38,9 @@ export default function Dashboard() {
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
   const [deckNames, setDeckNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // Tracks the background (non-blocking) data load so we can reserve space for
+  // the Game Log + Top Decks sections and avoid a layout shift when they arrive.
+  const [bgLoading, setBgLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Quick-entry form state
@@ -50,6 +53,7 @@ export default function Dashboard() {
 
   const load = async () => {
     setLoading(true);
+    setBgLoading(true);
     setError('');
     try {
       // Critical path: tier list only — show the page as soon as this resolves
@@ -68,10 +72,11 @@ export default function Dashboard() {
         const names = [...decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name), 'Rogue'];
         setDeckNames(names);
         if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
-      });
+      }).finally(() => setBgLoading(false));
     } catch (e: any) {
       setError(e.message || 'Failed to load tier list');
       setLoading(false);
+      setBgLoading(false);
     }
   };
 
@@ -138,8 +143,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Game Log */}
-      {deckNames.length > 0 && (
+      {/* Quick Game Log — reserve space while background data loads to avoid CLS */}
+      {bgLoading ? (
+        <div
+          className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-4 border border-md-border/40 skeleton-pulse"
+          style={{ minHeight: '104px' }}
+          aria-hidden
+        />
+      ) : deckNames.length > 0 && (
       <ErrorBoundary fallback={null}>
         <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-4 border border-md-border/40">
           <div className="flex items-center gap-2 mb-3">
@@ -209,7 +220,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        <TopArchetypesGrid featured={featured} />
+        <TopArchetypesGrid featured={featured} loading={bgLoading} />
       </div>
 
       {/* Stats Grid */}
