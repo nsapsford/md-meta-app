@@ -136,11 +136,11 @@ export default function CardSearch() {
       {/* Card Detail Modal */}
       {selectedCard && (
         <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="modal-backdrop"
           onClick={() => setSelectedCard(null)}
         >
           <div
-            className="bg-md-surface border border-md-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-surface-lg animate-slide-up"
+            className="modal-panel bg-md-surface border border-md-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-surface-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex gap-6">

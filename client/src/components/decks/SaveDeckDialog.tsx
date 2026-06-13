@@ -49,8 +49,8 @@ export default function SaveDeckDialog({ open, onClose, main, extra, side, onSav
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-md-surface border border-md-border rounded-lg w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel bg-md-surface border border-md-border rounded-xl shadow-surface-lg w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold mb-3">Save deck to My Decks</h3>
         <input
           autoFocus

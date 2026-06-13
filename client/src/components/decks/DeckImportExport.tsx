@@ -161,8 +161,8 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-md-surface border border-md-border rounded-lg w-full max-w-lg p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel bg-md-surface border border-md-border rounded-xl shadow-surface-lg w-full max-w-lg p-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <button onClick={() => switchTab('import')} className={`text-sm font-semibold ${tab === 'import' ? 'text-md-gold' : 'text-md-textMuted'}`}>Import</button>
           <button onClick={() => switchTab('export')} className={`text-sm font-semibold ${tab === 'export' ? 'text-md-gold' : 'text-md-textMuted'}`}>Export</button>
