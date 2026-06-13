@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import TierBadge from '../common/TierBadge';
-
-const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
+import { tierHex } from '../../constants/tierColors';
 
 interface FeaturedDeck {
   id: string;
@@ -96,7 +95,7 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {featured.map((deck, idx) => {
-          const tierColor = tierColors[deck.tier ?? 4];
+          const tierColor = tierHex(deck.tier);
           return (
             <Link
               key={deck.id}

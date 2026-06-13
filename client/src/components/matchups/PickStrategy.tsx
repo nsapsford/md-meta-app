@@ -7,6 +7,7 @@ import ErrorBanner from '../common/ErrorBanner';
 import TierBadge from '../common/TierBadge';
 import { useIsNative } from '../../hooks/useIsNative';
 import clsx from 'clsx';
+import { tierHex } from '../../constants/tierColors';
 
 interface Props {
   decks: string[];
@@ -19,11 +20,7 @@ interface Comfort { n: number; rate: number }
 const COMFORT_MIN_GAMES = 10;
 
 function tierColor(tier: number | null): string {
-  if (tier === 0) return '#f59e0b';
-  if (tier === 1) return '#3b82f6';
-  if (tier === 2) return '#8b5cf6';
-  if (tier === 3) return '#6b7280';
-  return '#404040';
+  return tierHex(tier);
 }
 
 function rateColor(rate: number): string {
