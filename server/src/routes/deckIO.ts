@@ -53,16 +53,91 @@ router.post('/resolve', async (req: Request, res: Response) => {
 
 const NOW = () => Math.floor(Date.now() / 1000);
 
-// GET /api/decks-io/saved -> deck rows (newest first)
+interface CardMeta {
+  id: number;
+  name: string;
+  type: string | null;
+  level: number | null;
+  atk: number | null;
+  link_val: number | null;
+  image: string | null;
+}
+
+const isExtraMonster = (type: string | null) =>
+  !!type && /Fusion|Synchro|XYZ|Xyz|Link/.test(type);
+const isMonster = (type: string | null) => !!type && /Monster/.test(type);
+// Rank by summoning tier (level / rank / link rating) then ATK so the deck's
+// boss monsters surface first.
+const bossScore = (c: CardMeta) =>
+  Math.max(c.level ?? 0, c.link_val ?? 0) * 1000 + (c.atk ?? 0);
+
+// Pick up to 3 "signature" cards for a deck: prefer Extra Deck boss monsters
+// (the deck's win conditions), then high-impact main-deck monsters, then anything.
+function pickSignatureCards(
+  main: Array<{ passcode: number }>,
+  extra: Array<{ passcode: number }>,
+  cardMap: Map<number, CardMeta>
+): Array<{ name: string; image: string | null }> {
+  const metaOf = (rows: Array<{ passcode: number }>) =>
+    rows.map((r) => cardMap.get(r.passcode)).filter((c): c is CardMeta => !!c);
+
+  const extraMeta = metaOf(extra);
+  const mainMeta = metaOf(main);
+
+  let pool = extraMeta.filter((c) => isExtraMonster(c.type));
+  if (pool.length === 0) pool = mainMeta.filter((c) => isMonster(c.type));
+  if (pool.length === 0) pool = mainMeta;
+
+  return [...pool]
+    .sort((a, b) => bossScore(b) - bossScore(a))
+    .slice(0, 3)
+    .map((c) => ({ name: c.name, image: c.image }));
+}
+
+// GET /api/decks-io/saved -> deck rows (newest first), each enriched with
+// `signature_cards` so clients can render a representative card fan.
 router.get('/saved', async (_req: Request, res: Response) => {
   try {
     const rows = await queryAll(getPool(),
       'SELECT * FROM user_decks ORDER BY updated_at DESC');
-    res.json(rows.map((d: any) => ({
+
+    const decks = rows.map((d: any) => ({
       ...d,
       main_json: JSON.parse(d.main_json),
       extra_json: d.extra_json ? JSON.parse(d.extra_json) : [],
       side_json: d.side_json ? JSON.parse(d.side_json) : [],
+    }));
+
+    // Resolve metadata for every main + extra passcode in one query.
+    const passcodes = new Set<number>();
+    for (const d of decks) {
+      for (const c of d.main_json) passcodes.add(Number(c.passcode));
+      for (const c of d.extra_json) passcodes.add(Number(c.passcode));
+    }
+
+    const cardMap = new Map<number, CardMeta>();
+    if (passcodes.size > 0) {
+      const cardRows = await queryAll(getPool(),
+        `SELECT id, name, type, level, atk, link_val, image_cropped_url, image_small_url
+         FROM cards WHERE id = ANY($1::int[])`,
+        [[...passcodes]]
+      );
+      for (const c of cardRows) {
+        cardMap.set(Number(c.id), {
+          id: Number(c.id),
+          name: c.name,
+          type: c.type,
+          level: c.level,
+          atk: c.atk,
+          link_val: c.link_val,
+          image: c.image_cropped_url || c.image_small_url || null,
+        });
+      }
+    }
+
+    res.json(decks.map((d: any) => ({
+      ...d,
+      signature_cards: pickSignatureCards(d.main_json, d.extra_json, cardMap),
     })));
   } catch (err: any) {
     res.status(500).json({ error: err.message });

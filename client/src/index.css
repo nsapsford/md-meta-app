@@ -38,6 +38,21 @@ html {
   * {
     scrollbar-gutter: stable;
   }
+
+  /* Keyboard focus ring — text inputs keep their own focus borders instead */
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  [role='button']:focus-visible {
+    @apply outline-none ring-2 ring-md-blue/60 ring-offset-2 ring-offset-md-bg;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+  button,
+  select {
+    @apply transition-colors duration-200;
+  }
 }
 
 @layer components {
@@ -183,20 +198,30 @@ html {
     100% { background-position: -200% 0; }
   }
 
-  /* Enhanced fade in animation */
-  .animate-fade-in {
-    animation: fadeInUp 0.4s ease-out forwards;
+  /* Modal overlay + panel entrance */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in;
+  }
+  .modal-panel {
+    @apply animate-slide-up;
   }
 
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  /* Form input/select standardization */
+  .input-field {
+    @apply w-full bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text placeholder-md-textMuted/60 hover:border-md-borderLight
+           focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors duration-200;
+  }
+  .input-field-gold {
+    @apply focus:border-md-gold/60 focus:ring-md-gold/20;
+  }
+  .select-field {
+    @apply bg-md-bg border border-md-border rounded-lg px-3 py-2 text-sm text-md-text cursor-pointer hover:border-md-borderLight
+           focus:outline-none focus:border-md-blue/50 focus:ring-1 focus:ring-md-blue/20 transition-colors duration-200;
+  }
+
+  /* Page title styling */
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-md-gold;
   }
 
   /* Soft pulse animation */

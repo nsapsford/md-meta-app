@@ -45,7 +45,9 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
   const [selectedDeck, setSelectedDeck] = useState('');
   const [advisorResult, setAdvisorResult] = useState<AdvisorResult | null>(null);
   const [evResults, setEvResults] = useState<LadderEvResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Start in the loading state — EV ranking fetches immediately on mount, so the
+  // initial paint should show the spinner, not a transient "no data" empty state.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tierFilter, setTierFilter] = useState<number | null>(null);
 

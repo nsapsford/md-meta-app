@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMetaTrends } from '../api/meta';
 import { searchCards } from '../api/cards';
@@ -53,6 +53,15 @@ export default function MetaTrends() {
   const [deckImages, setDeckImages] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const isNative = useIsNative();
+
+  // Play the line-draw animation only on the first reveal. Re-animating on every
+  // slider/metric change is what produces the abrupt "jump to end" — recharts
+  // restarts the tween mid-flight, so we disable animation after the initial run.
+  const hasAnimatedRef = useRef(false);
+  useEffect(() => {
+    if (!loading) hasAnimatedRef.current = true;
+  }, [loading]);
+  const animateChart = !hasAnimatedRef.current;
 
   useEffect(() => {
     getMetaTrends()
@@ -250,6 +259,9 @@ export default function MetaTrends() {
                 dot={{ r: 4, strokeWidth: 2, fill: '#0f1423' }}
                 activeDot={{ r: 6, strokeWidth: 2 }}
                 connectNulls
+                isAnimationActive={animateChart}
+                animationDuration={900}
+                animationEasing="ease-in-out"
               />
             ))}
           </LineChart>
