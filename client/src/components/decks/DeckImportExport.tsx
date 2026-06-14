@@ -3,6 +3,7 @@ import { parseYdk, exportYdk, createSavedDeck, type ResolvedCard } from '../../a
 import { copyText, shareYdk, openDeckPortal } from '../../utils/deckShare';
 import { buildYdke, buildKonamiDeepLink } from '../../utils/ydke';
 import { useIsNative } from '../../hooks/useIsNative';
+import { hapticSuccess } from '../../utils/haptics';
 
 // Deck Transfer extension (DawnbrandBots) — adds YDKE import/export to the
 // Konami DB deck editor and powers the #storm-access auto-import deep link.
@@ -69,6 +70,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
     try {
       const parsed = await parseYdk(ydkInput);
       onImport(parsed.cards, { main: parsed.main, extra: parsed.extra, side: parsed.side });
+      hapticSuccess();
       if (parsed.unresolved.length > 0) {
         err(`Imported. ${parsed.unresolved.length} card id(s) not found and skipped: ${parsed.unresolved.join(', ')}`);
       } else {
@@ -151,6 +153,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
         side: toPayload(side),
         source: 'manual',
       });
+      hapticSuccess();
       onSaved?.(name);
       ok(`Saved "${name}".`);
     } catch (e: any) {
@@ -179,7 +182,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
               className="w-full bg-md-bg border border-md-border rounded p-2 text-xs font-mono"
               placeholder={'#main\n10497636\n...'}
             />
-            <button disabled={busy || !ydkInput.trim()} onClick={handleImport} className="bg-md-blue text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50">
+            <button disabled={busy || !ydkInput.trim()} onClick={handleImport} className="press bg-md-blue text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50">
               Import into builder
             </button>
           </div>
@@ -188,9 +191,9 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
             {deckEmpty && <p className="text-xs text-md-textMuted">The builder is empty — add cards before exporting.</p>}
             <textarea readOnly value={ydkOutput} rows={8} className="w-full bg-md-bg border border-md-border rounded p-2 text-xs font-mono" />
             <div className="flex flex-wrap gap-2">
-              <button disabled={busy || deckEmpty} onClick={() => copyWithFeedback(ydkOutput, '.ydk')} className="bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Copy .ydk</button>
-              <button disabled={busy || deckEmpty} onClick={() => shareYdk(ydkOutput)} className="bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Share / Download</button>
-              <button disabled={busy || deckEmpty} onClick={handleSave} className="bg-md-blue text-white text-sm font-semibold px-3 py-2 rounded ml-auto disabled:opacity-50">Save to My Decks</button>
+              <button disabled={busy || deckEmpty} onClick={() => copyWithFeedback(ydkOutput, '.ydk')} className="press bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Copy .ydk</button>
+              <button disabled={busy || deckEmpty} onClick={() => shareYdk(ydkOutput)} className="press bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Share / Download</button>
+              <button disabled={busy || deckEmpty} onClick={handleSave} className="press bg-md-blue text-white text-sm font-semibold px-3 py-2 rounded ml-auto disabled:opacity-50">Save to My Decks</button>
             </div>
 
             <div className="border-t border-md-border pt-3 space-y-2">
@@ -215,8 +218,8 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
                 <p className="text-xs text-md-gold">Heads up: the Konami DB only saves decks with {KONAMI_MIN_MAIN}–60 main-deck cards (currently {mainCount}).</p>
               )}
               <div className="flex flex-wrap gap-2 pt-1">
-                <button disabled={busy || deckEmpty} onClick={copyYdke} className="bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Copy YDKE</button>
-                <button disabled={busy || deckEmpty} onClick={sendToKonami} className="bg-md-gold text-black text-sm font-semibold px-3 py-2 rounded disabled:opacity-50">
+                <button disabled={busy || deckEmpty} onClick={copyYdke} className="press bg-md-surfaceHover text-sm px-3 py-2 rounded disabled:opacity-50">Copy YDKE</button>
+                <button disabled={busy || deckEmpty} onClick={sendToKonami} className="press bg-md-gold text-black text-sm font-semibold px-3 py-2 rounded disabled:opacity-50">
                   {isNative ? 'Send via Firefox →' : 'Send to Konami DB →'}
                 </button>
               </div>

@@ -41,6 +41,19 @@ html {
 }
 
 @layer components {
+  /* Tactile press-in state for interactive cards & buttons. Transform-only so
+     it stays on the GPU; gated on reduced-motion so it never animates for users
+     who opt out. Pairs with hapticLight() at the call sites. */
+  .press {
+    @apply transition-transform duration-100 ease-out;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .press:active {
+      transform: scale(0.98);
+    }
+  }
+
   /* Enhanced card hover lift effect */
   .card-hover {
     @apply transition-all duration-300 ease-out;

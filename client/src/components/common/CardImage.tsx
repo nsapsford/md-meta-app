@@ -47,7 +47,7 @@ export default function CardImage({
         'relative rounded-lg overflow-hidden bg-gradient-to-br from-md-surface to-md-bg',
         sizeClasses[size],
         borderClass,
-        onClick && 'cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-card-hover hover:z-10',
+        onClick && 'press cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-card-hover hover:z-10',
         'group',
         className
       )}

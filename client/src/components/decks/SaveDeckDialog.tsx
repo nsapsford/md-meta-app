@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createSavedDeck } from '../../api/deckIO';
+import { hapticSuccess } from '../../utils/haptics';
 
 // Minimal shape needed to build a save payload; compatible with DeckBuilder's DeckCard.
 interface DeckCardLike {
@@ -38,6 +39,7 @@ export default function SaveDeckDialog({ open, onClose, main, extra, side, onSav
         side: toPayload(side),
         source: 'manual',
       });
+      hapticSuccess();
       onSaved?.(trimmed);
       setName('');
       onClose();
@@ -63,11 +65,11 @@ export default function SaveDeckDialog({ open, onClose, main, extra, side, onSav
         />
         {error && <p className="text-xs text-md-red mb-2">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="text-sm px-3 py-2 rounded bg-md-surfaceHover">Cancel</button>
+          <button onClick={onClose} className="press text-sm px-3 py-2 rounded bg-md-surfaceHover">Cancel</button>
           <button
             disabled={busy || !name.trim()}
             onClick={handleSave}
-            className="text-sm font-semibold px-3 py-2 rounded bg-md-blue text-white disabled:opacity-50"
+            className="press text-sm font-semibold px-3 py-2 rounded bg-md-blue text-white disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Save'}
           </button>

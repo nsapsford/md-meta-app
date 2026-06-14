@@ -58,9 +58,11 @@ export default {
         'glow-blue': '0 0 20px rgba(74,142,255,0.15)',
         'glow-gold': '0 0 20px rgba(212,175,55,0.15)',
         'glow-purple': '0 0 20px rgba(139,108,255,0.15)',
-        'card': '0 4px 24px rgba(0,0,0,0.4)',
-        'card-hover': '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.08)',
-        'card-featured': '0 0 0 1px rgba(255,255,255,0.06), 0 12px 48px rgba(0,0,0,0.7)',
+        // Layered ambient + key light: stacked stops read as a physical object
+        // catching light, rather than one flat drop shadow.
+        'card': '0 1px 2px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.35), 0 12px 24px rgba(0,0,0,0.45)',
+        'card-hover': '0 2px 4px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.5), 0 20px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)',
+        'card-featured': '0 0 0 1px rgba(255,255,255,0.06), 0 2px 6px rgba(0,0,0,0.45), 0 12px 48px rgba(0,0,0,0.7)',
         'surface': '0 1px 3px rgba(0,0,0,0.3)',
         'surface-lg': '0 4px 16px rgba(0,0,0,0.4)',
       },

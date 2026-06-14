@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import TierBadge from '../common/TierBadge';
+import { hapticLight } from '../../utils/haptics';
 
 const tierColors = ['#ff2d55', '#ff8c38', '#ffd60a', '#38c96e', '#6b7694'];
 
@@ -15,7 +16,11 @@ interface FeaturedDeck {
   cards: Array<{ name: string; image: string | null }>;
 }
 
-function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image: string | null }>; thumbnail?: string | null }) {
+function CardFanMini({ cards, thumbnail, tierColor }: { cards: Array<{ name: string; image: string | null }>; thumbnail?: string | null; tierColor: string }) {
+  // Layered depth shadow + a subtle tier-tinted glow and inset border, so each
+  // physical card reads as lit and colour-coded to its tier.
+  const cardShadow = `0 1px 2px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.5), 0 0 14px ${tierColor}33, inset 0 0 0 1px ${tierColor}40`;
+
   // Fallback: if no card data but we have a thumbnail, show it as a single centered card
   if ((!cards || cards.length === 0) && thumbnail) {
     return (
@@ -24,8 +29,8 @@ function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image:
           <img
             src={thumbnail}
             alt="Deck thumbnail"
-            className="rounded-md shadow-card border border-white/5"
-            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+            className="rounded-md"
+            style={{ width: '64px', height: '94px', objectFit: 'cover', boxShadow: cardShadow }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
@@ -67,8 +72,8 @@ function CardFanMini({ cards, thumbnail }: { cards: Array<{ name: string; image:
             <img
               src={card.image}
               alt={card.name}
-              className="rounded-md shadow-card border border-white/5"
-              style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+              className="rounded-md"
+              style={{ width: '64px', height: '94px', objectFit: 'cover', boxShadow: cardShadow }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
@@ -101,7 +106,8 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
             <Link
               key={deck.id}
               to={`/decks/${encodeURIComponent(deck.name)}`}
-              className="group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
+              onClick={hapticLight}
+              className="press group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
             >
               {/* Tier-colored top accent line */}
               <div
@@ -132,7 +138,7 @@ export default function TopArchetypesGrid({ featured }: TopArchetypesGridProps) 
                 </div>
 
                 {/* Card fan */}
-                <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} />
+                <CardFanMini cards={deck.cards} thumbnail={deck.thumbnail_image} tierColor={tierColor} />
 
                 {/* Name + stats */}
                 <div className="mt-5 text-center">

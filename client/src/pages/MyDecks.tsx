@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
+import { hapticMedium } from '../utils/haptics';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { useOfflineQuery } from '../hooks/useOfflineQuery';
 import { useOfflineCache } from '../offline/OfflineCacheContext';
@@ -21,6 +22,7 @@ export default function MyDecks() {
 
   const remove = async (id: number) => {
     if (!window.confirm('Delete this deck?')) return;
+    hapticMedium();
     try { await deleteSavedDeck(id); await refresh(); }
     catch (e) { setActionError(e instanceof Error ? e.message : String(e)); }
   };
@@ -57,9 +59,9 @@ export default function MyDecks() {
                   <p className="font-semibold truncate">{deck.name}</p>
                   <p className="text-xs text-md-textMuted">{total} main · {deck.source ?? 'manual'}</p>
                 </div>
-                <button onClick={() => exportDeck(deck, 'copy')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded">Copy</button>
-                <button onClick={() => exportDeck(deck, 'share')} className="text-xs bg-md-surfaceHover px-2 py-1 rounded">Share</button>
-                <button onClick={() => remove(deck.id)} className="text-xs text-md-red px-2 py-1 rounded">Delete</button>
+                <button onClick={() => exportDeck(deck, 'copy')} className="press text-xs bg-md-surfaceHover px-2 py-1 rounded">Copy</button>
+                <button onClick={() => exportDeck(deck, 'share')} className="press text-xs bg-md-surfaceHover px-2 py-1 rounded">Share</button>
+                <button onClick={() => remove(deck.id)} className="press text-xs text-md-red px-2 py-1 rounded">Delete</button>
               </div>
             );
           })}
