@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import MobileMoreSheet from './MobileMoreSheet';
+import { hapticLight } from '../../utils/haptics';
 
 const tabs = [
   { to: '/', label: 'Home', end: true, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -25,9 +26,10 @@ export default function MobileBottomNav() {
               key={t.to}
               to={t.to}
               end={t.end}
+              onClick={hapticLight}
               className={({ isActive }) =>
                 clsx(
-                  'flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
+                  'press flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
                   isActive ? 'text-md-blue' : 'text-md-textMuted active:text-md-text'
                 )
               }
@@ -40,9 +42,9 @@ export default function MobileBottomNav() {
           ))}
           <button
             type="button"
-            onClick={() => setMoreOpen(true)}
+            onClick={() => { hapticLight(); setMoreOpen(true); }}
             className={clsx(
-              'flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
+              'press flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
               moreOpen ? 'text-md-blue' : 'text-md-textMuted active:text-md-text'
             )}
           >

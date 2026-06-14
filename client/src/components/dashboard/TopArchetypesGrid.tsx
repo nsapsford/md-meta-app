@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import TierBadge from '../common/TierBadge';
+import { hapticLight } from '../../utils/haptics';
 import CardFan from '../common/CardFan';
 import { tierHex } from '../../constants/tierColors';
 
@@ -50,7 +51,8 @@ export default function TopArchetypesGrid({ featured, loading = false }: TopArch
             <Link
               key={deck.id}
               to={`/decks/${encodeURIComponent(deck.name)}`}
-              className="group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
+              onClick={hapticLight}
+              className="press group relative featured-card rounded-2xl overflow-hidden card-hover transform transition-all duration-300 hover:-translate-y-1"
             >
               {/* Tier-colored top accent line */}
               <div
@@ -81,7 +83,7 @@ export default function TopArchetypesGrid({ featured, loading = false }: TopArch
                 </div>
 
                 {/* Card fan */}
-                <CardFan cards={deck.cards} thumbnail={deck.thumbnail_image} />
+                <CardFan cards={deck.cards} thumbnail={deck.thumbnail_image} tierColor={tierColor} />
 
                 {/* Name + stats */}
                 <div className="mt-5 text-center">

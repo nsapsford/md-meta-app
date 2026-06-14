@@ -2,6 +2,8 @@ import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { syncAll } from '../../api/meta';
+import CacheToggle from '../settings/CacheToggle';
+import { hapticLight } from '../../utils/haptics';
 
 const items = [
   { to: '/cards', label: 'Card Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
@@ -49,7 +51,7 @@ export default function MobileMoreSheet({ open, onClose }: { open: boolean; onCl
               <NavLink
                 key={item.to}
                 to={item.to}
-                onClick={onClose}
+                onClick={() => { hapticLight(); onClose(); }}
                 className={({ isActive }) =>
                   clsx(
                     'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
@@ -65,11 +67,15 @@ export default function MobileMoreSheet({ open, onClose }: { open: boolean; onCl
                 <span>{item.label}</span>
               </NavLink>
             ))}
+          </div>
+          <h3 className="text-xs font-bold text-md-textMuted uppercase tracking-widest mt-4 mb-3">Offline</h3>
+          <div className="grid grid-cols-1 gap-1">
+            <CacheToggle />
             <button
               type="button"
-              onClick={handleSync}
+              onClick={() => { hapticLight(); void handleSync(); }}
               disabled={syncing}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-md-blue bg-md-blue/10 active:bg-md-blue/20 transition-colors disabled:opacity-50"
+              className="press flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-md-blue bg-md-blue/10 active:bg-md-blue/20 transition-colors disabled:opacity-50"
             >
               {syncing ? (
                 <span className="w-5 h-5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />

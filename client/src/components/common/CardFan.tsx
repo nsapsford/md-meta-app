@@ -8,6 +8,8 @@ interface CardFanProps {
   thumbnail?: string | null;
   /** Max number of cards to fan out (default 3). */
   max?: number;
+  /** When set, cards get a subtle tier-tinted glow + inset border (Dashboard featured decks). */
+  tierColor?: string;
 }
 
 /**
@@ -15,7 +17,14 @@ interface CardFanProps {
  * Dashboard's Top Performing Decks grid and the My Decks list so both pages
  * present saved/featured decks with the same visual language.
  */
-export default function CardFan({ cards, thumbnail, max = 3 }: CardFanProps) {
+export default function CardFan({ cards, thumbnail, max = 3, tierColor }: CardFanProps) {
+  // Layered depth shadow plus, when a tier colour is supplied, a subtle tinted
+  // glow and inset border so each physical card reads as lit and tier-coded.
+  // Falls back to the shared `shadow-card` utility (e.g. on the My Decks list).
+  const cardImgClass = tierColor ? 'rounded-md' : 'rounded-md shadow-card border border-white/5';
+  const cardImgStyle = tierColor
+    ? { boxShadow: `0 1px 2px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.5), 0 0 14px ${tierColor}33, inset 0 0 0 1px ${tierColor}40` }
+    : undefined;
   // Fallback: if no card data but we have a thumbnail, show it as a single centered card
   if ((!cards || cards.length === 0) && thumbnail) {
     return (
@@ -24,8 +33,8 @@ export default function CardFan({ cards, thumbnail, max = 3 }: CardFanProps) {
           <img
             src={thumbnail}
             alt="Deck thumbnail"
-            className="rounded-md shadow-card border border-white/5"
-            style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+            className={cardImgClass}
+            style={{ width: '64px', height: '94px', objectFit: 'cover', ...cardImgStyle }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
@@ -67,8 +76,8 @@ export default function CardFan({ cards, thumbnail, max = 3 }: CardFanProps) {
             <img
               src={card.image}
               alt={card.name}
-              className="rounded-md shadow-card border border-white/5"
-              style={{ width: '64px', height: '94px', objectFit: 'cover' }}
+              className={cardImgClass}
+              style={{ width: '64px', height: '94px', objectFit: 'cover', ...cardImgStyle }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (

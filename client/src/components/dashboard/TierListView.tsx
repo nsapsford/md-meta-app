@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import TierBadge from '../common/TierBadge';
 import type { TierList, DeckTierEntry } from '../../types/meta';
 import { useIsNative } from '../../hooks/useIsNative';
+import { hapticLight } from '../../utils/haptics';
 
 interface TierListViewProps {
   tierList: TierList;
@@ -37,8 +38,9 @@ export default function TierListView({ tierList }: TierListViewProps) {
                 <Link
                   key={deck.id}
                   to={`/decks/${encodeURIComponent(deck.name)}`}
+                  onClick={hapticLight}
                   className={clsx(
-                    'hover:bg-md-surfaceHover/30 transition-all duration-200 group',
+                    'press hover:bg-md-surfaceHover/30 transition-all duration-200 group',
                     isNative
                       ? 'flex flex-col gap-2 px-3 py-3'
                       : 'grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4'

@@ -10,6 +10,7 @@ import DeckImportExport from '../components/decks/DeckImportExport';
 import SaveDeckDialog from '../components/decks/SaveDeckDialog';
 import type { ResolvedCard } from '../api/deckIO';
 import type { Card } from '../types/card';
+import { hapticLight } from '../utils/haptics';
 
 interface DeckCard {
   id: number;
@@ -52,6 +53,7 @@ export default function DeckBuilder() {
   }, [debouncedQuery]);
 
   const addCard = useCallback((card: Card, toSide = false) => {
+    hapticLight();
     const setter = toSide ? setSideDeck : (isExtraDeck(card.type) ? setExtraDeck : setMainDeck);
 
     setter((prev) => {
@@ -65,6 +67,7 @@ export default function DeckBuilder() {
   }, []);
 
   const removeCard = useCallback((name: string, section: 'main' | 'extra' | 'side') => {
+    hapticLight();
     const setter = section === 'side' ? setSideDeck : section === 'extra' ? setExtraDeck : setMainDeck;
     setter((prev) => {
       const card = prev.find((c) => c.name === name);

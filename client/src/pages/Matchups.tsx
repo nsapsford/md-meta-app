@@ -4,8 +4,9 @@ import { getMatchupMatrix, type MatchupMatrix } from '../api/matchups';
 import { getDecks } from '../api/meta';
 import { getSyncStatus, type SyncRecord } from '../api/sync';
 import type { DeckType } from '../types/deck';
-import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
+import { MatchupMatrixSkeleton } from '../components/common/Skeleton';
+import CountUp from '../components/common/CountUp';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
@@ -142,7 +143,7 @@ export default function Matchups() {
             </div>
           </div>
 
-          {loading || !matrix ? <LoadingSpinner /> : matrix.decks.length > 0 ? (
+          {loading || !matrix ? <MatchupMatrixSkeleton /> : matrix.decks.length > 0 ? (
             isNative ? (
               <MobileMatchupFocus matrix={matrix} inferGaps={inferGaps} />
             ) : (
@@ -170,7 +171,6 @@ export default function Matchups() {
                         if (!cell) {
                           return <td key={colDeck} className="px-2 py-1 text-center bg-md-surfaceAlt/50 rounded text-md-textMuted text-xs">?</td>;
                         }
-                        const pct = (cell.rate * 100).toFixed(0);
                         const inferLabel = cell.inferred
                           ? ` [${cell.inference_method ?? 'inferred'}]`
                           : '';
@@ -185,7 +185,7 @@ export default function Matchups() {
                                 : `${getWinRateColor(cell.rate)} font-semibold`
                             )}
                           >
-                            {pct}%
+                            <CountUp value={cell.rate * 100} decimals={0} suffix="%" />
                           </td>
                         );
                       })}

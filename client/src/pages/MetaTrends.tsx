@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { getMetaTrends } from '../api/meta';
 import { searchCards } from '../api/cards';
 import type { MetaSnapshot } from '../types/meta';
-import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
+import { TrendsSkeleton } from '../components/common/Skeleton';
+import CountUp from '../components/common/CountUp';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useIsNative } from '../hooks/useIsNative';
 
@@ -130,7 +131,7 @@ export default function MetaTrends() {
     });
   }, [trends]);
 
-  if (loading) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
+  if (loading) return <div className="py-4"><TrendsSkeleton /></div>;
   if (error) return <ErrorBanner message={error} />;
 
   const deckNames = Object.keys(trends);
@@ -291,8 +292,12 @@ export default function MetaTrends() {
                       <span className="text-sm font-medium">{name}</span>
                     </div>
                   </td>
-                  <td className="text-center px-4 py-2 text-sm text-md-textMuted font-mono align-middle">{snaps.length}</td>
-                  <td className="text-right px-5 py-2 text-sm font-semibold font-mono align-middle">{latest?.power?.toFixed(1) || '-'}</td>
+                  <td className="text-center px-4 py-2 text-sm text-md-textMuted font-mono align-middle">
+                    <CountUp value={snaps.length} decimals={0} />
+                  </td>
+                  <td className="text-right px-5 py-2 text-sm font-semibold font-mono align-middle">
+                    {latest?.power != null && latest.power > 0 ? <CountUp value={latest.power} decimals={1} /> : '-'}
+                  </td>
                 </tr>
               );
             })}
