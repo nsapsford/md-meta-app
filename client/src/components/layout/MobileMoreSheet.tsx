@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { syncAll } from '../../api/meta';
 import CacheToggle from '../settings/CacheToggle';
 import { hapticLight } from '../../utils/haptics';
+import { useSyncUpdate } from '../../cache/SyncUpdateContext';
 
 const items = [
   { to: '/cards', label: 'Card Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
@@ -13,6 +14,12 @@ const items = [
 
 export default function MobileMoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [syncing, setSyncing] = useState(false);
+  const { updateAvailable, applying, applyUpdate } = useSyncUpdate();
+
+  const handleUpdate = async () => {
+    await applyUpdate();
+    onClose();
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -73,18 +80,26 @@ export default function MobileMoreSheet({ open, onClose }: { open: boolean; onCl
             <CacheToggle />
             <button
               type="button"
-              onClick={() => { hapticLight(); void handleSync(); }}
-              disabled={syncing}
-              className="press flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-md-blue bg-md-blue/10 active:bg-md-blue/20 transition-colors disabled:opacity-50"
+              onClick={() => { hapticLight(); void (updateAvailable ? handleUpdate() : handleSync()); }}
+              disabled={syncing || applying}
+              className={clsx(
+                'press flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50',
+                updateAvailable
+                  ? 'text-md-gold bg-md-gold/10 active:bg-md-gold/20'
+                  : 'text-md-blue bg-md-blue/10 active:bg-md-blue/20'
+              )}
             >
-              {syncing ? (
-                <span className="w-5 h-5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
+              {syncing || applying ? (
+                <span className={clsx(
+                  'w-5 h-5 border-2 rounded-full animate-spin',
+                  updateAvailable ? 'border-md-gold/30 border-t-md-gold' : 'border-md-blue/30 border-t-md-blue'
+                )} />
               ) : (
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
-              <span>{syncing ? 'Syncing…' : 'Sync all sources'}</span>
+              <span>{applying ? 'Updating…' : syncing ? 'Syncing…' : updateAvailable ? 'Sync Update' : 'Sync all sources'}</span>
             </button>
           </div>
         </div>

@@ -9,6 +9,7 @@ export interface KvSchema {
   'auth.session': { token: string; user: import('../types/auth').AuthUser };
   'offline.cachingEnabled': boolean;
   'offline.lastFullSyncAt': number; // unix ms
+  'sync.dataVersion': number; // fingerprint of last-acknowledged server data
 }
 
 export type KvKey = keyof KvSchema;

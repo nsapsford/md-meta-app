@@ -8,6 +8,8 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import { MatchupMatrixSkeleton } from '../components/common/Skeleton';
 import CountUp from '../components/common/CountUp';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
+import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
 import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
@@ -43,6 +45,7 @@ function _getRelationshipIcon(rate: number): string {
 
 export default function Matchups() {
   const isNative = useIsNative();
+  const { dataGeneration, applying } = useSyncUpdate();
   const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
@@ -53,6 +56,7 @@ export default function Matchups() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Re-runs on a Sync Update (dataGeneration bump) to refetch decks + status.
   useEffect(() => {
     getSyncStatus().then(setSyncRecords).catch(() => {});
     getDecks()
@@ -62,18 +66,36 @@ export default function Matchups() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [dataGeneration]);
 
   useEffect(() => {
     if (tab !== 'matrix') return;
     const controller = new AbortController();
+    // Cache key carries the params so each source/toggle combo caches separately.
+    const cacheKey = `${LOCAL_KEYS.matchupMatrix}:${matrixSource}:${inferGaps}:${includePersonal}`;
+    let cancelled = false;
     setLoading(true);
-    getMatchupMatrix(matrixSource, inferGaps, controller.signal, includePersonal)
-      .then(setMatrix)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [tab, matrixSource, inferGaps, includePersonal]);
+
+    void (async () => {
+      // Local-first: paint a cached matrix for these params if we have one.
+      const cached = await readLocal<MatchupMatrix>(cacheKey);
+      if (cancelled) return;
+      if (cached) { setMatrix(cached); setLoading(false); }
+      try {
+        const fresh = await getMatchupMatrix(matrixSource, inferGaps, controller.signal, includePersonal);
+        if (cancelled) return;
+        setMatrix(fresh);
+        void writeLocal(cacheKey, fresh);
+      } catch (e) {
+        // Keep the cached matrix on a network failure.
+        if (!axios.isCancel(e) && !cached) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [tab, matrixSource, inferGaps, includePersonal, dataGeneration]);
 
   const tabClass = (t: string) => clsx(
     'px-4 py-2 text-sm font-semibold rounded-lg transition-colors',
@@ -86,7 +108,7 @@ export default function Matchups() {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
-        <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} />
+        <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments']} updating={applying} />
       </div>
 
       <div className="flex flex-wrap gap-2">

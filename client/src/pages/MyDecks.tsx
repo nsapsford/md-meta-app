@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
@@ -7,6 +7,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import CardFan from '../components/common/CardFan';
 import { useOfflineQuery } from '../hooks/useOfflineQuery';
 import { useOfflineCache } from '../offline/OfflineCacheContext';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { savedDecksResource } from '../offline/resources';
 
 const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
@@ -31,6 +32,14 @@ export default function MyDecks() {
   // silently revalidates against the server.
   const { data, loading, error: loadError, refresh, source } =
     useOfflineQuery(savedDecksResource, cachingEnabled);
+  // A Sync Update revalidates this page in place. useOfflineQuery already loads
+  // on mount, so skip the initial generation (0) to avoid a redundant fetch.
+  const { dataGeneration } = useSyncUpdate();
+  const firstGen = useRef(dataGeneration);
+  useEffect(() => {
+    if (dataGeneration === firstGen.current) return;
+    void refresh();
+  }, [dataGeneration, refresh]);
   const [actionError, setActionError] = useState('');
   const decks = data ?? [];
   const error = actionError || loadError || '';

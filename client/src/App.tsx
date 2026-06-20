@@ -20,6 +20,7 @@ import MyAccount from './pages/MyAccount';
 import RequireAuth from './components/auth/RequireAuth';
 import { AuthProvider } from './auth/AuthContext';
 import { OfflineCacheProvider } from './offline/OfflineCacheContext';
+import { SyncUpdateProvider } from './cache/SyncUpdateContext';
 import { useIsNative } from './hooks/useIsNative';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
     <AuthProvider>
       <OfflineCacheProvider>
         <BrowserRouter>
+          <SyncUpdateProvider>
           <div className="min-h-screen bg-md-bg">
             <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
             <div className="flex">
@@ -77,6 +79,7 @@ export default function App() {
             </div>
             {isNative && <MobileBottomNav />}
           </div>
+          </SyncUpdateProvider>
         </BrowserRouter>
       </OfflineCacheProvider>
     </AuthProvider>

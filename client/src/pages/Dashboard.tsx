@@ -7,6 +7,8 @@ import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
+import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
 import TierListView from '../components/dashboard/TierListView';
 import MoversWidget from '../components/dashboard/MoversWidget';
@@ -33,6 +35,7 @@ interface FeaturedDeck {
 
 export default function Dashboard() {
   const isSmall = useIsSmall();
+  const { dataGeneration, applying } = useSyncUpdate();
   const [tierList, setTierList] = useState<TierList | null>(null);
   const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
@@ -52,13 +55,24 @@ export default function Dashboard() {
   const [logFlash, setLogFlash] = useState('');
 
   const load = async () => {
-    setLoading(true);
     setBgLoading(true);
     setError('');
+
+    // Local-first: paint instantly from the device cache when we have a copy,
+    // so a cold start (or a Sync Update re-render) never blocks on the network.
+    const cached = await readLocal<TierList>(LOCAL_KEYS.tierList);
+    if (cached) {
+      setTierList(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       // Critical path: tier list only — show the page as soon as this resolves
       const data = await getTierList();
       setTierList(data);
+      void writeLocal(LOCAL_KEYS.tierList, data);
       setLoading(false);
 
       // Background: load supplementary data without blocking render
@@ -74,13 +88,16 @@ export default function Dashboard() {
         if (names.length > 0) { setLogDeck(names[0]); setLogOpponent(names[0]); }
       }).finally(() => setBgLoading(false));
     } catch (e: any) {
-      setError(e.message || 'Failed to load tier list');
+      // Keep showing cached data on a network failure — that's the point of
+      // local-first. Only surface the error when we have nothing to show.
+      if (!cached) setError(e.message || 'Failed to load tier list');
       setLoading(false);
       setBgLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Re-run on a Sync Update (dataGeneration bump) to refetch + re-render in place.
+  useEffect(() => { load(); }, [dataGeneration]);
 
   const handleLogGame = async () => {
     if (!logDeck || !logOpponent) return;
@@ -139,7 +156,7 @@ export default function Dashboard() {
               Current Yu-Gi-Oh! Master Duel tier list and meta analysis with real-time data from multiple sources
             </p>
           </div>
-          <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments', 'untapped']} />
+          <SyncFreshnessBadge records={syncRecords} sources={['mdm_deck_types', 'mdm_tournaments', 'untapped']} updating={applying} />
         </div>
       </div>
 

@@ -5,10 +5,12 @@ import clsx from 'clsx';
 import { useIsNative } from '../../hooks/useIsNative';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
 import { useAuth } from '../../auth/AuthContext';
+import { useSyncUpdate } from '../../cache/SyncUpdateContext';
 
 export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const { updateAvailable, applying, applyUpdate } = useSyncUpdate();
   const { status } = useAuth();
   const isNative = useIsNative();
   const scrollDir = useScrollDirection();
@@ -72,22 +74,34 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
             </span>
           )}
           <button
-            onClick={handleSync}
-            disabled={syncing}
-            title="Sync all data sources including untapped.gg"
+            onClick={updateAvailable ? () => void applyUpdate() : handleSync}
+            disabled={syncing || applying}
+            title={updateAvailable
+              ? 'New data available — pull the latest and refresh'
+              : 'Sync all data sources including untapped.gg'}
             className={clsx(
-              'flex items-center gap-2 font-bold rounded-xl px-3 py-2 text-xs disabled:opacity-40',
-              'bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue'
+              // w-auto + whitespace-nowrap let the pill grow with its label; the
+              // transition makes the Sync → Sync Update resize smooth.
+              'flex items-center gap-2 font-bold rounded-xl px-3 py-2 text-xs w-auto whitespace-nowrap',
+              'disabled:opacity-40 transition-all duration-300 ease-out',
+              updateAvailable
+                ? 'bg-gradient-to-br from-md-gold/20 to-md-gold/5 text-md-gold border border-md-gold/40 hover:from-md-gold/30 hover:to-md-gold/10 hover:border-md-gold/60 hover:shadow-glow-gold animate-pulse'
+                : 'bg-gradient-to-br from-md-blue/15 to-md-blue/5 text-md-blue border border-md-blue/30 hover:from-md-blue/25 hover:to-md-blue/10 hover:border-md-blue/50 hover:shadow-glow-blue'
             )}
           >
-            {syncing ? (
-              <span className="w-3.5 h-3.5 border-2 border-md-blue/30 border-t-md-blue rounded-full animate-spin" />
+            {syncing || applying ? (
+              <span className={clsx(
+                'w-3.5 h-3.5 border-2 rounded-full animate-spin',
+                updateAvailable ? 'border-md-gold/30 border-t-md-gold' : 'border-md-blue/30 border-t-md-blue'
+              )} />
             ) : (
               <svg className="shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.586 9m0 0H9m11 11v-5m-6.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+            <span className="transition-all duration-300">
+              {applying ? 'Updating…' : syncing ? 'Syncing...' : updateAvailable ? 'Sync Update' : 'Sync'}
+            </span>
           </button>
           <Link
             to={status === 'authenticated' ? '/account' : '/login'}

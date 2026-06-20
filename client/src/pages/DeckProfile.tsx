@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDeckProfile } from '../api/meta';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import type { DeckProfile as DeckProfileType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -58,6 +59,7 @@ function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
 
 export default function DeckProfile() {
   const { name } = useParams<{ name: string }>();
+  const { dataGeneration } = useSyncUpdate();
   const navigate = useNavigate();
   const [deck, setDeck] = useState<DeckProfileType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function DeckProfile() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [name]);
+  }, [name, dataGeneration]);
 
   if (loading) return <LoadingSpinner size="lg" />;
   if (error) return <ErrorBanner message={error} />;
