@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { searchCards, getArchetypes } from '../api/cards';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import type { Card, CardSearchResult } from '../types/card';
 import { useDebounce } from '../hooks/useDebounce';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -22,6 +23,7 @@ function negateColorClass(value: number): string {
 }
 
 export default function CardSearch() {
+  const { dataGeneration } = useSyncUpdate();
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
   const [attribute, setAttribute] = useState('');
@@ -57,7 +59,7 @@ export default function CardSearch() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [debouncedQuery, type, attribute, archetype, sort, page]);
+  }, [debouncedQuery, type, attribute, archetype, sort, page, dataGeneration]);
 
   return (
     <div className="space-y-5">

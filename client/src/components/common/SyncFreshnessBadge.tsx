@@ -3,9 +3,19 @@ import type { SyncRecord } from '../../api/sync';
 interface Props {
   records: SyncRecord[];
   sources?: string[]; // which sources are relevant to this page
+  updating?: boolean; // a pull-only refresh is in flight
 }
 
-export default function SyncFreshnessBadge({ records, sources }: Props) {
+export default function SyncFreshnessBadge({ records, sources, updating }: Props) {
+  if (updating) {
+    return (
+      <span className="inline-flex items-center gap-1.5 border rounded-full px-2.5 py-0.5 text-xs font-medium bg-md-gold/10 border-md-gold/20 text-md-gold">
+        <span className="w-2.5 h-2.5 border-2 border-md-gold/30 border-t-md-gold rounded-full animate-spin" />
+        Updating…
+      </span>
+    );
+  }
+
   const relevant = sources
     ? records.filter((r) => sources.includes(r.source))
     : records;

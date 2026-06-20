@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getBanList } from '../api/meta';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import type { BanListData, BanCard } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -105,6 +106,7 @@ function BanSection({
 }
 
 export default function BanList() {
+  const { dataGeneration } = useSyncUpdate();
   const [data, setData] = useState<BanListData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -117,7 +119,7 @@ export default function BanList() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [dataGeneration]);
 
   if (loading) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
   if (error) return <ErrorBanner message={error} onRetry={load} />;

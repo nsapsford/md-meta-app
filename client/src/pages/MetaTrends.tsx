@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMetaTrends } from '../api/meta';
+import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { searchCards } from '../api/cards';
 import type { MetaSnapshot } from '../types/meta';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -45,6 +46,7 @@ function MiniCardFan({ images }: { images: string[] }) {
 }
 
 export default function MetaTrends() {
+  const { dataGeneration } = useSyncUpdate();
   const [trends, setTrends] = useState<Record<string, MetaSnapshot[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -68,7 +70,7 @@ export default function MetaTrends() {
       .then(setTrends)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [dataGeneration]);
 
   useEffect(() => {
     const names = Object.keys(trends);
