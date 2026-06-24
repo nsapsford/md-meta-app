@@ -11,6 +11,8 @@ import { cacheRead, cacheWrite } from '../storage/offlineCache';
 export const LOCAL_KEYS = {
   tierList: 'tier-list',
   matchupMatrix: 'matchup-matrix',
+  featuredDecks: 'featured-decks',
+  metaTrends: 'meta-trends',
 } as const;
 
 export type LocalKey = (typeof LOCAL_KEYS)[keyof typeof LOCAL_KEYS];
