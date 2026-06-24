@@ -42,8 +42,11 @@ export default function Dashboard() {
   const [deckNames, setDeckNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   // Tracks the background (non-blocking) data load so we can reserve space for
-  // the Game Log + Top Decks sections and avoid a layout shift when they arrive.
+  // the Game Log section and avoid a layout shift when it arrives.
   const [bgLoading, setBgLoading] = useState(true);
+  // Tracked separately from bgLoading so the Top Decks grid can paint from
+  // cache instantly instead of waiting on the Game Log's network calls too.
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Quick-entry form state
@@ -58,14 +61,23 @@ export default function Dashboard() {
     setBgLoading(true);
     setError('');
 
+    setFeaturedLoading(true);
+
     // Local-first: paint instantly from the device cache when we have a copy,
     // so a cold start (or a Sync Update re-render) never blocks on the network.
-    const cached = await readLocal<TierList>(LOCAL_KEYS.tierList);
+    const [cached, cachedFeatured] = await Promise.all([
+      readLocal<TierList>(LOCAL_KEYS.tierList),
+      readLocal<FeaturedDeck[]>(LOCAL_KEYS.featuredDecks),
+    ]);
     if (cached) {
       setTierList(cached);
       setLoading(false);
     } else {
       setLoading(true);
+    }
+    if (cachedFeatured) {
+      setFeatured(cachedFeatured);
+      setFeaturedLoading(false);
     }
 
     try {
@@ -81,7 +93,10 @@ export default function Dashboard() {
         getSyncStatus().catch(() => [] as SyncRecord[]),
         getDecks().catch(() => [] as DeckType[]),
       ]).then(([feat, sync, decks]) => {
-        setFeatured(Array.isArray(feat) ? feat : []);
+        const featList = Array.isArray(feat) ? feat : [];
+        setFeatured(featList);
+        if (featList.length > 0) void writeLocal(LOCAL_KEYS.featuredDecks, featList);
+        setFeaturedLoading(false);
         setSyncRecords(sync);
         const names = [...decks.filter((d) => d.tier != null && d.tier <= 3).map((d) => d.name), 'Rogue'];
         setDeckNames(names);
@@ -93,6 +108,7 @@ export default function Dashboard() {
       if (!cached) setError(e.message || 'Failed to load tier list');
       setLoading(false);
       setBgLoading(false);
+      setFeaturedLoading(false);
     }
   };
 
@@ -237,7 +253,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        <TopArchetypesGrid featured={featured} loading={bgLoading} />
+        <TopArchetypesGrid featured={featured} loading={featuredLoading} />
       </div>
 
       {/* Stats Grid */}

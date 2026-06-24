@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMetaTrends } from '../api/meta';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
+import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import { searchCards } from '../api/cards';
 import type { MetaSnapshot } from '../types/meta';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -66,10 +67,28 @@ export default function MetaTrends() {
   const animateChart = !hasAnimatedRef.current;
 
   useEffect(() => {
-    getMetaTrends()
-      .then(setTrends)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    void (async () => {
+      // Local-first: paint instantly from the device cache when we have a
+      // copy, so a cold start never blocks on the network.
+      const cached = await readLocal<Record<string, MetaSnapshot[]>>(LOCAL_KEYS.metaTrends);
+      if (cancelled) return;
+      if (cached) {
+        setTrends(cached);
+        setLoading(false);
+      }
+      try {
+        const fresh = await getMetaTrends();
+        if (cancelled) return;
+        setTrends(fresh);
+        void writeLocal(LOCAL_KEYS.metaTrends, fresh);
+      } catch (e: any) {
+        if (!cached) setError(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [dataGeneration]);
 
   useEffect(() => {
