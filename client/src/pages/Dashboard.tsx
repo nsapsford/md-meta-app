@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { memo, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { getTierList, getFeaturedDecks, getDecks } from '../api/meta';
 import { getSyncStatus, type SyncRecord } from '../api/sync';
 import { logGame } from '../api/personalGames';
@@ -7,6 +7,7 @@ import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import ChartTooltip from '../components/common/ChartTooltip';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
@@ -37,10 +38,26 @@ const PowerRankingsChart = memo(function PowerRankingsChart({
   data: PopularityDatum[];
   isSmall: boolean;
 }) {
+  // Draw-in only on the first render; when local-first data is replaced by the
+  // network refresh the bars update in place instead of re-animating.
+  const hasAnimatedRef = useRef(false);
+  const animate = !hasAnimatedRef.current;
+  useEffect(() => {
+    hasAnimatedRef.current = true;
+  }, []);
+
   return (
     <div className="h-64 sm:h-80">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
+          <defs>
+            {TIER_COLORS.map((color, i) => (
+              <linearGradient key={i} id={`tier-bar-grad-${i}`} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.95} />
+              </linearGradient>
+            ))}
+          </defs>
           <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
           <YAxis
             type="category"
@@ -53,21 +70,21 @@ const PowerRankingsChart = memo(function PowerRankingsChart({
             axisLine={false}
             tick={{ fill: '#eceef4' }}
           />
-          <Tooltip
-            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-            contentStyle={{
-              backgroundColor: '#18181b',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              boxShadow: '0 12px 40px rgba(0,0,0,0.65)',
-              fontSize: 13,
-            }}
-            labelStyle={{ color: '#eceef4', fontWeight: 600 }}
-            itemStyle={{ color: '#a1a1aa' }}
-          />
-          <Bar dataKey="power" radius={[0, 6, 6, 0]} barSize={20}>
+          <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} content={<ChartTooltip />} />
+          <Bar
+            dataKey="power"
+            name="Power"
+            radius={[0, 6, 6, 0]}
+            barSize={20}
+            isAnimationActive={animate}
+            animationDuration={700}
+            animationEasing="ease-out"
+          >
             {data.map((entry, i) => (
-              <Cell key={i} fill={TIER_COLORS[entry.tier] || TIER_COLORS[ROGUE_INDEX]} fillOpacity={0.85} />
+              <Cell
+                key={i}
+                fill={`url(#tier-bar-grad-${TIER_COLORS[entry.tier] ? entry.tier : ROGUE_INDEX})`}
+              />
             ))}
           </Bar>
         </BarChart>
