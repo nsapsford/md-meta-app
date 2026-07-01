@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 
 interface DataValueProps {
@@ -23,6 +24,19 @@ export default function DataValue({
   freshness_age_hours,
   className,
 }: DataValueProps) {
+  // Flash briefly when an already-displayed value changes — the visible cue
+  // that a background Sync Update quietly refreshed the numbers in place.
+  const prevValue = useRef(value);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const changed = prevValue.current !== value && prevValue.current != null && value != null;
+    prevValue.current = value;
+    if (!changed) return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 900);
+    return () => clearTimeout(t);
+  }, [value]);
+
   if (value === null || value === undefined) {
     return <span className="text-md-textMuted text-xs">—</span>;
   }
@@ -44,7 +58,8 @@ export default function DataValue({
 
   // Base classes
   const baseClasses = clsx(
-    'inline-flex items-center',
+    'inline-flex items-center rounded px-0.5 -mx-0.5',
+    flash && 'value-flash',
     className,
   );
 

@@ -8,6 +8,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import { MatchupMatrixSkeleton } from '../components/common/Skeleton';
 import CountUp from '../components/common/CountUp';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
@@ -45,7 +46,7 @@ function _getRelationshipIcon(rate: number): string {
 
 export default function Matchups() {
   const isNative = useIsNative();
-  const { dataGeneration, applying } = useSyncUpdate();
+  const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
   const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
@@ -105,6 +106,7 @@ export default function Matchups() {
   );
 
   return (
+    <PullToRefresh onRefresh={applyUpdate}>
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <h2 className="text-2xl font-bold text-md-gold">Matchup Analysis</h2>
@@ -244,5 +246,6 @@ export default function Matchups() {
         <MyMatchupSpread deckNames={[...decks.map((d) => d.name), 'Rogue']} />
       )}
     </div>
+    </PullToRefresh>
   );
 }

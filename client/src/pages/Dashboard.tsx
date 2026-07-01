@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import ChartTooltip from '../components/common/ChartTooltip';
+import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
@@ -107,7 +108,7 @@ interface FeaturedDeck {
 
 export default function Dashboard() {
   const isSmall = useIsSmall();
-  const { dataGeneration, applying } = useSyncUpdate();
+  const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
   const [tierList, setTierList] = useState<TierList | null>(null);
   const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
@@ -224,6 +225,7 @@ export default function Dashboard() {
   if (!tierList) return null;
 
   return (
+    <PullToRefresh onRefresh={applyUpdate}>
     <div className="space-y-8 pb-8">
       {/* Hero header with gradient */}
       <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
@@ -405,5 +407,6 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

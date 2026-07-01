@@ -258,3 +258,16 @@ html {
   background: #111113;
   border-radius: 11px;
 }
+/* Brief highlight when a displayed value changes in place (background sync). */
+@keyframes value-flash {
+  0% {
+    background-color: rgba(74, 142, 255, 0.28);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.value-flash {
+  animation: value-flash 0.9s ease-out;
+}
