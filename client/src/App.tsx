@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, m } from 'framer-motion';
 import clsx from 'clsx';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -12,6 +13,7 @@ import { OfflineCacheProvider } from './offline/OfflineCacheContext';
 import { SyncUpdateProvider } from './cache/SyncUpdateContext';
 import { useIsNative } from './hooks/useIsNative';
 import { hideSplashAfterFirstPaint } from './utils/splash';
+import MotionProvider from './motion/MotionProvider';
 
 // Every page is lazy so the entry chunk stays small: recharts (Dashboard,
 // MetaTrends) and other page-only weight download on first navigation instead
@@ -48,6 +50,57 @@ function RouteFallback() {
   );
 }
 
+// Detail pages reached by tapping into an item get a deeper slide to convey
+// hierarchy; top-level tab switches stay quick and subtle.
+function isDrillIn(pathname: string) {
+  return pathname.startsWith('/decks/');
+}
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  const deep = isDrillIn(location.pathname);
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <m.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: deep ? 16 : 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: deep ? -8 : -4 }}
+        transition={{ duration: deep ? 0.22 : 0.15, ease: 'easeOut' }}
+      >
+        <ErrorBoundary>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes location={location}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/decks/:name" element={<DeckProfile />} />
+              <Route path="/cards" element={<CardSearch />} />
+              <Route path="/matchups" element={<Matchups />} />
+              <Route path="/ban-list" element={<BanList />} />
+              <Route path="/trends" element={<MetaTrends />} />
+              {/* Deck area lands on My Decks; the builder lives at /build-deck */}
+              <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
+              <Route path="/build-deck" element={<DeckBuilder />} />
+              <Route path="/my-decks" element={<MyDecks />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/account"
+                element={
+                  <RequireAuth>
+                    <MyAccount />
+                  </RequireAuth>
+                }
+              />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </m.div>
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isNative = useIsNative();
@@ -57,12 +110,19 @@ export default function App() {
   }, []);
 
   return (
+    <MotionProvider>
     <AuthProvider>
       <OfflineCacheProvider>
         <BrowserRouter>
           <SyncUpdateProvider>
           <div className="min-h-screen bg-md-bg">
-            <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
+            {/* Launch reveal: header fades, then content rises — a staged
+                handoff from the native splash instead of a hard cut.
+                Opacity-only on the header and bottom nav so their fixed/sticky
+                positioning is never inside a transformed ancestor. */}
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+              <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
+            </m.div>
             <div className="flex">
               {!isNative && sidebarOpen && (
                 <div
@@ -77,42 +137,26 @@ export default function App() {
                   isNative && 'pb-20'
                 )}
               >
-                <div className="max-w-[1400px] mx-auto animate-fade-in">
-                  <ErrorBoundary>
-                    <Suspense fallback={<RouteFallback />}>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/decks/:name" element={<DeckProfile />} />
-                        <Route path="/cards" element={<CardSearch />} />
-                        <Route path="/matchups" element={<Matchups />} />
-                        <Route path="/ban-list" element={<BanList />} />
-                        <Route path="/trends" element={<MetaTrends />} />
-                        {/* Deck area lands on My Decks; the builder lives at /build-deck */}
-                        <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
-                        <Route path="/build-deck" element={<DeckBuilder />} />
-                        <Route path="/my-decks" element={<MyDecks />} />
-                        <Route path="/admin" element={<Admin />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route
-                          path="/account"
-                          element={
-                            <RequireAuth>
-                              <MyAccount />
-                            </RequireAuth>
-                          }
-                        />
-                      </Routes>
-                    </Suspense>
-                  </ErrorBoundary>
-                </div>
+                <m.div
+                  className="max-w-[1400px] mx-auto"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: 0.08, ease: 'easeOut' }}
+                >
+                  <AnimatedRoutes />
+                </m.div>
               </main>
             </div>
-            {isNative && <MobileBottomNav />}
+            {isNative && (
+              <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: 0.15 }}>
+                <MobileBottomNav />
+              </m.div>
+            )}
           </div>
           </SyncUpdateProvider>
         </BrowserRouter>
       </OfflineCacheProvider>
     </AuthProvider>
+    </MotionProvider>
   );
 }
