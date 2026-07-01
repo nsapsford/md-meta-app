@@ -1,31 +1,60 @@
-import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import MobileBottomNav from './components/layout/MobileBottomNav';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import Dashboard from './pages/Dashboard';
-import DeckProfile from './pages/DeckProfile';
-import CardSearch from './pages/CardSearch';
-import Matchups from './pages/Matchups';
-import BanList from './pages/BanList';
-import MetaTrends from './pages/MetaTrends';
-import DeckBuilder from './pages/DeckBuilder';
-import MyDecks from './pages/MyDecks';
-import Admin from './pages/Admin';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import MyAccount from './pages/MyAccount';
 import RequireAuth from './components/auth/RequireAuth';
+import { Skeleton, MatchupMatrixSkeleton, TrendsSkeleton } from './components/common/Skeleton';
 import { AuthProvider } from './auth/AuthContext';
 import { OfflineCacheProvider } from './offline/OfflineCacheContext';
 import { SyncUpdateProvider } from './cache/SyncUpdateContext';
 import { useIsNative } from './hooks/useIsNative';
+import { hideSplashAfterFirstPaint } from './utils/splash';
+
+// Every page is lazy so the entry chunk stays small: recharts (Dashboard,
+// MetaTrends) and other page-only weight download on first navigation instead
+// of at cold start.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DeckProfile = lazy(() => import('./pages/DeckProfile'));
+const CardSearch = lazy(() => import('./pages/CardSearch'));
+const Matchups = lazy(() => import('./pages/Matchups'));
+const BanList = lazy(() => import('./pages/BanList'));
+const MetaTrends = lazy(() => import('./pages/MetaTrends'));
+const DeckBuilder = lazy(() => import('./pages/DeckBuilder'));
+const MyDecks = lazy(() => import('./pages/MyDecks'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const MyAccount = lazy(() => import('./pages/MyAccount'));
+
+// Shown while a page chunk downloads. Mirrors the skeletons pages themselves
+// use while data loads, so a chunk load is indistinguishable from a data load.
+function RouteFallback() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/matchups')) return <MatchupMatrixSkeleton />;
+  if (pathname.startsWith('/trends')) return <TrendsSkeleton />;
+  return (
+    <div className="space-y-4">
+      <Skeleton className="w-48 h-8" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
+      </div>
+      <Skeleton className="h-64" />
+    </div>
+  );
+}
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isNative = useIsNative();
+
+  useEffect(() => {
+    hideSplashAfterFirstPaint();
+  }, []);
 
   return (
     <AuthProvider>
@@ -50,29 +79,31 @@ export default function App() {
               >
                 <div className="max-w-[1400px] mx-auto animate-fade-in">
                   <ErrorBoundary>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/decks/:name" element={<DeckProfile />} />
-                      <Route path="/cards" element={<CardSearch />} />
-                      <Route path="/matchups" element={<Matchups />} />
-                      <Route path="/ban-list" element={<BanList />} />
-                      <Route path="/trends" element={<MetaTrends />} />
-                      {/* Deck area lands on My Decks; the builder lives at /build-deck */}
-                      <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
-                      <Route path="/build-deck" element={<DeckBuilder />} />
-                      <Route path="/my-decks" element={<MyDecks />} />
-                      <Route path="/admin" element={<Admin />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route
-                        path="/account"
-                        element={
-                          <RequireAuth>
-                            <MyAccount />
-                          </RequireAuth>
-                        }
-                      />
-                    </Routes>
+                    <Suspense fallback={<RouteFallback />}>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/decks/:name" element={<DeckProfile />} />
+                        <Route path="/cards" element={<CardSearch />} />
+                        <Route path="/matchups" element={<Matchups />} />
+                        <Route path="/ban-list" element={<BanList />} />
+                        <Route path="/trends" element={<MetaTrends />} />
+                        {/* Deck area lands on My Decks; the builder lives at /build-deck */}
+                        <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
+                        <Route path="/build-deck" element={<DeckBuilder />} />
+                        <Route path="/my-decks" element={<MyDecks />} />
+                        <Route path="/admin" element={<Admin />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route
+                          path="/account"
+                          element={
+                            <RequireAuth>
+                              <MyAccount />
+                            </RequireAuth>
+                          }
+                        />
+                      </Routes>
+                    </Suspense>
                   </ErrorBoundary>
                 </div>
               </main>
