@@ -1,4 +1,4 @@
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { memo, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { getTierList, getFeaturedDecks, getDecks } from '../api/meta';
 import { getSyncStatus, type SyncRecord } from '../api/sync';
 import { logGame } from '../api/personalGames';
@@ -7,6 +7,8 @@ import type { DeckType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
+import ChartTooltip from '../components/common/ChartTooltip';
+import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
@@ -20,6 +22,77 @@ const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width
 const subscribe = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
 const getSnapshot = () => smallQuery?.matches ?? false;
 function useIsSmall() { return useSyncExternalStore(subscribe, getSnapshot); }
+
+interface PopularityDatum {
+  name: string;
+  power: number | null;
+  tier: number;
+}
+
+// Memoized so Dashboard's frequent state changes (game-log form, bgLoading,
+// sync badges) don't re-render recharts — the chart only redraws when its
+// data or the small-screen breakpoint actually change.
+const PowerRankingsChart = memo(function PowerRankingsChart({
+  data,
+  isSmall,
+}: {
+  data: PopularityDatum[];
+  isSmall: boolean;
+}) {
+  // Draw-in only on the first render; when local-first data is replaced by the
+  // network refresh the bars update in place instead of re-animating.
+  const hasAnimatedRef = useRef(false);
+  const animate = !hasAnimatedRef.current;
+  useEffect(() => {
+    hasAnimatedRef.current = true;
+  }, []);
+
+  return (
+    <div className="h-64 sm:h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
+          <defs>
+            {TIER_COLORS.map((color, i) => (
+              <linearGradient key={i} id={`tier-bar-grad-${i}`} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.95} />
+              </linearGradient>
+            ))}
+          </defs>
+          <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            stroke="#a1a1aa"
+            fontSize={12}
+            width={isSmall ? 0 : 110}
+            hide={isSmall}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fill: '#eceef4' }}
+          />
+          <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} content={<ChartTooltip />} />
+          <Bar
+            dataKey="power"
+            name="Power"
+            radius={[0, 6, 6, 0]}
+            barSize={20}
+            isAnimationActive={animate}
+            animationDuration={700}
+            animationEasing="ease-out"
+          >
+            {data.map((entry, i) => (
+              <Cell
+                key={i}
+                fill={`url(#tier-bar-grad-${TIER_COLORS[entry.tier] ? entry.tier : ROGUE_INDEX})`}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+});
 
 interface FeaturedDeck {
   id: string;
@@ -35,7 +108,7 @@ interface FeaturedDeck {
 
 export default function Dashboard() {
   const isSmall = useIsSmall();
-  const { dataGeneration, applying } = useSyncUpdate();
+  const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
   const [tierList, setTierList] = useState<TierList | null>(null);
   const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
   const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
@@ -115,6 +188,29 @@ export default function Dashboard() {
   // Re-run on a Sync Update (dataGeneration bump) to refetch + re-render in place.
   useEffect(() => { load(); }, [dataGeneration]);
 
+  // Derived before the early returns (hooks must be unconditional) and memoized
+  // on tierList so unrelated state changes don't recompute or re-render the chart.
+  const allDecks = useMemo(() => {
+    if (!tierList) return [];
+    return [
+      ...(tierList['0'] ?? []).map(d => ({ ...d, tierKey: 0 })),
+      ...(tierList['1'] ?? []).map(d => ({ ...d, tierKey: 1 })),
+      ...(tierList['2'] ?? []).map(d => ({ ...d, tierKey: 2 })),
+      ...(tierList['3'] ?? []).map(d => ({ ...d, tierKey: 3 })),
+      ...(tierList.rogue ?? []).map(d => ({ ...d, tierKey: 4 })),
+    ];
+  }, [tierList]);
+
+  const popularityData = useMemo<PopularityDatum[]>(
+    () =>
+      allDecks
+        .filter(d => d.power != null)
+        .sort((a, b) => (b.power || 0) - (a.power || 0))
+        .slice(0, 12)
+        .map(d => ({ name: d.name, power: d.power, tier: d.tierKey })),
+    [allDecks]
+  );
+
   const handleLogGame = async () => {
     if (!logDeck || !logOpponent) return;
     setLogSaving(true);
@@ -144,21 +240,8 @@ export default function Dashboard() {
   if (error) return <ErrorBanner message={error} onRetry={load} />;
   if (!tierList) return null;
 
-  const allDecks = [
-    ...(tierList['0'] ?? []).map(d => ({ ...d, tierKey: 0 })),
-    ...(tierList['1'] ?? []).map(d => ({ ...d, tierKey: 1 })),
-    ...(tierList['2'] ?? []).map(d => ({ ...d, tierKey: 2 })),
-    ...(tierList['3'] ?? []).map(d => ({ ...d, tierKey: 3 })),
-    ...(tierList.rogue ?? []).map(d => ({ ...d, tierKey: 4 })),
-  ];
-
-  const popularityData = allDecks
-    .filter(d => d.power != null)
-    .sort((a, b) => (b.power || 0) - (a.power || 0))
-    .slice(0, 12)
-    .map(d => ({ name: d.name, power: d.power, tier: d.tierKey }));
-
   return (
+    <PullToRefresh onRefresh={applyUpdate}>
     <div className="space-y-8 pb-8">
       {/* Hero header with gradient */}
       <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
@@ -336,43 +419,10 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-md-text">Power Rankings</h3>
             <span className="text-xs text-md-textMuted ml-auto">Top 12 decks</span>
           </div>
-          <div className="h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={popularityData} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
-                <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  stroke="#a1a1aa"
-                  fontSize={12}
-                  width={isSmall ? 0 : 110}
-                  hide={isSmall}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: '#eceef4' }}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{
-                    backgroundColor: '#18181b',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.65)',
-                    fontSize: 13,
-                  }}
-                  labelStyle={{ color: '#eceef4', fontWeight: 600 }}
-                  itemStyle={{ color: '#a1a1aa' }}
-                />
-                <Bar dataKey="power" radius={[0, 6, 6, 0]} barSize={20}>
-                  {popularityData.map((entry, i) => (
-                    <Cell key={i} fill={TIER_COLORS[entry.tier] || TIER_COLORS[ROGUE_INDEX]} fillOpacity={0.85} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <PowerRankingsChart data={popularityData} isSmall={isSmall} />
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

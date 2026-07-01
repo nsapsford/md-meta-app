@@ -8,13 +8,11 @@ async function initNative() {
   try {
     const { Capacitor } = await import('@capacitor/core');
     if (!Capacitor.isNativePlatform()) return;
-    const [{ StatusBar, Style }, { SplashScreen }] = await Promise.all([
-      import('@capacitor/status-bar'),
-      import('@capacitor/splash-screen'),
-    ]);
+    const { StatusBar, Style } = await import('@capacitor/status-bar');
     await StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
-    await SplashScreen.hide().catch(() => {});
+    // The splash screen is hidden separately, at the app shell's first paint —
+    // see hideSplashAfterFirstPaint() in App.tsx.
   } catch {
     // Capacitor not installed in this environment (e.g. plain web build) — ignore.
   }

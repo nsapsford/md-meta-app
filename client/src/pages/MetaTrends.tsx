@@ -7,6 +7,7 @@ import { searchCards } from '../api/cards';
 import type { MetaSnapshot } from '../types/meta';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { TrendsSkeleton } from '../components/common/Skeleton';
+import ChartTooltip from '../components/common/ChartTooltip';
 import CountUp from '../components/common/CountUp';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useIsNative } from '../hooks/useIsNative';
@@ -255,16 +256,7 @@ export default function MetaTrends() {
               reversed={metric === 'tier'}
               domain={metric === 'tier' ? [0, 3] : ['auto', 'auto']}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#141a2e',
-                border: '1px solid #1e2740',
-                borderRadius: 10,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                fontSize: 12,
-              }}
-              labelStyle={{ color: '#eceef4', fontWeight: 600 }}
-            />
+            <Tooltip content={<ChartTooltip sortByValue />} />
             <Legend
               wrapperStyle={{ paddingTop: 16, fontSize: 11 }}
               iconType="circle"
@@ -276,9 +268,9 @@ export default function MetaTrends() {
                 type="monotone"
                 dataKey={name}
                 stroke={COLORS[i % COLORS.length]}
-                strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2, fill: '#0f1423' }}
-                activeDot={{ r: 6, strokeWidth: 2 }}
+                strokeWidth={2.5}
+                dot={{ r: 3, strokeWidth: 2, fill: '#0f1423' }}
+                activeDot={{ r: 6, strokeWidth: 0, style: { filter: `drop-shadow(0 0 6px ${COLORS[i % COLORS.length]})` } }}
                 connectNulls
                 isAnimationActive={animateChart}
                 animationDuration={900}
