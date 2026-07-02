@@ -43,11 +43,11 @@ export default function TierListView({ tierList }: TierListViewProps) {
                     'press hover:bg-md-surfaceHover/30 transition-all duration-200 group',
                     isNative
                       ? 'flex flex-col gap-2 px-3 py-3'
-                      : 'grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4'
+                      : 'flex flex-col gap-2 px-3 py-3 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-6 sm:py-4'
                   )}
                 >
                   {/* Card images — overlapping thumbnails */}
-                  <div className={clsx('flex items-center overflow-hidden', isNative ? 'w-full' : 'min-w-[8rem]')}>
+                  <div className={clsx('flex items-center overflow-hidden', isNative ? 'w-full' : 'w-full sm:w-auto sm:min-w-[8rem]')}>
                     {deck.cards && deck.cards.length > 0 ? (
                       deck.cards.map((card, index) => (
                         <div
@@ -121,8 +121,8 @@ export default function TierListView({ tierList }: TierListViewProps) {
                   </div>
 
                   {/* Right: stats + arrow */}
-                  <div className={clsx('flex items-center flex-shrink-0', isNative ? 'gap-3 justify-between w-full' : 'gap-5')}>
-                    <div className={clsx('text-sm tabular-nums', isNative ? 'flex flex-row items-center gap-3' : 'flex flex-col items-end gap-1')}>
+                  <div className={clsx('flex items-center flex-shrink-0', isNative ? 'gap-3 justify-between w-full' : 'gap-3 justify-between w-full sm:gap-5 sm:justify-start sm:w-auto')}>
+                    <div className={clsx('text-sm tabular-nums', isNative ? 'flex flex-row items-center gap-3' : 'flex flex-row items-center gap-3 sm:flex-col sm:items-end sm:gap-1')}>
                       {typeof deck.win_rate === 'number' && (
                         <span className={`font-bold ${deck.win_rate >= 55 ? 'text-md-winRate' : deck.win_rate <= 45 ? 'text-md-red' : 'text-md-text'}`}>
                           {deck.win_rate.toFixed(1)}%<span className="text-md-textMuted font-normal ml-1 text-xs">win</span>

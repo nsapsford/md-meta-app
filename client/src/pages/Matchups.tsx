@@ -13,7 +13,6 @@ import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
-import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
 import MobileMatchupFocus from '../components/matchups/MobileMatchupFocus';
 import { useIsNative } from '../hooks/useIsNative';
 import clsx from 'clsx';
@@ -47,7 +46,7 @@ function _getRelationshipIcon(rate: number): string {
 export default function Matchups() {
   const isNative = useIsNative();
   const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
-  const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem' | 'my-spread'>('matrix');
+  const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem'>('matrix');
   const [decks, setDecks] = useState<DeckType[]>([]);
   const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
   const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
@@ -117,7 +116,6 @@ export default function Matchups() {
         <button className={tabClass('matrix')} onClick={() => setTab('matrix')}>Matrix</button>
         <button className={tabClass('ecosystem')} onClick={() => setTab('ecosystem')}>Ecosystem</button>
         <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
-        <button className={tabClass('my-spread')} onClick={() => setTab('my-spread')}>My Spread</button>
       </div>
 
       {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
@@ -240,10 +238,6 @@ export default function Matchups() {
 
       {tab === 'advisor' && (
         <MetaAdvisor decks={[...decks.map((d) => d.name), 'Rogue']} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
-      )}
-
-      {tab === 'my-spread' && (
-        <MyMatchupSpread deckNames={[...decks.map((d) => d.name), 'Rogue']} />
       )}
     </div>
     </PullToRefresh>
