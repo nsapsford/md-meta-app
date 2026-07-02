@@ -51,7 +51,7 @@ export default function MyAccount() {
 
       <section className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
         <div className="flex items-center justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="font-semibold text-md-text">Enable Local Caching</p>
             <p className="text-xs text-md-textMuted">
               Store the card database, tier list and your deck lists on this
@@ -64,14 +64,14 @@ export default function MyAccount() {
             disabled={!ready || busy}
             onClick={() => guard(() => setEnabled(!enabled))}
             className={clsx(
-              'relative shrink-0 box-border w-12 h-7 rounded-full border overflow-hidden transition-colors disabled:opacity-40',
+              'relative shrink-0 w-11 h-6 rounded-full border transition-colors disabled:opacity-40',
               enabled ? 'bg-md-gold/30 border-md-gold/60' : 'bg-md-bg border-md-border'
             )}
           >
             <span
               className={clsx(
-                'absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full transition-transform',
-                enabled ? 'translate-x-5 bg-md-gold' : 'translate-x-0.5 bg-md-textMuted'
+                'absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform',
+                enabled ? 'translate-x-5 bg-md-gold' : 'translate-x-0 bg-md-textMuted'
               )}
             />
           </button>

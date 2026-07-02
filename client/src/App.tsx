@@ -26,6 +26,7 @@ const BanList = lazy(() => import('./pages/BanList'));
 const MetaTrends = lazy(() => import('./pages/MetaTrends'));
 const DeckBuilder = lazy(() => import('./pages/DeckBuilder'));
 const MyDecks = lazy(() => import('./pages/MyDecks'));
+const MyGames = lazy(() => import('./pages/MyGames'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -82,6 +83,7 @@ function AnimatedRoutes() {
               <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
               <Route path="/build-deck" element={<DeckBuilder />} />
               <Route path="/my-decks" element={<MyDecks />} />
+              <Route path="/my-games" element={<MyGames />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

@@ -19,7 +19,7 @@ export default function TierBadge({ tier, size = 'md' }: { tier: number | null; 
 
   return (
     <span className={clsx(
-      'rounded-md font-semibold inline-block border tracking-wide',
+      'rounded-md font-semibold inline-block border tracking-wide shrink-0 whitespace-nowrap',
       cfg.bg, cfg.text, cfg.border, cfg.glow, sizeClass
     )}>
       {cfg.label}
