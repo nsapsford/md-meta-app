@@ -9,6 +9,13 @@ import TierBadge from '../components/common/TierBadge';
 import CardImage from '../components/common/CardImage';
 import DecklistView from '../components/decks/DecklistView';
 
+// Step the title size down for long names so the tier badge stays on-screen.
+function deckNameSize(name: string) {
+  if (name.length <= 16) return 'text-2xl';
+  if (name.length <= 24) return 'text-xl';
+  return 'text-lg';
+}
+
 function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
   // Get top 3 archetype cards from the first top decklist
   const deckNameLower = deck.name.toLowerCase();
@@ -94,10 +101,12 @@ export default function DeckProfile() {
       <div className="bg-md-surface border border-md-border rounded-lg p-6">
         <div className="flex items-start gap-6">
           <HeaderCardFan deck={deck} />
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-2xl font-bold">{deck.name}</h2>
-              <TierBadge tier={deck.tier} size="lg" />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2 min-w-0">
+              <h2 className={`${deckNameSize(deck.name)} font-bold min-w-0 break-words`}>{deck.name}</h2>
+              <div className="shrink-0">
+                <TierBadge tier={deck.tier} size="lg" />
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-md-textMuted">
               {deck.power != null && <span>Power: <span className="text-md-gold font-semibold">{deck.power.toFixed(1)}</span></span>}

@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getSpread, deleteGame, getGames, type PersonalSpread, type PersonalGame } from '../../api/personalGames';
+import { readLocal, writeLocal } from '../../cache/cacheStore';
 import ErrorBanner from '../common/ErrorBanner';
 import LoadingSpinner from '../common/LoadingSpinner';
 import clsx from 'clsx';
+
+// Cache keys are parameterized by the filters that shape the server response.
+const spreadKey = (deck: string, days: number) => `personal-spread:${deck}:${days}`;
+const gamesKey = (deck: string) => `personal-games:${deck}`;
 
 function WinRateBar({ rate }: { rate: number }) {
   const pct = Math.round(rate * 100);
@@ -41,21 +46,52 @@ export default function MyMatchupSpread({ deckNames }: Props) {
 
   useEffect(() => {
     if (!selectedDeck) return;
-    setLoading(true);
-    Promise.all([
-      getSpread({ deck: selectedDeck, days }),
-      getGames({ deck: selectedDeck, limit: 10 }),
-    ])
-      .then(([s, g]) => { setSpread(s); setRecentGames(g); })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      // Local-first: paint from the device cache, then revalidate.
+      const [cachedSpread, cachedGames] = await Promise.all([
+        readLocal<PersonalSpread[]>(spreadKey(selectedDeck, days)),
+        readLocal<PersonalGame[]>(gamesKey(selectedDeck)),
+      ]);
+      if (cancelled) return;
+      if (cachedSpread) setSpread(cachedSpread);
+      if (cachedGames) setRecentGames(cachedGames);
+      setLoading(!cachedSpread);
+      try {
+        const [s, g] = await Promise.all([
+          getSpread({ deck: selectedDeck, days }),
+          getGames({ deck: selectedDeck, limit: 10 }),
+        ]);
+        if (cancelled) return;
+        setSpread(s);
+        setRecentGames(g);
+        setError('');
+        void writeLocal(spreadKey(selectedDeck, days), s);
+        void writeLocal(gamesKey(selectedDeck), g);
+      } catch (e) {
+        // With cached data on screen, a failed refresh stays silent.
+        if (!cancelled && !cachedSpread && !cachedGames) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [selectedDeck, days]);
 
   const handleDelete = async (id: number) => {
     await deleteGame(id);
-    setRecentGames((prev) => prev.filter((g) => g.id !== id));
+    setRecentGames((prev) => {
+      const next = prev.filter((g) => g.id !== id);
+      void writeLocal(gamesKey(selectedDeck), next);
+      return next;
+    });
     // Refresh spread
-    getSpread({ deck: selectedDeck, days }).then(setSpread).catch(() => {});
+    getSpread({ deck: selectedDeck, days })
+      .then((s) => {
+        setSpread(s);
+        void writeLocal(spreadKey(selectedDeck, days), s);
+      })
+      .catch(() => {});
   };
 
   const totalGames = spread.filter((s) => s.deck_played.toLowerCase() === selectedDeck.toLowerCase())

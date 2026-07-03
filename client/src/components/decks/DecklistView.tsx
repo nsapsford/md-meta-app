@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { EnrichedDeckCard } from '../../types/deck';
 import CardImage from '../common/CardImage';
+
+const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 interface DecklistViewProps {
   mainDeck: EnrichedDeckCard[];
@@ -49,15 +52,37 @@ const RARITY_BORDERS: Record<string, string> = {
   N: 'border-l-rarity-n',
 };
 
+function CardMetaInfo({ card }: { card: EnrichedDeckCard }) {
+  return (
+    <>
+      <p className="text-sm text-center text-md-text mt-1.5 font-medium truncate px-2">{card.cardName}</p>
+      {card.negate_effectiveness != null && card.negate_effectiveness > 0 && (
+        <div className="mt-1 px-2 space-y-0.5">
+          <p className={`text-xs text-center font-semibold ${card.negate_effectiveness > 8 ? 'text-md-red' : card.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
+            Negate Impact: +{card.negate_effectiveness.toFixed(1)}%
+          </p>
+          {card.not_negated_win_rate != null && card.negated_win_rate != null && (
+            <p className="text-[10px] text-center text-md-textMuted">
+              WR: <span className="text-md-green">{card.not_negated_win_rate.toFixed(1)}%</span> / Negated: <span className="text-md-red">{card.negated_win_rate.toFixed(1)}%</span>
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
   const borderClass = RARITY_BORDERS[card.rarity || 'N'] || RARITY_BORDERS.N;
   const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false);
   const cellRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   const largeUrl = card.imageUrl?.replace('/cards_small/', '/cards/') || null;
 
   const handleMouseEnter = () => {
+    if (!canHover) return;
     setHovered(true);
     if (cellRef.current) {
       const rect = cellRef.current.getBoundingClientRect();
@@ -79,9 +104,10 @@ function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
   return (
     <div
       ref={cellRef}
-      className={`relative border-l-2 ${borderClass} rounded overflow-hidden w-full aspect-[3/4]`}
+      className={`relative border-l-2 ${borderClass} rounded overflow-hidden w-full aspect-[3/4] cursor-pointer`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => { setHovered(false); setOpen(true); }}
     >
       <CardImage src={card.imageUrl || null} alt={card.cardName} size="md" className="!w-full !h-full" />
       {card.amount > 1 && (
@@ -98,20 +124,30 @@ function DeckCardCell({ card }: { card: EnrichedDeckCard }) {
           style={{ top: pos.top, left: pos.left, width: 480 }}
         >
           <img src={largeUrl} alt={card.cardName} className="w-full rounded" />
-          <p className="text-sm text-center text-md-text mt-1.5 font-medium truncate px-2">{card.cardName}</p>
-          {card.negate_effectiveness != null && card.negate_effectiveness > 0 && (
-            <div className="mt-1 px-2 space-y-0.5">
-              <p className={`text-xs text-center font-semibold ${card.negate_effectiveness > 8 ? 'text-md-red' : card.negate_effectiveness > 4 ? 'text-md-orange' : 'text-yellow-400'}`}>
-                Negate Impact: +{card.negate_effectiveness.toFixed(1)}%
-              </p>
-              {card.not_negated_win_rate != null && card.negated_win_rate != null && (
-                <p className="text-[10px] text-center text-md-textMuted">
-                  WR: <span className="text-md-green">{card.not_negated_win_rate.toFixed(1)}%</span> / Negated: <span className="text-md-red">{card.negated_win_rate.toFixed(1)}%</span>
-                </p>
-              )}
-            </div>
-          )}
+          <CardMetaInfo card={card} />
         </div>
+      )}
+      {open && largeUrl && createPortal(
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          // Portal clicks bubble through the React tree to the cell's onClick,
+          // which would instantly reopen the modal — stop them here.
+          onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+        >
+          <div
+            className="w-full max-w-[420px] bg-md-bg border border-md-border rounded-lg p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={largeUrl}
+              alt={card.cardName}
+              className="w-full rounded max-h-[75vh] object-contain"
+              style={{ aspectRatio: '59/86' }}
+            />
+            <CardMetaInfo card={card} />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

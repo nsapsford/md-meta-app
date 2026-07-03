@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react';
 import axios from 'axios';
 import { getEcosystemAnalysis } from '../../api/matchups';
 import type {
@@ -15,6 +15,11 @@ import clsx from 'clsx';
 import { tierHex } from '../../constants/tierColors';
 
 // ── Helpers ──
+
+const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null;
+const subscribeSmall = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
+const getSmallSnapshot = () => smallQuery?.matches ?? false;
+function useIsSmall() { return useSyncExternalStore(subscribeSmall, getSmallSnapshot); }
 
 function strengthLabel(s: PredatorPreyRelationship['strength']): string {
   if (s === 'hard_counter') return 'Hard Counter';
@@ -170,7 +175,10 @@ function FoodChainGraph({
     return m;
   }, [profiles]);
 
-  const width = 650, height = 450;
+  // Near-square viewBox on small screens so the circular layout fills the
+  // panel width instead of leaving horizontal dead space.
+  const isSmall = useIsSmall();
+  const width = isSmall ? 470 : 650, height = 450;
   const cx = width / 2, cy = height / 2;
   const radius = Math.min(cx, cy) - 70;
 
@@ -348,11 +356,11 @@ function FoodChainGraph({
               />
               <text
                 x={pos.x}
-                y={pos.y + nodeR + 14}
+                y={pos.y + nodeR + 16}
                 textAnchor="middle"
                 fill={dimmed ? '#555' : '#a1a1aa'}
-                fontSize="10"
-                fontWeight="500"
+                fontSize={isSmall ? 14 : 13}
+                fontWeight="600"
               >
                 {deck.length > 15 ? deck.slice(0, 13) + '\u2026' : deck}
               </text>
@@ -540,10 +548,10 @@ export default function EcosystemView({ deckNames }: Props) {
                 {(gt.expected_payoff * 100).toFixed(1)}%
               </span>
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-xs text-md-textMuted block">Nash Status</span>
-              <span className={`font-bold ${nashDev.color}`}>{nashDev.label}</span>
-              <span className="text-xs text-md-textMuted ml-1">
+              <span className={`font-bold ${nashDev.color}`}>{nashDev.label}</span>{' '}
+              <span className="text-xs text-md-textMuted whitespace-nowrap">
                 ({gt.nash_deviation > 0 ? '+' : ''}{(gt.nash_deviation * 100).toFixed(0)}%)
               </span>
             </div>
