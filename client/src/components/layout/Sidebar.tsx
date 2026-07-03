@@ -10,6 +10,7 @@ const navItems = [
   { to: '/ban-list', label: 'Ban List', icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' },
   { to: '/trends', label: 'Meta Trends', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
   { to: '/my-decks', label: 'My Decks', icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
+  { to: '/my-games', label: 'My Games', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
 ];
 
 const SOURCE_LABELS: Record<string, string> = {
