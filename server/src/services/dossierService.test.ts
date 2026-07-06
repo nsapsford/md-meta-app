@@ -3,8 +3,11 @@ import {
   validateOpponentContent,
   validatePilotContent,
   parseModelJson,
+  buildOpponentPrompt,
+  buildPilotPrompt,
   type OpponentDossierContent,
   type PilotDossierContent,
+  type CardPoolEntry,
 } from './dossierService.js';
 
 const validOpponent: OpponentDossierContent = {
@@ -76,5 +79,38 @@ describe('parseModelJson', () => {
 
   it('strips a plain ``` fenced block', () => {
     expect(parseModelJson('```\n{"a": 1}\n```')).toEqual({ a: 1 });
+  });
+});
+
+const pool: CardPoolEntry[] = [
+  { name: 'Card A', desc: 'Special Summon this card.', count: 3 },
+  { name: 'Card B', desc: null, count: 1 },
+];
+
+describe('buildOpponentPrompt', () => {
+  it('includes the archetype name, card names, usage counts, and a JSON-only instruction', () => {
+    const prompt = buildOpponentPrompt('Kashtira', pool);
+    expect(prompt).toContain('Kashtira');
+    expect(prompt).toContain('Card A (used 3x): Special Summon this card.');
+    expect(prompt).toContain('Card B (used 1x)');
+    expect(prompt).toMatch(/only.*JSON/i);
+    expect(prompt).toContain('keyStarters');
+  });
+});
+
+describe('buildPilotPrompt', () => {
+  it('includes the deck name, archetype, card pool, and pilot-only schema fields', () => {
+    const prompt = buildPilotPrompt('My Kashtira Build', 'Kashtira', pool);
+    expect(prompt).toContain('My Kashtira Build');
+    expect(prompt).toContain('Kashtira');
+    expect(prompt).toContain('Card A (used 3x): Special Summon this card.');
+    expect(prompt).toContain('comboLines');
+    expect(prompt).toContain('matchupTips');
+  });
+
+  it('omits the archetype clause when the deck has no archetype', () => {
+    const prompt = buildPilotPrompt('Homebrew Deck', null, pool);
+    expect(prompt).toContain('Homebrew Deck');
+    expect(prompt).not.toMatch(/a null build/i);
   });
 });
