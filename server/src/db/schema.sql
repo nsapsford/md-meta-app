@@ -169,3 +169,56 @@ CREATE TABLE IF NOT EXISTS user_decks (
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
+
+-- Duel Companion: versioned AI-generated dossiers. 'opponent' dossiers are
+-- keyed by archetype (matching deck_types.name); 'pilot' dossiers are keyed
+-- to a specific saved deck so lines match the user's exact list. Regeneration
+-- inserts a new version rather than overwriting; a failed generation is
+-- recorded but never becomes the version served to the client.
+CREATE TABLE IF NOT EXISTS dossiers (
+  id SERIAL PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('opponent', 'pilot')),
+  archetype TEXT,
+  deck_id INTEGER REFERENCES user_decks(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL,
+  content_json TEXT NOT NULL,
+  model TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+  error TEXT,
+  generated_at INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
+  CHECK (
+    (kind = 'opponent' AND archetype IS NOT NULL AND deck_id IS NULL) OR
+    (kind = 'pilot' AND deck_id IS NOT NULL AND archetype IS NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_dossiers_opponent_lookup
+  ON dossiers(LOWER(archetype), version DESC) WHERE kind = 'opponent';
+CREATE INDEX IF NOT EXISTS idx_dossiers_pilot_lookup
+  ON dossiers(deck_id, version DESC) WHERE kind = 'pilot';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_opponent_version_unique
+  ON dossiers(LOWER(archetype), version) WHERE kind = 'opponent';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_pilot_version_unique
+  ON dossiers(deck_id, version) WHERE kind = 'pilot';
+
+-- Personal notes layered onto a dossier. category slots the note into the
+-- matching dossier section in the UI. game_id is unused until Phase 2 (review
+-- loop) but included now to avoid a later migration.
+CREATE TABLE IF NOT EXISTS dossier_notes (
+  id SERIAL PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('opponent', 'pilot')),
+  archetype TEXT,
+  deck_id INTEGER REFERENCES user_decks(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK (category IN ('negate-priority', 'play-around', 'combo-line', 'general')),
+  note TEXT NOT NULL,
+  game_id INTEGER REFERENCES personal_games(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
+  CHECK (
+    (kind = 'opponent' AND archetype IS NOT NULL AND deck_id IS NULL) OR
+    (kind = 'pilot' AND deck_id IS NOT NULL AND archetype IS NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_dossier_notes_opponent ON dossier_notes(LOWER(archetype)) WHERE kind = 'opponent';
+CREATE INDEX IF NOT EXISTS idx_dossier_notes_pilot ON dossier_notes(deck_id) WHERE kind = 'pilot';

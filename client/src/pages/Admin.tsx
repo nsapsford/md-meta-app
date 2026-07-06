@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSyncStatus, triggerSync, SYNC_TTL, SOURCE_LABEL, type SyncRecord, type SyncSource } from '../api/sync';
+import { ADMIN_TOKEN_KEY as TOKEN_KEY } from '../utils/adminToken';
+import { bulkGenerateOpponentDossiers } from '../api/dossiers';
 
 const SOURCES: SyncSource[] = ['mdm_deck_types', 'mdm_tournaments', 'untapped', 'ygoprodeck'];
-const TOKEN_KEY = 'admin_token';
 
 function ageString(synced_at: number): string {
   const secs = Math.floor(Date.now() / 1000) - synced_at;
@@ -21,6 +22,8 @@ export default function Admin() {
   const [records, setRecords] = useState<SyncRecord[]>([]);
   const [running, setRunning] = useState<SyncSource | null>(null);
   const [flash, setFlash] = useState<{ source: SyncSource; ok: boolean } | null>(null);
+  const [dossierBusy, setDossierBusy] = useState(false);
+  const [dossierResult, setDossierResult] = useState<string>('');
 
   const authenticated = Boolean(token);
 
@@ -54,6 +57,20 @@ export default function Admin() {
     } finally {
       setRunning(null);
       setTimeout(() => setFlash(null), 3000);
+    }
+  }
+
+  async function runBulkDossiers() {
+    setDossierBusy(true);
+    setDossierResult('');
+    try {
+      const { results } = await bulkGenerateOpponentDossiers(10);
+      const ok = results.filter((r) => r.ok).length;
+      setDossierResult(`${ok}/${results.length} dossiers generated`);
+    } catch (e: any) {
+      setDossierResult(`Failed: ${e.message || 'unknown error'}`);
+    } finally {
+      setDossierBusy(false);
     }
   }
 
@@ -130,6 +147,21 @@ export default function Admin() {
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-6 bg-md-surface border border-md-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-md-text">Opponent Dossiers</p>
+          <button
+            onClick={runBulkDossiers}
+            disabled={dossierBusy}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-md-blue/15 text-md-blue border border-md-blue/30 hover:bg-md-blue/25 disabled:opacity-50 transition-colors"
+          >
+            {dossierBusy ? 'Generating…' : 'Generate top 10'}
+          </button>
+        </div>
+        <p className="text-xs text-md-textMuted">Generates AI scouting dossiers for the top 10 archetypes by power.</p>
+        {dossierResult && <p className="text-xs text-md-green mt-2">{dossierResult}</p>}
       </div>
     </div>
   );

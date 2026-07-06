@@ -15,6 +15,8 @@ export const MD_BANLIST_DATES: string[] = [
 export const config = {
   port: parseInt(process.env.PORT || '3001'),
   adminToken: process.env.ADMIN_TOKEN || '',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+  dossierModel: 'claude-sonnet-5',
   // HMAC key for auth tokens. Falling back to a random key means tokens are
   // invalidated on restart, so set AUTH_SECRET in any real deployment.
   authSecret: process.env.AUTH_SECRET || randomBytes(32).toString('hex'),
