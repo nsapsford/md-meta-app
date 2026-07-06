@@ -197,11 +197,12 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
     const prompt = buildOpponentPrompt(archetype, cardPool);
     const parsed = parseModelJson(await callModel(prompt));
     if (!validateOpponentContent(parsed)) throw new Error('Model output failed schema validation');
-    return await queryOne(pool,
+    const row = await queryOne(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
        VALUES ('opponent', $1, NULL, $2, $3, $4, 'completed') RETURNING *`,
       [archetype, version, JSON.stringify(parsed), config.dossierModel]
     );
+    return { ...row, content_json: parsed };
   } catch (err: any) {
     await run(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
@@ -219,11 +220,12 @@ export async function generatePilotDossier(pool: Pool, deckId: number) {
     const prompt = buildPilotPrompt(deckName, archetype, cardPool);
     const parsed = parseModelJson(await callModel(prompt));
     if (!validatePilotContent(parsed)) throw new Error('Model output failed schema validation');
-    return await queryOne(pool,
+    const row = await queryOne(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
        VALUES ('pilot', NULL, $1, $2, $3, $4, 'completed') RETURNING *`,
       [deckId, version, JSON.stringify(parsed), config.dossierModel]
     );
+    return { ...row, content_json: parsed };
   } catch (err: any) {
     await run(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
