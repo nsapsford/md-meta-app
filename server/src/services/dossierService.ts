@@ -36,7 +36,7 @@ export function validateOpponentContent(raw: unknown): raw is OpponentDossierCon
 
 export function validatePilotContent(raw: unknown): raw is PilotDossierContent {
   if (!validateOpponentContent(raw)) return false;
-  const c = raw as Record<string, unknown>;
+  const c = raw as unknown as Record<string, unknown>;
   if (!isStringArray(c.comboLines) || !isStringArray(c.underInterruption)) return false;
   if (!Array.isArray(c.matchupTips) || c.matchupTips.length === 0) return false;
   return c.matchupTips.every(
