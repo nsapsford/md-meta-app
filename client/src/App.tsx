@@ -14,6 +14,8 @@ import { SyncUpdateProvider } from './cache/SyncUpdateContext';
 import { useIsNative } from './hooks/useIsNative';
 import { hideSplashAfterFirstPaint } from './utils/splash';
 import MotionProvider from './motion/MotionProvider';
+import SplashScreen from './components/launch/SplashScreen';
+import { useAppLaunch } from './hooks/useAppLaunch';
 
 // Every page is lazy so the entry chunk stays small: recharts (Dashboard,
 // MetaTrends) and other page-only weight download on first navigation instead
@@ -106,6 +108,7 @@ function AnimatedRoutes() {
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isNative = useIsNative();
+  const { phase, done } = useAppLaunch();
 
   useEffect(() => {
     hideSplashAfterFirstPaint();
@@ -118,6 +121,7 @@ export default function App() {
         <BrowserRouter>
           <SyncUpdateProvider>
           <div className="min-h-screen bg-md-bg">
+            {!done && <SplashScreen phase={phase} transitionStyle="morph" />}
             {/* Launch reveal: header fades, then content rises — a staged
                 handoff from the native splash instead of a hard cut.
                 Opacity-only on the header and bottom nav so their fixed/sticky

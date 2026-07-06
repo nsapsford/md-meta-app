@@ -50,9 +50,14 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
           </svg>
         </button>
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-md-gold/30 via-md-gold/20 to-md-gold/10 border border-md-gold/30 flex items-center justify-center shadow-glow-gold">
-            <span className="text-md-gold font-extrabold tracking-tighter text-lg">MD</span>
-          </div>
+          <div
+            id="app-header-logo"
+            role="img"
+            aria-label="MD Meta"
+            className="w-10 h-10 rounded-xl shadow-glow-gold shrink-0 bg-center bg-no-repeat"
+            style={{ backgroundImage: "url('/icon.svg')", backgroundSize: '155%' }}
+          />
+
           <div className="flex flex-col">
             <h1 className="font-extrabold text-md-text leading-none tracking-tight bg-gradient-to-r from-md-text to-md-textSecondary bg-clip-text text-transparent text-xl">
               MD Meta
