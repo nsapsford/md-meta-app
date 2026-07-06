@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSyncStatus, triggerSync, SYNC_TTL, SOURCE_LABEL, type SyncRecord, type SyncSource } from '../api/sync';
+import { ADMIN_TOKEN_KEY as TOKEN_KEY } from '../utils/adminToken';
 
 const SOURCES: SyncSource[] = ['mdm_deck_types', 'mdm_tournaments', 'untapped', 'ygoprodeck'];
-const TOKEN_KEY = 'admin_token';
 
 function ageString(synced_at: number): string {
   const secs = Math.floor(Date.now() / 1000) - synced_at;
