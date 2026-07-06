@@ -204,11 +204,16 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
-    await run(pool,
-      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
-       VALUES ('opponent', $1, NULL, $2, '{}', $3, 'failed', $4)`,
-      [archetype, version, config.dossierModel, String(err?.message || err)]
-    );
+    try {
+      await run(pool,
+        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
+         VALUES ('opponent', $1, NULL, $2, '{}', $3, 'failed', $4)`,
+        [archetype, version, config.dossierModel, String(err?.message || err)]
+      );
+    } catch {
+      // Failure-record insert itself collided (e.g. a concurrent call already
+      // took this version) — ignore and still surface the original error below.
+    }
     throw err;
   }
 }
@@ -227,11 +232,16 @@ export async function generatePilotDossier(pool: Pool, deckId: number) {
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
-    await run(pool,
-      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
-       VALUES ('pilot', NULL, $1, $2, '{}', $3, 'failed', $4)`,
-      [deckId, version, config.dossierModel, String(err?.message || err)]
-    );
+    try {
+      await run(pool,
+        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
+         VALUES ('pilot', NULL, $1, $2, '{}', $3, 'failed', $4)`,
+        [deckId, version, config.dossierModel, String(err?.message || err)]
+      );
+    } catch {
+      // Failure-record insert itself collided (e.g. a concurrent call already
+      // took this version) — ignore and still surface the original error below.
+    }
     throw err;
   }
 }
