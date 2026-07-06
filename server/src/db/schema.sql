@@ -197,6 +197,11 @@ CREATE INDEX IF NOT EXISTS idx_dossiers_opponent_lookup
 CREATE INDEX IF NOT EXISTS idx_dossiers_pilot_lookup
   ON dossiers(deck_id, version DESC) WHERE kind = 'pilot';
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_opponent_version_unique
+  ON dossiers(LOWER(archetype), version) WHERE kind = 'opponent';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_pilot_version_unique
+  ON dossiers(deck_id, version) WHERE kind = 'pilot';
+
 -- Personal notes layered onto a dossier. category slots the note into the
 -- matching dossier section in the UI. game_id is unused until Phase 2 (review
 -- loop) but included now to avoid a later migration.
