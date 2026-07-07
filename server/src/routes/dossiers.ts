@@ -8,6 +8,7 @@ import {
   generatePilotDossier,
   getLatestDossier,
   getDossierHistory,
+  type DossierDepth,
 } from '../services/dossierService.js';
 
 const router = Router();
@@ -21,6 +22,27 @@ function requireAdmin(req: Request, res: Response): boolean {
   return true;
 }
 
+// 'quick' trades thoroughness for a faster/cheaper model, for mid-duel use;
+// 'detailed' (default) is the original thorough treatment.
+function parseDepth(body: any, res: Response): DossierDepth | null {
+  const depth = body?.depth;
+  if (depth === undefined || depth === null) return 'detailed';
+  if (depth === 'quick' || depth === 'detailed') return depth;
+  res.status(400).json({ error: 'depth must be "quick" or "detailed"' });
+  return null;
+}
+
+// For GET lookups, an absent depth means "latest of either depth" rather than
+// defaulting to 'detailed' — callers that want a specific depth's latest
+// version (to switch between an already-generated quick/detailed pair
+// without regenerating) pass ?depth= explicitly.
+function parseOptionalDepth(raw: unknown, res: Response): DossierDepth | undefined | null {
+  if (raw === undefined) return undefined;
+  if (raw === 'quick' || raw === 'detailed') return raw;
+  res.status(400).json({ error: 'depth must be "quick" or "detailed"' });
+  return null;
+}
+
 // Dossiers key off the canonical deck_types.name so casing/spacing always
 // matches, regardless of how the client typed the archetype. Also returns
 // updated_at so callers can flag a dossier stale when the meta has moved
@@ -31,11 +53,13 @@ async function resolveCanonicalArchetype(pool: Pool, name: string): Promise<{ na
 }
 
 router.get('/opponent/:archetype', async (req: Request, res: Response) => {
+  const depth = parseOptionalDepth(req.query.depth, res);
+  if (depth === null) return;
   try {
     const pool = getPool();
     const deckType = await resolveCanonicalArchetype(pool, req.params.archetype);
     if (!deckType) return res.status(404).json({ error: 'Unknown archetype' });
-    const dossier = await getLatestDossier(pool, 'opponent', deckType.name, null);
+    const dossier = await getLatestDossier(pool, 'opponent', deckType.name, null, depth);
     const notes = await queryAll(pool,
       `SELECT * FROM dossier_notes WHERE kind = 'opponent' AND LOWER(archetype) = LOWER($1) ORDER BY created_at DESC`,
       [deckType.name]
@@ -62,11 +86,13 @@ router.get('/opponent/:archetype/history', async (req: Request, res: Response) =
 
 router.post('/opponent/:archetype/generate', async (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
+  const depth = parseDepth(req.body, res);
+  if (!depth) return;
   try {
     const pool = getPool();
     const deckType = await resolveCanonicalArchetype(pool, req.params.archetype);
     if (!deckType) return res.status(404).json({ error: 'Unknown archetype' });
-    res.status(201).json(await generateOpponentDossier(pool, deckType.name));
+    res.status(201).json(await generateOpponentDossier(pool, deckType.name, depth));
   } catch (err: any) {
     res.status(422).json({ error: err.message });
   }
@@ -97,12 +123,14 @@ router.post('/bulk-generate', async (req: Request, res: Response) => {
 });
 
 router.get('/pilot/:deckId', async (req: Request, res: Response) => {
+  const depth = parseOptionalDepth(req.query.depth, res);
+  if (depth === null) return;
   try {
     const pool = getPool();
     const deckId = parseInt(req.params.deckId);
     const deckRow = await queryOne(pool, 'SELECT updated_at FROM user_decks WHERE id = $1', [deckId]);
     if (!deckRow) return res.status(404).json({ error: 'Deck not found' });
-    const dossier = await getLatestDossier(pool, 'pilot', null, deckId);
+    const dossier = await getLatestDossier(pool, 'pilot', null, deckId, depth);
     const notes = await queryAll(pool,
       `SELECT * FROM dossier_notes WHERE kind = 'pilot' AND deck_id = $1 ORDER BY created_at DESC`,
       [deckId]
@@ -126,9 +154,11 @@ router.get('/pilot/:deckId/history', async (req: Request, res: Response) => {
 
 router.post('/pilot/:deckId/generate', async (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
+  const depth = parseDepth(req.body, res);
+  if (!depth) return;
   try {
     const pool = getPool();
-    res.status(201).json(await generatePilotDossier(pool, parseInt(req.params.deckId)));
+    res.status(201).json(await generatePilotDossier(pool, parseInt(req.params.deckId), depth));
   } catch (err: any) {
     res.status(422).json({ error: err.message });
   }

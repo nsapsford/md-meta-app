@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { queryAll, queryOne, run } from '../utils/dbHelpers.js';
 
 export type DossierKind = 'opponent' | 'pilot';
+export type DossierDepth = 'quick' | 'detailed';
 
 export interface OpponentDossierContent {
   overview: string;
@@ -87,21 +88,28 @@ function formatCardPool(pool: CardPoolEntry[]): string {
     .join('\n');
 }
 
-export function buildOpponentPrompt(archetype: string, cardPool: CardPoolEntry[]): string {
+const DEPTH_INSTRUCTION: Record<DossierDepth, string> = {
+  quick: 'Keep it fast to read at a glance, mid-duel: 1-sentence overview, and at most 2 items per list, each under 15 words.',
+  detailed: 'Be thorough, for careful post-game review: 4-6 well-explained items per list where relevant.',
+};
+
+export function buildOpponentPrompt(archetype: string, cardPool: CardPoolEntry[], depth: DossierDepth = 'detailed'): string {
   return [
     `You are a Yu-Gi-Oh! Master Duel coach. Write a scouting dossier for the "${archetype}" archetype so a player can beat it in real time, mid-duel.`,
     `Ground every claim in these cards actually played by the archetype (most-used first):`,
     formatCardPool(cardPool),
+    DEPTH_INSTRUCTION[depth],
     `Respond with ONLY minified JSON matching this shape (no markdown fences, no commentary):`,
     OPPONENT_SCHEMA_HINT,
   ].join('\n\n');
 }
 
-export function buildPilotPrompt(deckName: string, archetype: string | null, cardPool: CardPoolEntry[]): string {
+export function buildPilotPrompt(deckName: string, archetype: string | null, cardPool: CardPoolEntry[], depth: DossierDepth = 'detailed'): string {
   return [
     `You are a Yu-Gi-Oh! Master Duel coach. Write a pilot guide for this exact deck ("${deckName}"${archetype ? `, a ${archetype} build` : ''}) so its owner plays it correctly mid-duel.`,
     `The deck's actual cards (most-used first):`,
     formatCardPool(cardPool),
+    DEPTH_INSTRUCTION[depth],
     `Respond with ONLY minified JSON matching this shape (no markdown fences, no commentary):`,
     PILOT_SCHEMA_HINT,
   ].join('\n\n');
@@ -116,10 +124,10 @@ function getAnthropicClient(): Anthropic {
   return anthropicClient;
 }
 
-async function callAnthropicModel(prompt: string): Promise<string> {
+async function callAnthropicModel(prompt: string, model: string): Promise<string> {
   const client = getAnthropicClient();
   const msg = await client.messages.create({
-    model: config.dossierModel,
+    model,
     max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -130,9 +138,9 @@ async function callAnthropicModel(prompt: string): Promise<string> {
 
 // Gemini has a free API tier and is used as a stand-in for smoke-testing the
 // full generation pipeline for real, without Anthropic Console billing.
-async function callGeminiModel(prompt: string): Promise<string> {
+async function callGeminiModel(prompt: string, model: string): Promise<string> {
   if (!config.geminiApiKey) throw new Error('GEMINI_API_KEY environment variable is required');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -145,14 +153,16 @@ async function callGeminiModel(prompt: string): Promise<string> {
   return text;
 }
 
-// Which model name gets recorded against a generated dossier row.
-export function currentDossierModel(): string {
-  return config.dossierProvider === 'gemini' ? config.geminiModel : config.dossierModel;
+// Which model name gets used/recorded for a given depth tier.
+export function resolveModel(depth: DossierDepth): string {
+  if (config.dossierProvider === 'gemini') return depth === 'quick' ? config.geminiQuickModel : config.geminiModel;
+  return depth === 'quick' ? config.dossierQuickModel : config.dossierModel;
 }
 
-async function callModel(prompt: string): Promise<string> {
-  if (config.dossierProvider === 'gemini') return callGeminiModel(prompt);
-  if (config.dossierProvider === 'anthropic') return callAnthropicModel(prompt);
+async function callModel(prompt: string, depth: DossierDepth): Promise<string> {
+  const model = resolveModel(depth);
+  if (config.dossierProvider === 'gemini') return callGeminiModel(prompt, model);
+  if (config.dossierProvider === 'anthropic') return callAnthropicModel(prompt, model);
   throw new Error('No dossier model provider configured — set ANTHROPIC_API_KEY or GEMINI_API_KEY');
 }
 
@@ -218,26 +228,26 @@ export async function resolveDeckCardPool(
   return { deckName: deck.name, archetype: deck.archetype, cardPool };
 }
 
-export async function generateOpponentDossier(pool: Pool, archetype: string) {
+export async function generateOpponentDossier(pool: Pool, archetype: string, depth: DossierDepth = 'detailed') {
   const version = await nextVersion(pool, 'opponent', archetype, null);
-  const modelUsed = currentDossierModel();
+  const modelUsed = resolveModel(depth);
   try {
     const cardPool = await resolveArchetypeCardPool(pool, archetype);
-    const prompt = buildOpponentPrompt(archetype, cardPool);
-    const parsed = parseModelJson(await callModel(prompt));
+    const prompt = buildOpponentPrompt(archetype, cardPool, depth);
+    const parsed = parseModelJson(await callModel(prompt, depth));
     if (!validateOpponentContent(parsed)) throw new Error('Model output failed schema validation');
     const row = await queryOne(pool,
-      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
-       VALUES ('opponent', $1, NULL, $2, $3, $4, 'completed') RETURNING *`,
-      [archetype, version, JSON.stringify(parsed), modelUsed]
+      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, depth, status)
+       VALUES ('opponent', $1, NULL, $2, $3, $4, $5, 'completed') RETURNING *`,
+      [archetype, version, JSON.stringify(parsed), modelUsed, depth]
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
     try {
       await run(pool,
-        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
-         VALUES ('opponent', $1, NULL, $2, '{}', $3, 'failed', $4)`,
-        [archetype, version, modelUsed, String(err?.message || err)]
+        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, depth, status, error)
+         VALUES ('opponent', $1, NULL, $2, '{}', $3, $4, 'failed', $5)`,
+        [archetype, version, modelUsed, depth, String(err?.message || err)]
       );
     } catch {
       // Failure-record insert itself collided (e.g. a concurrent call already
@@ -247,26 +257,26 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
   }
 }
 
-export async function generatePilotDossier(pool: Pool, deckId: number) {
+export async function generatePilotDossier(pool: Pool, deckId: number, depth: DossierDepth = 'detailed') {
   const version = await nextVersion(pool, 'pilot', null, deckId);
-  const modelUsed = currentDossierModel();
+  const modelUsed = resolveModel(depth);
   try {
     const { deckName, archetype, cardPool } = await resolveDeckCardPool(pool, deckId);
-    const prompt = buildPilotPrompt(deckName, archetype, cardPool);
-    const parsed = parseModelJson(await callModel(prompt));
+    const prompt = buildPilotPrompt(deckName, archetype, cardPool, depth);
+    const parsed = parseModelJson(await callModel(prompt, depth));
     if (!validatePilotContent(parsed)) throw new Error('Model output failed schema validation');
     const row = await queryOne(pool,
-      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
-       VALUES ('pilot', NULL, $1, $2, $3, $4, 'completed') RETURNING *`,
-      [deckId, version, JSON.stringify(parsed), modelUsed]
+      `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, depth, status)
+       VALUES ('pilot', NULL, $1, $2, $3, $4, $5, 'completed') RETURNING *`,
+      [deckId, version, JSON.stringify(parsed), modelUsed, depth]
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
     try {
       await run(pool,
-        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
-         VALUES ('pilot', NULL, $1, $2, '{}', $3, 'failed', $4)`,
-        [deckId, version, modelUsed, String(err?.message || err)]
+        `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, depth, status, error)
+         VALUES ('pilot', NULL, $1, $2, '{}', $3, $4, 'failed', $5)`,
+        [deckId, version, modelUsed, depth, String(err?.message || err)]
       );
     } catch {
       // Failure-record insert itself collided (e.g. a concurrent call already
@@ -276,11 +286,13 @@ export async function generatePilotDossier(pool: Pool, deckId: number) {
   }
 }
 
-export async function getLatestDossier(pool: Pool, kind: DossierKind, archetype: string | null, deckId: number | null) {
+export async function getLatestDossier(
+  pool: Pool, kind: DossierKind, archetype: string | null, deckId: number | null, depth?: DossierDepth
+) {
   const row = await queryOne(pool,
     `SELECT * FROM dossiers WHERE kind = $1 AND archetype IS NOT DISTINCT FROM $2 AND deck_id IS NOT DISTINCT FROM $3
-     AND status = 'completed' ORDER BY version DESC LIMIT 1`,
-    [kind, archetype, deckId]
+     AND status = 'completed' AND ($4::text IS NULL OR depth = $4) ORDER BY version DESC LIMIT 1`,
+    [kind, archetype, deckId, depth ?? null]
   );
   if (!row) return null;
   return { ...row, content_json: JSON.parse(row.content_json) };

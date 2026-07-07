@@ -23,12 +23,18 @@ export interface DossierRow<T> {
   version: number;
   content_json: T;
   model: string;
+  depth: 'quick' | 'detailed';
   status: 'completed' | 'failed';
   error: string | null;
   generated_at: number;
 }
 
 export type NoteCategory = 'negate-priority' | 'play-around' | 'combo-line' | 'general';
+export type DossierDepth = 'quick' | 'detailed';
+
+// Live model calls can take well over axios's default 30s timeout, especially
+// for the larger pilot-guide prompt or under free-tier latency variance.
+const GENERATE_TIMEOUT_MS = 90000;
 
 export interface DossierNote {
   id: number;
@@ -41,30 +47,34 @@ export interface DossierNote {
   created_at: number;
 }
 
-export async function getOpponentDossier(archetype: string): Promise<{ dossier: DossierRow<OpponentDossierContent> | null; notes: DossierNote[]; stale: boolean }> {
-  const { data } = await api.get(`/dossiers/opponent/${encodeURIComponent(archetype)}`);
+// Passing depth fetches the latest version generated at that specific depth
+// (or null if that depth has never been generated), rather than the latest
+// version overall — this is what lets the UI switch between an already-
+// generated quick and detailed dossier instantly, without regenerating.
+export async function getOpponentDossier(archetype: string, depth?: DossierDepth): Promise<{ dossier: DossierRow<OpponentDossierContent> | null; notes: DossierNote[]; stale: boolean }> {
+  const { data } = await api.get(`/dossiers/opponent/${encodeURIComponent(archetype)}`, { params: { depth } });
   return data;
 }
 
-export async function getPilotDossier(deckId: number): Promise<{ dossier: DossierRow<PilotDossierContent> | null; notes: DossierNote[]; stale: boolean }> {
-  const { data } = await api.get(`/dossiers/pilot/${deckId}`);
+export async function getPilotDossier(deckId: number, depth?: DossierDepth): Promise<{ dossier: DossierRow<PilotDossierContent> | null; notes: DossierNote[]; stale: boolean }> {
+  const { data } = await api.get(`/dossiers/pilot/${deckId}`, { params: { depth } });
   return data;
 }
 
-export async function generateOpponentDossier(archetype: string): Promise<DossierRow<OpponentDossierContent>> {
+export async function generateOpponentDossier(archetype: string, depth: DossierDepth = 'detailed'): Promise<DossierRow<OpponentDossierContent>> {
   const { data } = await api.post(
     `/dossiers/opponent/${encodeURIComponent(archetype)}/generate`,
-    null,
-    { headers: { Authorization: `Bearer ${getAdminToken()}` } }
+    { depth },
+    { headers: { Authorization: `Bearer ${getAdminToken()}` }, timeout: GENERATE_TIMEOUT_MS }
   );
   return data;
 }
 
-export async function generatePilotDossier(deckId: number): Promise<DossierRow<PilotDossierContent>> {
+export async function generatePilotDossier(deckId: number, depth: DossierDepth = 'detailed'): Promise<DossierRow<PilotDossierContent>> {
   const { data } = await api.post(
     `/dossiers/pilot/${deckId}/generate`,
-    null,
-    { headers: { Authorization: `Bearer ${getAdminToken()}` } }
+    { depth },
+    { headers: { Authorization: `Bearer ${getAdminToken()}` }, timeout: GENERATE_TIMEOUT_MS }
   );
   return data;
 }

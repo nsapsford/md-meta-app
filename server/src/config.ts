@@ -17,12 +17,17 @@ export const config = {
   adminToken: process.env.ADMIN_TOKEN || '',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   dossierModel: 'claude-sonnet-5',
+  // Faster/cheaper model used for 'quick' dossiers (low-latency, mid-duel use)
+  // as opposed to 'detailed' dossiers which use dossierModel above.
+  dossierQuickModel: process.env.DOSSIER_QUICK_MODEL || 'claude-haiku-4-5-20251001',
   // Gemini has a free API tier (Google AI Studio), unlike Anthropic's Console
   // API — a Claude Pro/Max subscription does not grant ANTHROPIC_API_KEY access.
   // Setting GEMINI_API_KEY lets dossier generation run for real without any
   // billing, for local smoke-testing.
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  // Faster/cheaper model used for 'quick' dossiers.
+  geminiQuickModel: process.env.GEMINI_QUICK_MODEL || 'gemini-2.5-flash-lite',
   dossierProvider: (process.env.DOSSIER_PROVIDER ||
     (process.env.ANTHROPIC_API_KEY ? 'anthropic' : process.env.GEMINI_API_KEY ? 'gemini' : '')) as
     | 'anthropic'

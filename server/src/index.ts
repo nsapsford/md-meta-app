@@ -1,9 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cron from 'node-cron';
 import { config } from './config.js';
-import 'dotenv/config';
 import { initDb, getPool } from './db/connection.js';
 import { queryOne } from './utils/dbHelpers.js';
 import cardsRouter from './routes/cards.js';

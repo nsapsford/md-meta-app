@@ -142,6 +142,10 @@ CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_pla
 -- This allows the tier-list endpoint to run as a single SELECT with no joins
 ALTER TABLE deck_types ADD COLUMN IF NOT EXISTS computed_cards_json TEXT;
 
+-- 'quick' dossiers use a faster model and a terser prompt for low-latency,
+-- mid-duel use; 'detailed' is the original thorough treatment.
+ALTER TABLE dossiers ADD COLUMN IF NOT EXISTS depth TEXT NOT NULL DEFAULT 'detailed';
+
 -- Indexes for tier-list performance (window function + card image lookups)
 CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type_name));
 CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
@@ -183,6 +187,7 @@ CREATE TABLE IF NOT EXISTS dossiers (
   version INTEGER NOT NULL,
   content_json TEXT NOT NULL,
   model TEXT NOT NULL,
+  depth TEXT NOT NULL DEFAULT 'detailed',
   status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
   error TEXT,
   generated_at INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),

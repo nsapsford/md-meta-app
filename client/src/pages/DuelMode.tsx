@@ -5,7 +5,7 @@ import {
   getOpponentDossier, getPilotDossier,
   generateOpponentDossier, generatePilotDossier,
   addDossierNote, type OpponentDossierContent, type PilotDossierContent,
-  type DossierRow, type DossierNote, type NoteCategory,
+  type DossierRow, type DossierNote, type NoteCategory, type DossierDepth,
 } from '../api/dossiers';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { hapticLight } from '../utils/haptics';
@@ -115,15 +115,20 @@ export default function DuelMode() {
   const [activeOpponent, setActiveOpponent] = useState<string | null>(null);
   const [tab, setTab] = useState<'opponent' | 'pilot'>('opponent');
 
-  const [opponentDossier, setOpponentDossier] = useState<DossierRow<OpponentDossierContent> | null>(null);
+  // Cached per "<key>:<depth>" so switching the depth toggle between an
+  // already-generated quick and detailed dossier is instant (no refetch);
+  // an absent cache entry (vs. one holding dossier: null) is what drives the
+  // loading indicator below.
+  type DepthEntry<T> = { dossier: DossierRow<T> | null; stale: boolean };
+  const [opponentCache, setOpponentCache] = useState<Record<string, DepthEntry<OpponentDossierContent>>>({});
   const [opponentNotes, setOpponentNotes] = useState<DossierNote[]>([]);
-  const [opponentStale, setOpponentStale] = useState(false);
-  const [pilotDossier, setPilotDossier] = useState<DossierRow<PilotDossierContent> | null>(null);
+  const [pilotCache, setPilotCache] = useState<Record<string, DepthEntry<PilotDossierContent>>>({});
   const [pilotNotes, setPilotNotes] = useState<DossierNote[]>([]);
-  const [pilotStale, setPilotStale] = useState(false);
 
-  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Defaults to 'quick' since Duel Mode is a live, mid-duel second screen —
+  // 'detailed' is there for unhurried post-game review generation.
+  const [depth, setDepth] = useState<DossierDepth>('quick');
   const [error, setError] = useState('');
   const [logFlash, setLogFlash] = useState('');
 
@@ -143,39 +148,59 @@ export default function DuelMode() {
 
   const myDeck = useMemo(() => decks.find((d) => d.id === myDeckId) ?? null, [decks, myDeckId]);
 
+  const opponentKey = activeOpponent ? `${activeOpponent}:${depth}` : null;
+  const opponentEntry = opponentKey ? opponentCache[opponentKey] : undefined;
+  const pilotKey = myDeckId ? `${myDeckId}:${depth}` : null;
+  const pilotEntry = pilotKey ? pilotCache[pilotKey] : undefined;
+
   function pickMyDeck(id: number) {
     setMyDeckId(id);
     localStorage.setItem(MY_DECK_KEY, String(id));
   }
 
-  async function loadDossiers(archetype: string) {
-    setLoading(true);
+  function selectOpponent(archetype: string) {
     setError('');
-    try {
-      const opp = await getOpponentDossier(archetype);
-      setOpponentDossier(opp.dossier);
-      setOpponentNotes(opp.notes);
-      setOpponentStale(opp.stale);
-      if (myDeckId) {
-        const pilot = await getPilotDossier(myDeckId);
-        setPilotDossier(pilot.dossier);
-        setPilotNotes(pilot.notes);
-        setPilotStale(pilot.stale);
-      }
-      setActiveOpponent(archetype);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load dossier');
-    } finally {
-      setLoading(false);
-    }
+    setActiveOpponent(archetype);
   }
 
+  // Fetches the archetype+depth combo the first time it's viewed; already-seen
+  // combos are served straight from opponentCache, so flipping the toggle
+  // back and forth between a previously-generated quick/detailed pair is instant.
+  useEffect(() => {
+    if (!activeOpponent || !opponentKey || opponentCache[opponentKey] !== undefined) return;
+    let cancelled = false;
+    getOpponentDossier(activeOpponent, depth)
+      .then((res) => {
+        if (cancelled) return;
+        setOpponentCache((prev) => ({ ...prev, [opponentKey]: { dossier: res.dossier, stale: res.stale } }));
+        setOpponentNotes(res.notes);
+      })
+      .catch((e: any) => !cancelled && setError(e.message || 'Failed to load dossier'));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeOpponent, depth]);
+
+  useEffect(() => {
+    if (!myDeckId || !pilotKey || pilotCache[pilotKey] !== undefined) return;
+    let cancelled = false;
+    getPilotDossier(myDeckId, depth)
+      .then((res) => {
+        if (cancelled) return;
+        setPilotCache((prev) => ({ ...prev, [pilotKey]: { dossier: res.dossier, stale: res.stale } }));
+        setPilotNotes(res.notes);
+      })
+      .catch((e: any) => !cancelled && setError(e.message || 'Failed to load dossier'));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myDeckId, depth]);
+
   async function handleGenerateOpponent() {
-    if (!activeOpponent) return;
+    if (!activeOpponent || !opponentKey) return;
     setGenerating(true);
+    setError('');
     try {
-      await generateOpponentDossier(activeOpponent);
-      await loadDossiers(activeOpponent);
+      const generated = await generateOpponentDossier(activeOpponent, depth);
+      setOpponentCache((prev) => ({ ...prev, [opponentKey]: { dossier: generated, stale: false } }));
     } catch (e: any) {
       setError(e.message || 'Generation failed');
     } finally {
@@ -184,12 +209,12 @@ export default function DuelMode() {
   }
 
   async function handleGeneratePilot() {
-    if (!myDeckId) return;
+    if (!myDeckId || !pilotKey) return;
     setGenerating(true);
+    setError('');
     try {
-      const pilot = await generatePilotDossier(myDeckId);
-      setPilotDossier(pilot);
-      setPilotStale(false);
+      const generated = await generatePilotDossier(myDeckId, depth);
+      setPilotCache((prev) => ({ ...prev, [pilotKey]: { dossier: generated, stale: false } }));
     } catch (e: any) {
       setError(e.message || 'Generation failed');
     } finally {
@@ -258,10 +283,10 @@ export default function DuelMode() {
         <div className="space-y-3">
           <div className="flex gap-2">
             <input value={opponentInput} onChange={(e) => setOpponentInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && opponentInput.trim() && loadDossiers(opponentInput.trim())}
+              onKeyDown={(e) => e.key === 'Enter' && opponentInput.trim() && selectOpponent(opponentInput.trim())}
               placeholder="Opponent's archetype..."
               className="flex-1 bg-md-surface border border-md-border rounded-xl px-3 py-3 text-base text-md-text focus:outline-none focus:border-md-blue" />
-            <button onClick={() => opponentInput.trim() && loadDossiers(opponentInput.trim())}
+            <button onClick={() => opponentInput.trim() && selectOpponent(opponentInput.trim())}
               className="px-4 py-3 rounded-xl bg-md-blue/15 text-md-blue border border-md-blue/30 font-bold">
               Go
             </button>
@@ -271,7 +296,7 @@ export default function DuelMode() {
               <p className="text-xs font-bold text-md-textMuted uppercase tracking-widest mb-2">Recent opponents</p>
               <div className="flex flex-wrap gap-2">
                 {recentOpponents.map((o) => (
-                  <button key={o} onClick={() => loadDossiers(o)}
+                  <button key={o} onClick={() => selectOpponent(o)}
                     className="press px-3 py-2 rounded-lg bg-md-surface border border-md-border text-sm text-md-textSecondary hover:border-md-blue/40">
                     {o}
                   </button>
@@ -299,12 +324,30 @@ export default function DuelMode() {
             </button>
           </div>
 
-          {loading ? (
-            <p className="text-sm text-md-textMuted">Loading...</p>
-          ) : tab === 'opponent' ? (
-            opponentDossier ? (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[10px] font-bold text-md-textMuted uppercase tracking-widest">Generate:</span>
+            <button onClick={() => setDepth('quick')}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${depth === 'quick' ? 'bg-md-blue/15 text-md-blue border border-md-blue/30' : 'bg-md-surface text-md-textMuted border border-md-border'}`}>
+              Quick
+            </button>
+            <button onClick={() => setDepth('detailed')}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${depth === 'detailed' ? 'bg-md-blue/15 text-md-blue border border-md-blue/30' : 'bg-md-surface text-md-textMuted border border-md-border'}`}>
+              Detailed
+            </button>
+            <button
+              onClick={tab === 'opponent' ? handleGenerateOpponent : handleGeneratePilot}
+              disabled={generating || (tab === 'opponent' ? !activeOpponent : !myDeckId)}
+              className="ml-auto px-2.5 py-1 rounded-full text-xs font-bold bg-md-surface text-md-textMuted border border-md-border hover:border-md-blue/40 disabled:opacity-50 transition-colors">
+              {generating ? 'Regenerating...' : 'Regenerate'}
+            </button>
+          </div>
+
+          {tab === 'opponent' ? (
+            opponentEntry === undefined ? (
+              <p className="text-sm text-md-textMuted">Loading...</p>
+            ) : opponentEntry.dossier ? (
               <div>
-                {opponentStale && (
+                {opponentEntry.stale && (
                   <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-lg bg-md-orange/10 border border-md-orange/30">
                     <span className="text-xs text-md-orange">Meta has moved since this was generated.</span>
                     <button onClick={handleGenerateOpponent} disabled={generating}
@@ -314,23 +357,25 @@ export default function DuelMode() {
                   </div>
                 )}
                 <OpponentDossierView
-                  content={opponentDossier.content_json}
+                  content={opponentEntry.dossier.content_json}
                   notes={opponentNotes}
                   onAddNote={(c, t) => handleAddNote('opponent', c, t)}
                 />
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-md-surface border border-md-border text-center">
-                <p className="text-sm text-md-textMuted mb-3">No dossier yet for {activeOpponent}.</p>
+                <p className="text-sm text-md-textMuted mb-3">No {depth} dossier yet for {activeOpponent}.</p>
                 <button onClick={handleGenerateOpponent} disabled={generating}
                   className="px-4 py-2 rounded-lg bg-md-blue/15 text-md-blue border border-md-blue/30 text-sm font-bold disabled:opacity-50">
                   {generating ? 'Generating...' : 'Generate dossier'}
                 </button>
               </div>
             )
-          ) : pilotDossier ? (
+          ) : pilotEntry === undefined ? (
+            <p className="text-sm text-md-textMuted">Loading...</p>
+          ) : pilotEntry.dossier ? (
             <div>
-              {pilotStale && (
+              {pilotEntry.stale && (
                 <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-lg bg-md-orange/10 border border-md-orange/30">
                   <span className="text-xs text-md-orange">This deck changed since the guide was generated.</span>
                   <button onClick={handleGeneratePilot} disabled={generating}
@@ -340,14 +385,14 @@ export default function DuelMode() {
                 </div>
               )}
               <PilotDossierView
-                content={pilotDossier.content_json}
+                content={pilotEntry.dossier.content_json}
                 notes={pilotNotes}
                 onAddNote={(c, t) => handleAddNote('pilot', c, t)}
               />
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-md-surface border border-md-border text-center">
-              <p className="text-sm text-md-textMuted mb-3">No pilot guide yet for {myDeck.name}.</p>
+              <p className="text-sm text-md-textMuted mb-3">No {depth} pilot guide yet for {myDeck.name}.</p>
               <button onClick={handleGeneratePilot} disabled={generating}
                 className="px-4 py-2 rounded-lg bg-md-blue/15 text-md-blue border border-md-blue/30 text-sm font-bold disabled:opacity-50">
                 {generating ? 'Generating...' : 'Generate pilot guide'}
