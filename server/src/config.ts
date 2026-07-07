@@ -17,6 +17,17 @@ export const config = {
   adminToken: process.env.ADMIN_TOKEN || '',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   dossierModel: 'claude-sonnet-5',
+  // Gemini has a free API tier (Google AI Studio), unlike Anthropic's Console
+  // API — a Claude Pro/Max subscription does not grant ANTHROPIC_API_KEY access.
+  // Setting GEMINI_API_KEY lets dossier generation run for real without any
+  // billing, for local smoke-testing.
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  dossierProvider: (process.env.DOSSIER_PROVIDER ||
+    (process.env.ANTHROPIC_API_KEY ? 'anthropic' : process.env.GEMINI_API_KEY ? 'gemini' : '')) as
+    | 'anthropic'
+    | 'gemini'
+    | '',
   // HMAC key for auth tokens. Falling back to a random key means tokens are
   // invalidated on restart, so set AUTH_SECRET in any real deployment.
   authSecret: process.env.AUTH_SECRET || randomBytes(32).toString('hex'),

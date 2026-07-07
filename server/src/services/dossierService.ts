@@ -116,7 +116,7 @@ function getAnthropicClient(): Anthropic {
   return anthropicClient;
 }
 
-async function callModel(prompt: string): Promise<string> {
+async function callAnthropicModel(prompt: string): Promise<string> {
   const client = getAnthropicClient();
   const msg = await client.messages.create({
     model: config.dossierModel,
@@ -126,6 +126,34 @@ async function callModel(prompt: string): Promise<string> {
   const block = msg.content[0];
   if (!block || block.type !== 'text') throw new Error('Model returned no text content');
   return block.text;
+}
+
+// Gemini has a free API tier and is used as a stand-in for smoke-testing the
+// full generation pipeline for real, without Anthropic Console billing.
+async function callGeminiModel(prompt: string): Promise<string> {
+  if (!config.geminiApiKey) throw new Error('GEMINI_API_KEY environment variable is required');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  if (!res.ok) throw new Error(`Gemini API error ${res.status}: ${await res.text()}`);
+  const data: any = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!isNonEmptyString(text)) throw new Error('Model returned no text content');
+  return text;
+}
+
+// Which model name gets recorded against a generated dossier row.
+export function currentDossierModel(): string {
+  return config.dossierProvider === 'gemini' ? config.geminiModel : config.dossierModel;
+}
+
+async function callModel(prompt: string): Promise<string> {
+  if (config.dossierProvider === 'gemini') return callGeminiModel(prompt);
+  if (config.dossierProvider === 'anthropic') return callAnthropicModel(prompt);
+  throw new Error('No dossier model provider configured — set ANTHROPIC_API_KEY or GEMINI_API_KEY');
 }
 
 async function nextVersion(pool: Pool, kind: DossierKind, archetype: string | null, deckId: number | null): Promise<number> {
@@ -192,6 +220,7 @@ export async function resolveDeckCardPool(
 
 export async function generateOpponentDossier(pool: Pool, archetype: string) {
   const version = await nextVersion(pool, 'opponent', archetype, null);
+  const modelUsed = currentDossierModel();
   try {
     const cardPool = await resolveArchetypeCardPool(pool, archetype);
     const prompt = buildOpponentPrompt(archetype, cardPool);
@@ -200,7 +229,7 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
     const row = await queryOne(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
        VALUES ('opponent', $1, NULL, $2, $3, $4, 'completed') RETURNING *`,
-      [archetype, version, JSON.stringify(parsed), config.dossierModel]
+      [archetype, version, JSON.stringify(parsed), modelUsed]
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
@@ -208,7 +237,7 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
       await run(pool,
         `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
          VALUES ('opponent', $1, NULL, $2, '{}', $3, 'failed', $4)`,
-        [archetype, version, config.dossierModel, String(err?.message || err)]
+        [archetype, version, modelUsed, String(err?.message || err)]
       );
     } catch {
       // Failure-record insert itself collided (e.g. a concurrent call already
@@ -220,6 +249,7 @@ export async function generateOpponentDossier(pool: Pool, archetype: string) {
 
 export async function generatePilotDossier(pool: Pool, deckId: number) {
   const version = await nextVersion(pool, 'pilot', null, deckId);
+  const modelUsed = currentDossierModel();
   try {
     const { deckName, archetype, cardPool } = await resolveDeckCardPool(pool, deckId);
     const prompt = buildPilotPrompt(deckName, archetype, cardPool);
@@ -228,7 +258,7 @@ export async function generatePilotDossier(pool: Pool, deckId: number) {
     const row = await queryOne(pool,
       `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status)
        VALUES ('pilot', NULL, $1, $2, $3, $4, 'completed') RETURNING *`,
-      [deckId, version, JSON.stringify(parsed), config.dossierModel]
+      [deckId, version, JSON.stringify(parsed), modelUsed]
     );
     return { ...row, content_json: parsed };
   } catch (err: any) {
@@ -236,7 +266,7 @@ export async function generatePilotDossier(pool: Pool, deckId: number) {
       await run(pool,
         `INSERT INTO dossiers (kind, archetype, deck_id, version, content_json, model, status, error)
          VALUES ('pilot', NULL, $1, $2, '{}', $3, 'failed', $4)`,
-        [deckId, version, config.dossierModel, String(err?.message || err)]
+        [deckId, version, modelUsed, String(err?.message || err)]
       );
     } catch {
       // Failure-record insert itself collided (e.g. a concurrent call already
