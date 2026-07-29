@@ -9,12 +9,13 @@ export interface SyncRecord {
   synced_at: number; // unix timestamp
 }
 
-// Expected sync intervals in seconds, used to detect stale data (threshold = 2×)
+// Expected sync intervals in seconds, used to detect stale data (threshold = 2×).
+// The server syncs every source together at 06:00 and 18:00 UTC.
 export const SYNC_TTL: Record<SyncSource, number> = {
-  ygoprodeck:      86400, // 24h
-  mdm_deck_types:  21600, // 6h
-  mdm_tournaments:  7200, // 2h
-  untapped:        10800, // 3h
+  ygoprodeck:      43200, // 12h
+  mdm_deck_types:  43200, // 12h
+  mdm_tournaments: 43200, // 12h
+  untapped:        43200, // 12h
 };
 
 export const SOURCE_LABEL: Record<SyncSource, string> = {

@@ -4,6 +4,7 @@ import {
   syncTournaments, syncUntapped, syncCardNegateEffectiveness
 } from '../services/syncService.js';
 import { recordSync, getSyncStatus, SyncSource } from '../services/syncStatusService.js';
+import { runFullSync } from '../services/fullSyncService.js';
 import { clearCache } from '../services/cacheService.js';
 import { config } from '../config.js';
 import { updateTiersFromScrape } from '../services/tierListService.js';
@@ -72,41 +73,19 @@ router.post('/negate', async (_req: Request, res: Response) => {
   }
 });
 
+// Shares runFullSync with the scheduled job so the manual and automatic paths
+// can't drift — including the derived-data and cache-refresh stages.
 router.post('/all', async (_req: Request, res: Response) => {
-  let step = 'init';
   try {
-    await clearCache('mdm');
-    invalidateTierListCache();
-    invalidateFeaturedCache();
-    step = 'syncCards';
-    const cardCount = await syncCards();
-    await syncArchetypes();
-    await recordSync('ygoprodeck', 'success');
-    step = 'syncDeckTypes';
-    const dtCount = await syncDeckTypes();
-    step = 'syncTopDecks';
-    const tdCount = await syncTopDecks();
-    await recordSync('mdm_deck_types', 'success');
-    step = 'syncTournaments';
-    const tCount = await syncTournaments();
-    await recordSync('mdm_tournaments', 'success');
-    step = 'syncUntapped';
-    const uCount = await syncUntapped();
-    await recordSync('untapped', 'success');
-    step = 'syncNegate';
-    const nCount = await syncCardNegateEffectiveness();
+    const result = await runFullSync();
     res.json({
-      message: 'Full sync complete',
-      cards: cardCount, deckTypes: dtCount, topDecks: tdCount,
-      tournaments: tCount, untappedArchetypes: uCount, cardNegateEffectiveness: nCount,
+      message: result.errors.length === 0
+        ? 'Full sync complete'
+        : `Full sync completed with ${result.errors.length} failed stage(s)`,
+      ...result,
     });
   } catch (err: any) {
-    const source: SyncSource =
-      step === 'syncTournaments' ? 'mdm_tournaments' :
-      step === 'syncUntapped'    ? 'untapped'        :
-      (step === 'syncDeckTypes' || step === 'syncTopDecks') ? 'mdm_deck_types' : 'ygoprodeck';
-    await recordSync(source, 'failed', String(err?.message || err));
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: String(err?.message || err) });
   }
 });
 

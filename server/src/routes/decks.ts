@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
+import { config } from '../config.js';
 
 let featuredMemCache: any[] | null = null;
 let featuredMemCacheAt = 0;
@@ -11,8 +12,7 @@ export function invalidateFeaturedCache() { featuredMemCache = null; }
 export async function warmFeaturedCache(): Promise<void> {
   if (featuredMemCache && (Date.now() - featuredMemCacheAt) < FEATURED_MEM_TTL_MS) return;
   const { default: axios } = await import('axios');
-  const port = process.env.PORT || 3000;
-  await axios.get(`http://localhost:${port}/api/decks/featured`, { timeout: 30000 });
+  await axios.get(`http://localhost:${config.port}/api/decks/featured`, { timeout: 30000 });
   console.log('[Warmup] featured cache built');
 }
 
