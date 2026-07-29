@@ -244,6 +244,11 @@ function buildProfile(
 let memo: { at: number; data: Record<string, InteractionProfile> } | null = null;
 const MEMO_MS = 5 * 60 * 1000;
 
+/** Drops the in-process memo so the next call re-reads api_cache or recomputes. */
+export function invalidateInteractionProfiles() {
+  memo = null;
+}
+
 /** Per-deck Interaction Profiles, keyed by lowercased deck name. Cached. */
 export async function getInteractionProfiles(pool: Pool): Promise<Record<string, InteractionProfile>> {
   if (memo && Date.now() - memo.at < MEMO_MS) return memo.data;

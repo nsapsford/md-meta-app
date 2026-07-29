@@ -19,9 +19,9 @@ import personalGamesRouter from './routes/personalGames.js';
 import deckIORouter from './routes/deckIO.js';
 import dossiersRouter from './routes/dossiers.js';
 import authRouter from './routes/auth.js';
-import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, syncUntapped, computeDeckTypeCards } from './services/syncService.js';
+import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, computeDeckTypeCards } from './services/syncService.js';
 import { updateTiersFromScrape } from './services/tierListService.js';
-import { recordSync } from './services/syncStatusService.js';
+import { runFullSync } from './services/fullSyncService.js';
 
 async function main() {
   // Init DB first
@@ -105,54 +105,12 @@ async function main() {
     }
   })();
 
-  // Scheduled syncs — per-source schedules
-  cron.schedule('0 */6 * * *', async () => {
-    console.log('[Cron] Running deck-type sync...');
-    try {
-      await syncDeckTypes();
-      await syncTopDecks();
-      await updateTiersFromScrape();
-      await computeDeckTypeCards();
-      await recordSync('mdm_deck_types', 'success');
-    } catch (err: any) {
-      await recordSync('mdm_deck_types', 'failed', String(err?.message || err));
-      console.error('[Cron] Deck-type sync failed:', err);
-    }
-  });
-
-  cron.schedule('0 */2 * * *', async () => {
-    console.log('[Cron] Running tournament sync...');
-    try {
-      await syncTournaments();
-      await recordSync('mdm_tournaments', 'success');
-    } catch (err: any) {
-      await recordSync('mdm_tournaments', 'failed', String(err?.message || err));
-      console.error('[Cron] Tournament sync failed:', err);
-    }
-  });
-
-  cron.schedule('0 */3 * * *', async () => {
-    console.log('[Cron] Running untapped sync...');
-    try {
-      await syncUntapped();
-      await recordSync('untapped', 'success');
-    } catch (err: any) {
-      await recordSync('untapped', 'failed', String(err?.message || err));
-      console.error('[Cron] Untapped sync failed:', err);
-    }
-  });
-
-  cron.schedule('0 4 * * *', async () => {
-    console.log('[Cron] Running card sync...');
-    try {
-      await syncCards();
-      await syncArchetypes();
-      await recordSync('ygoprodeck', 'success');
-    } catch (err: any) {
-      await recordSync('ygoprodeck', 'failed', String(err?.message || err));
-      console.error('[Cron] Card sync failed:', err);
-    }
-  });
+  // Scheduled sync — every source plus its derived data, twice daily.
+  // node-cron reads the host clock unless told otherwise, so pin UTC explicitly.
+  cron.schedule('0 6,18 * * *', () => {
+    console.log('[Cron] Running scheduled full sync...');
+    void runFullSync();
+  }, { timezone: 'Etc/UTC' });
 
   app.listen(config.port, () => {
     console.log(`[Server] Running on http://localhost:${config.port}`);

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll } from '../utils/dbHelpers.js';
 import { syncDeckTypes, computeDeckTypeCards } from '../services/syncService.js';
+import { config } from '../config.js';
 
 // In-memory process cache — instant lookup, no DB round-trip
 let memCache: Record<string, any[]> | null = null;
@@ -15,8 +16,7 @@ export function invalidateTierListCache() {
 export async function warmTierListCache(): Promise<void> {
   if (memCache && (Date.now() - memCacheAt) < MEM_CACHE_TTL_MS) return;
   const { default: axios } = await import('axios');
-  const port = process.env.PORT || 3000;
-  await axios.get(`http://localhost:${port}/api/tier-list`, { timeout: 30000 });
+  await axios.get(`http://localhost:${config.port}/api/tier-list`, { timeout: 30000 });
   console.log('[Warmup] tier-list cache built');
 }
 
