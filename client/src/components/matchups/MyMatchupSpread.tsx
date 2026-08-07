@@ -32,9 +32,13 @@ interface Props {
   deckNames: string[];
   /** Bump to force a refetch, e.g. after logging a new game elsewhere on the page. */
   refreshToken?: number;
+  /** Deck to preselect once deckNames arrive, e.g. the last deck from a previous session. */
+  initialDeck?: string;
+  /** Notifies the parent when the user picks a different "Playing as" deck. */
+  onDeckChange?: (deck: string) => void;
 }
 
-export default function MyMatchupSpread({ deckNames, refreshToken }: Props) {
+export default function MyMatchupSpread({ deckNames, refreshToken, initialDeck, onDeckChange }: Props) {
   const [spread, setSpread] = useState<PersonalSpread[]>([]);
   const [recentGames, setRecentGames] = useState<PersonalGame[]>([]);
   const [selectedDeck, setSelectedDeck] = useState('');
@@ -43,8 +47,10 @@ export default function MyMatchupSpread({ deckNames, refreshToken }: Props) {
   const [days, setDays] = useState(90);
 
   useEffect(() => {
-    if (deckNames.length > 0 && !selectedDeck) setSelectedDeck(deckNames[0]);
-  }, [deckNames, selectedDeck]);
+    if (deckNames.length > 0 && !selectedDeck) {
+      setSelectedDeck(initialDeck && deckNames.includes(initialDeck) ? initialDeck : deckNames[0]);
+    }
+  }, [deckNames, selectedDeck, initialDeck]);
 
   useEffect(() => {
     if (!selectedDeck) return;
@@ -127,7 +133,7 @@ export default function MyMatchupSpread({ deckNames, refreshToken }: Props) {
           <label className="text-sm text-md-textMuted block mb-2">Playing as:</label>
           <select
             value={selectedDeck}
-            onChange={(e) => setSelectedDeck(e.target.value)}
+            onChange={(e) => { setSelectedDeck(e.target.value); onDeckChange?.(e.target.value); }}
             className="bg-md-bg border border-md-border rounded-lg px-3 py-2.5 text-sm text-md-text focus:outline-none focus:border-md-blue w-full max-w-sm"
           >
             {deckNames.map((d) => <option key={d} value={d}>{d}</option>)}

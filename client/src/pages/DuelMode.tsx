@@ -8,9 +8,15 @@ import {
   type DossierRow, type DossierNote, type NoteCategory, type DossierDepth,
 } from '../api/dossiers';
 import ErrorBanner from '../components/common/ErrorBanner';
+import { readLocal, writeLocal } from '../cache/cacheStore';
+import { savedDecksResource } from '../offline/resources';
 import { hapticLight } from '../utils/haptics';
 
 const MY_DECK_KEY = 'duel_mode_deck_id';
+// Local-first mirror of the recent-opponent chips. Saved decks reuse the
+// background-sync cache entry (savedDecksResource.key) so both stay on the
+// same copy.
+const RECENT_OPPONENTS_KEY = 'duel-recent-opponents';
 
 const CATEGORY_LABEL: Record<NoteCategory, string> = {
   'negate-priority': 'Negate priority',
@@ -106,6 +112,9 @@ function Section({ title, items, accentClass }: { title: string; items: string[]
 
 export default function DuelMode() {
   const [decks, setDecks] = useState<SavedDeck[]>([]);
+  // True once the deck list has resolved (from cache or network) — until then
+  // we can't tell "no decks" apart from "still loading".
+  const [decksReady, setDecksReady] = useState(false);
   const [recentOpponents, setRecentOpponents] = useState<string[]>([]);
   const [myDeckId, setMyDeckId] = useState<number | null>(() => {
     const stored = localStorage.getItem(MY_DECK_KEY);
@@ -132,18 +141,47 @@ export default function DuelMode() {
   const [error, setError] = useState('');
   const [logFlash, setLogFlash] = useState('');
 
+  // Local-first launch: paint saved decks and recent opponents from the device
+  // cache so a relaunch lands straight on the duel screen for the remembered
+  // deck, then revalidate both against the server in the background.
   useEffect(() => {
-    getSavedDecks().then(setDecks).catch(() => {});
-    getGames({ limit: 50 })
-      .then((games) => {
-        const seen = new Set<string>();
-        const recent: string[] = [];
-        for (const g of games) {
-          if (!seen.has(g.opponent_deck)) { seen.add(g.opponent_deck); recent.push(g.opponent_deck); }
-        }
-        setRecentOpponents(recent.slice(0, 8));
-      })
-      .catch(() => {});
+    let cancelled = false;
+    void (async () => {
+      const [cachedDecks, cachedOpponents] = await Promise.all([
+        readLocal<SavedDeck[]>(savedDecksResource.key),
+        readLocal<string[]>(RECENT_OPPONENTS_KEY),
+      ]);
+      if (cancelled) return;
+      if (cachedDecks) {
+        setDecks(cachedDecks);
+        setDecksReady(true);
+      }
+      if (cachedOpponents) setRecentOpponents(cachedOpponents);
+
+      getSavedDecks()
+        .then((fresh) => {
+          if (cancelled) return;
+          setDecks(fresh);
+          void writeLocal(savedDecksResource.key, fresh);
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setDecksReady(true); });
+
+      getGames({ limit: 50 })
+        .then((games) => {
+          if (cancelled) return;
+          const seen = new Set<string>();
+          const recent: string[] = [];
+          for (const g of games) {
+            if (!seen.has(g.opponent_deck)) { seen.add(g.opponent_deck); recent.push(g.opponent_deck); }
+          }
+          const top = recent.slice(0, 8);
+          setRecentOpponents(top);
+          void writeLocal(RECENT_OPPONENTS_KEY, top);
+        })
+        .catch(() => {});
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const myDeck = useMemo(() => decks.find((d) => d.id === myDeckId) ?? null, [decks, myDeckId]);
@@ -246,12 +284,24 @@ export default function DuelMode() {
   }
 
   if (!myDeck) {
+    // A deck remembered from last session normally resolves instantly from the
+    // cached deck list; don't flash the picker before the list has arrived.
+    if (myDeckId != null && !decksReady) {
+      return (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-extrabold text-md-text">Duel Mode</h1>
+          <p className="text-sm text-md-textMuted">Loading your deck...</p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-extrabold text-md-text">Duel Mode</h1>
         <p className="text-sm text-md-textSecondary">Pick the deck you're playing this session.</p>
         {decks.length === 0 ? (
-          <p className="text-sm text-md-textMuted">No saved decks yet — save one in My Decks first.</p>
+          <p className="text-sm text-md-textMuted">
+            {decksReady ? 'No saved decks yet — save one in My Decks first.' : 'Loading your decks...'}
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {decks.map((d) => (
