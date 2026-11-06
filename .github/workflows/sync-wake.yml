@@ -1,0 +1,20 @@
+name: Wake server for scheduled sync
+
+# Render's free-tier web service spins the dyno down after ~15 min with no
+# HTTP traffic. The server's own sync schedule (server/src/index.ts) only
+# runs while the process is alive, so with no real visitors around 06:00 or
+# 18:00 UTC, the scheduled full sync is simply never fired. This workflow
+# hits /api/health a few minutes ahead of each scheduled run so the dyno is
+# awake in time; the server's own startup/staleness catch-up logic takes it
+# from there if the fixed-time cron still gets missed.
+on:
+  schedule:
+    - cron: '55 5,17 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: curl -fsS --retry 5 --retry-delay 10 --max-time 90 https://md-meta-app.onrender.com/api/health

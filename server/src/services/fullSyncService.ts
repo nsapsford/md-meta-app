@@ -36,8 +36,24 @@ const msg = (err: unknown) => String((err as any)?.message || err);
  * Each stage is isolated so one failing source doesn't cost us the others, and
  * every source calls recordSync either way — the client derives its "new data
  * available" fingerprint from those timestamps.
+ *
+ * Callers (the fixed-time cron, the hourly staleness check, the startup
+ * catch-up, and the manual admin endpoint) can all land at once after the
+ * server wakes from idle — inFlight makes them share a single run instead of
+ * hammering upstream sources concurrently.
  */
-export async function runFullSync(): Promise<FullSyncResult> {
+let inFlight: Promise<FullSyncResult> | null = null;
+
+export function runFullSync(): Promise<FullSyncResult> {
+  if (!inFlight) {
+    inFlight = runFullSyncNow().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function runFullSyncNow(): Promise<FullSyncResult> {
   const result: FullSyncResult = {
     cards: null, deckTypes: null, topDecks: null, tournaments: null,
     untappedArchetypes: null, cardNegateEffectiveness: null,

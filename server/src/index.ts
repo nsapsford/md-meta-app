@@ -22,6 +22,14 @@ import authRouter from './routes/auth.js';
 import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, computeDeckTypeCards } from './services/syncService.js';
 import { updateTiersFromScrape } from './services/tierListService.js';
 import { runFullSync } from './services/fullSyncService.js';
+import { isSyncStale } from './services/syncStatusService.js';
+
+// Matches the twice-daily cron cadence below. A host that spins the service
+// down on idle (e.g. Render's free tier) can miss a scheduled run entirely —
+// kill the process and node-cron's timer dies with it, with no catch-up — so
+// anything that wakes the process (a real request, or the external pinger in
+// .github/workflows/sync-wake.yml) also checks staleness and catches up.
+const SYNC_STALE_SECONDS = 12 * 60 * 60;
 
 async function main() {
   // Init DB first
@@ -99,6 +107,15 @@ async function main() {
           computeDeckTypeCards().catch((e: any) =>
             console.error('[Startup] computeDeckTypeCards failed:', e?.message));
         }
+
+        // Data already exists, so this isn't a fresh deploy — but if every
+        // source is stale, the process was very likely asleep (or crash-
+        // looping) through its last scheduled sync. Catch up immediately
+        // instead of waiting for the next fixed cron time.
+        if (await isSyncStale(SYNC_STALE_SECONDS)) {
+          console.log('[Startup] Sync data is stale — catching up now...');
+          void runFullSync();
+        }
       }
     } catch (err) {
       console.error('[Startup] Initial sync failed:', err);
@@ -111,6 +128,21 @@ async function main() {
     console.log('[Cron] Running scheduled full sync...');
     void runFullSync();
   }, { timezone: 'Etc/UTC' });
+
+  // Safety net for while the process is actually running: node-cron only
+  // fires at the exact scheduled minute, so a restart that lands a few
+  // minutes either side of 06:00/18:00 can still miss a run. Checking
+  // hourly catches that without waiting up to 12h for the next fixed slot.
+  setInterval(() => {
+    isSyncStale(SYNC_STALE_SECONDS)
+      .then((stale) => {
+        if (stale) {
+          console.log('[Cron] Sync data is stale — running catch-up sync...');
+          void runFullSync();
+        }
+      })
+      .catch((e: any) => console.error('[Cron] Staleness check failed:', e?.message));
+  }, 60 * 60 * 1000);
 
   app.listen(config.port, () => {
     console.log(`[Server] Running on http://localhost:${config.port}`);
