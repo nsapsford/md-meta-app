@@ -1,0 +1,1057 @@
+{
+ "lines": [
+  {
+   "name": "1-card: Magician's Rod \u2192 Destruction + Chaos Angel + Dragoon",
+   "starters": [
+    [
+     "Magician's Rod"
+    ]
+   ],
+   "freeCards": 0,
+   "steps": [
+    {
+     "text": "Normal Summon Magician's Rod. Its effect adds Dark Magical Curtain.",
+     "summons": [
+      {
+       "card": "Magician's Rod",
+       "method": "normal"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Magician's Rod",
+       "effect": 1
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Curtain. Rod stays on the field; play a second starter if you hold one (Pharaoh's Servant + a Spell, Apprentice + a discard, or Illusion of Chaos). With Rod alone, end on Rod and keep hand traps."
+      },
+      {
+       "interruption": "Infinite Impermanence",
+       "response": "Same as Ash: Rod's search is negated. Go into your second starter, or end on Rod."
+      }
+     ]
+    },
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck (it can't activate effects this turn; your opponent may also summon a DARK Spellcaster). Because it's Dark Magician, add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "Curtain is negated, so no Dark Magician and no Gaze. Rod has used its search; end on Rod, or go into a second starter."
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction from the Extra Deck by banishing Dark Magician (a Spell was activated this turn). Its effect adds Dark Magician, the Pharaoh's Servant.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Servant. Use Gaze on Dark Magician of Destruction (it's named Dark Magician on the field) to Fusion Summon Red-Eyes Dark Dragoon. End on Dragoon + Rod."
+      }
+     ]
+    },
+    {
+     "text": "Reveal The Gaze of Timaeus and Special Summon Pharaoh's Servant from your hand; Set The Gaze of Timaeus from your Deck.",
+     "activations": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "field"
+      }
+     ]
+    },
+    {
+     "text": "Synchro Summon Chaos Angel using Pharaoh's Servant and Magician's Rod, treating Rod as the Tuner (7 + 3 = 10). Both materials are DARK, so your monsters can't be destroyed by battle.",
+     "summons": [
+      {
+       "card": "Chaos Angel",
+       "method": "synchro",
+       "materials": [
+        "Magician's Rod",
+        "Dark Magician, the Pharaoh's Servant"
+       ]
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Nibiru, the Primal Being",
+       "response": "Nibiru tributes your monsters. Pharaoh's Servant is still Dark Magician in the GY, so activate Gaze from your hand targeting it and Fusion Summon Red-Eyes Dark Dragoon; it can negate later effects."
+      }
+     ]
+    },
+    {
+     "text": "Activate The Gaze of Timaeus from your hand targeting Pharaoh's Servant in the GY (it's named Dark Magician there): shuffle it into the Deck to Fusion Summon Red-Eyes Dark Dragoon.",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician, the Pharaoh's Servant"
+       ],
+       "materialsFrom": "gy",
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Chaos Angel",
+    "Red-Eyes Dark Dragoon",
+    "The Gaze of Timaeus"
+   ],
+   "endBoardText": "Dragoon negates once (discard 1); the set Gaze summons another Fusion on their turn (Master of Chaos off Destruction); Chaos Angel stops battle destruction.",
+   "notes": "Keep at least 1 card in hand for Dragoon's discard. Magician's Rod in the GY returns to your hand on their turn when you activate the set Gaze (Tribute a Spellcaster)."
+  },
+  {
+   "name": "1-card: Illusion of Chaos \u2192 Rod line",
+   "starters": [
+    [
+     "Illusion of Chaos"
+    ]
+   ],
+   "freeCards": 0,
+   "steps": [
+    {
+     "text": "Reveal Illusion of Chaos: add Magician's Rod, then place Illusion of Chaos on top of your Deck.",
+     "activations": [
+      {
+       "card": "Illusion of Chaos",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Magician's Rod",
+       "from": "deck",
+       "to": "hand"
+      },
+      {
+       "card": "Illusion of Chaos",
+       "from": "hand",
+       "to": "deck"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Rod. Keep Illusion in hand and play another starter if you have one."
+      }
+     ]
+    },
+    {
+     "text": "Normal Summon Magician's Rod. Its effect adds Dark Magical Curtain.",
+     "summons": [
+      {
+       "card": "Magician's Rod",
+       "method": "normal"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Magician's Rod",
+       "effect": 1
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Infinite Impermanence",
+       "response": "Rod's search is negated. End on Rod, or use a second starter."
+      }
+     ]
+    },
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck, then add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction by banishing Dark Magician; add Dark Magician, the Pharaoh's Servant.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "Use Gaze on Dark Magician of Destruction for Red-Eyes Dark Dragoon; end on Dragoon + Rod."
+      }
+     ]
+    },
+    {
+     "text": "Reveal The Gaze of Timaeus to Special Summon Pharaoh's Servant; Set The Gaze of Timaeus from your Deck.",
+     "activations": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "field"
+      }
+     ]
+    },
+    {
+     "text": "Synchro Summon Chaos Angel with Pharaoh's Servant + Magician's Rod (Rod treated as the Tuner).",
+     "summons": [
+      {
+       "card": "Chaos Angel",
+       "method": "synchro",
+       "materials": [
+        "Magician's Rod",
+        "Dark Magician, the Pharaoh's Servant"
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Activate The Gaze of Timaeus from your hand targeting Pharaoh's Servant in the GY: Fusion Summon Red-Eyes Dark Dragoon.",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician, the Pharaoh's Servant"
+       ],
+       "materialsFrom": "gy",
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Chaos Angel",
+    "Red-Eyes Dark Dragoon",
+    "The Gaze of Timaeus"
+   ],
+   "endBoardText": "Same board as the Rod line. Illusion goes back on top of the Deck, so it's your next draw.",
+   "notes": "If you'd rather keep Illusion in hand, place a dead card on top instead."
+  },
+  {
+   "name": "Apprentice + 1 card \u2192 Sarcophagus, Destruction, Chaos Angel, Dragoon",
+   "starters": [
+    [
+     "Dark Magician Girl the Magician's Apprentice"
+    ]
+   ],
+   "freeCards": 1,
+   "steps": [
+    {
+     "text": "Discard 1 card to Special Summon Dark Magician Girl the Magician's Apprentice. Its effect adds Shining Sarcophagus.",
+     "activations": [
+      {
+       "card": "Dark Magician Girl the Magician's Apprentice",
+       "effect": 2
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician Girl the Magician's Apprentice",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "*",
+       "from": "hand",
+       "to": "gy"
+      },
+      {
+       "card": "Shining Sarcophagus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Sarcophagus. Normal Summon Magician's Rod if you have it and play the Rod line; otherwise end on Apprentice."
+      }
+     ]
+    },
+    {
+     "text": "Activate Shining Sarcophagus, then use its effect to add Dark Magician the Magician of Black Magic.",
+     "activations": [
+      {
+       "card": "Shining Sarcophagus",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician the Magician of Black Magic from your hand (Shining Sarcophagus is on the field).",
+     "activations": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "method": "special",
+       "from": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction by banishing the Apprentice (a Spell was activated this turn). Its effect adds Magician's Rod.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician Girl the Magician's Apprentice"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Magician's Rod",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Rod. Normal Summon is still free: end on Destruction + Black Magic with Sarcophagus up, and keep your hand traps."
+      }
+     ]
+    },
+    {
+     "text": "Normal Summon Magician's Rod. Its effect adds Dark Magical Curtain.",
+     "summons": [
+      {
+       "card": "Magician's Rod",
+       "method": "normal"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Magician's Rod",
+       "effect": 1
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck, then add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Nibiru, the Primal Being",
+       "response": "This is your 5th summon. If Nibiru wipes the field, Gaze can still target Dark Magician of Destruction or Dark Magician in the GY for Red-Eyes Dark Dragoon."
+      }
+     ]
+    },
+    {
+     "text": "Synchro Summon Chaos Angel with Dark Magician the Magician of Black Magic + Magician's Rod (Rod treated as the Tuner).",
+     "summons": [
+      {
+       "card": "Chaos Angel",
+       "method": "synchro",
+       "materials": [
+        "Magician's Rod",
+        "Dark Magician the Magician of Black Magic"
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Activate The Gaze of Timaeus targeting Dark Magician on your field: shuffle it into the Deck to Fusion Summon Red-Eyes Dark Dragoon. A Normal Monster was its material, so Dragoon can destroy 1 monster and burn each turn.",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Chaos Angel",
+    "Red-Eyes Dark Dragoon",
+    "Shining Sarcophagus"
+   ],
+   "endBoardText": "Dragoon negates once (discard 1) and can destroy + burn once per turn; Sarcophagus can send a monster they revive from the GY to the GY (discard a Spell).",
+   "notes": "Needs one card to discard for the Apprentice. Gaze banishes Dragoon at the End Phase of your NEXT turn."
+  },
+  {
+   "name": "1-card + discard: Future Silence \u2192 Apprentice line",
+   "starters": [
+    [
+     "Future Silence"
+    ]
+   ],
+   "freeCards": 1,
+   "steps": [
+    {
+     "text": "Activate Future Silence: add Dark Magician Girl the Magician's Apprentice.",
+     "activations": [
+      {
+       "card": "Future Silence",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician Girl the Magician's Apprentice",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No search. Play another starter if you hold one."
+      }
+     ]
+    },
+    {
+     "text": "Discard 1 card to Special Summon the Apprentice; add Shining Sarcophagus.",
+     "activations": [
+      {
+       "card": "Dark Magician Girl the Magician's Apprentice",
+       "effect": 2
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician Girl the Magician's Apprentice",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "*",
+       "from": "hand",
+       "to": "gy"
+      },
+      {
+       "card": "Shining Sarcophagus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Activate Shining Sarcophagus; add Dark Magician the Magician of Black Magic.",
+     "activations": [
+      {
+       "card": "Shining Sarcophagus",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician the Magician of Black Magic from your hand.",
+     "activations": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician the Magician of Black Magic",
+       "method": "special",
+       "from": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction by banishing the Apprentice; add Magician's Rod.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician Girl the Magician's Apprentice"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Magician's Rod",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Normal Summon Magician's Rod; add Dark Magical Curtain.",
+     "summons": [
+      {
+       "card": "Magician's Rod",
+       "method": "normal"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Magician's Rod",
+       "effect": 1
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck; add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Synchro Summon Chaos Angel with Dark Magician the Magician of Black Magic + Magician's Rod (Rod as the Tuner).",
+     "summons": [
+      {
+       "card": "Chaos Angel",
+       "method": "synchro",
+       "materials": [
+        "Magician's Rod",
+        "Dark Magician the Magician of Black Magic"
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Gaze of Timaeus on Dark Magician: Fusion Summon Red-Eyes Dark Dragoon.",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Chaos Angel",
+    "Red-Eyes Dark Dragoon",
+    "Shining Sarcophagus"
+   ],
+   "endBoardText": "Same board as the Apprentice line.",
+   "notes": "Future Silence only draws for both players in the Battle Phase; in Main Phase 1 it's just a search."
+  },
+  {
+   "name": "Pharaoh's Servant + a Spell \u2192 Destruction, Chaos Angel, Dragoon",
+   "starters": [
+    [
+     "Dark Magician, the Pharaoh's Servant"
+    ]
+   ],
+   "freeCards": 1,
+   "steps": [
+    {
+     "text": "Reveal a Spell in your hand to Special Summon Dark Magician, the Pharaoh's Servant; Set Dark Magical Circle from your Deck.",
+     "activations": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Circle",
+       "from": "deck",
+       "to": "field"
+      }
+     ]
+    },
+    {
+     "text": "Activate the Set Dark Magical Circle: look at the top 3 cards and add Dark Magician or a Spell/Trap that mentions it if one is there.",
+     "activations": [
+      {
+       "card": "Dark Magical Circle",
+       "effect": 1,
+       "from": "field"
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction by banishing Pharaoh's Servant (a Spell was activated). Its effect adds Magician's Rod.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician, the Pharaoh's Servant"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Magician's Rod",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "No Rod. Dark Magical Circle banishes when Dark Magician is summoned; end on Destruction + Circle and keep your hand traps."
+      }
+     ]
+    },
+    {
+     "text": "Normal Summon Magician's Rod; add Dark Magical Curtain.",
+     "summons": [
+      {
+       "card": "Magician's Rod",
+       "method": "normal"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Magician's Rod",
+       "effect": 1
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck; add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ]
+    },
+    {
+     "text": "Synchro Summon Chaos Angel with Dark Magician + Magician's Rod (Rod as the Tuner).",
+     "summons": [
+      {
+       "card": "Chaos Angel",
+       "method": "synchro",
+       "materials": [
+        "Magician's Rod",
+        "Dark Magician"
+       ]
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Nibiru, the Primal Being",
+       "response": "If Nibiru tributes your field, Gaze can still target Dark Magician in the GY for Red-Eyes Dark Dragoon."
+      }
+     ]
+    },
+    {
+     "text": "Activate The Gaze of Timaeus targeting Dark Magician in the GY: Fusion Summon Red-Eyes Dark Dragoon (a Normal Monster was its material, so it can destroy + burn).",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsFrom": "gy",
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Chaos Angel",
+    "Red-Eyes Dark Dragoon",
+    "Dark Magical Circle"
+   ],
+   "endBoardText": "Dragoon negates once (discard 1) and can destroy + burn; Circle banishes a card whenever a Dark Magician is summoned on a later turn.",
+   "notes": "Needs any Spell in hand to reveal (it stays in hand). Circle's top-3 look is luck; the line doesn't depend on it."
+  },
+  {
+   "name": "1-card: Dark Magical Curtain \u2192 Destruction + Dragoon",
+   "starters": [
+    [
+     "Dark Magical Curtain"
+    ]
+   ],
+   "freeCards": 0,
+   "steps": [
+    {
+     "text": "Activate Dark Magical Curtain: Special Summon Dark Magician from your Deck; add The Gaze of Timaeus.",
+     "activations": [
+      {
+       "card": "Dark Magical Curtain",
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician",
+       "method": "special",
+       "from": "deck"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "Nothing is summoned. Use your Normal Summon on another starter if you have one."
+      }
+     ]
+    },
+    {
+     "text": "Special Summon Dark Magician of Destruction by banishing Dark Magician; add Dark Magician, the Pharaoh's Servant.",
+     "summons": [
+      {
+       "card": "Dark Magician of Destruction",
+       "method": "special",
+       "from": "extra",
+       "materials": [
+        "Dark Magician"
+       ],
+       "materialsTo": "banished"
+      }
+     ],
+     "activations": [
+      {
+       "card": "Dark Magician of Destruction"
+      }
+     ],
+     "moves": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "from": "deck",
+       "to": "hand"
+      }
+     ],
+     "branches": [
+      {
+       "interruption": "Ash Blossom & Joyous Spring",
+       "response": "Gaze on Dark Magician of Destruction for Red-Eyes Dark Dragoon; end on Dragoon."
+      }
+     ]
+    },
+    {
+     "text": "Reveal The Gaze of Timaeus to Special Summon Pharaoh's Servant; Set The Gaze of Timaeus from your Deck.",
+     "activations": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "effect": 1,
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Dark Magician, the Pharaoh's Servant",
+       "method": "special",
+       "from": "hand"
+      }
+     ],
+     "moves": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "deck",
+       "to": "field"
+      }
+     ]
+    },
+    {
+     "text": "Activate The Gaze of Timaeus from your hand targeting Pharaoh's Servant (named Dark Magician on the field): Fusion Summon Red-Eyes Dark Dragoon.",
+     "activations": [
+      {
+       "card": "The Gaze of Timaeus",
+       "from": "hand"
+      }
+     ],
+     "summons": [
+      {
+       "card": "Red-Eyes Dark Dragoon",
+       "method": "fusion",
+       "materials": [
+        "Dark Magician, the Pharaoh's Servant"
+       ],
+       "materialsTo": "deck"
+      }
+     ]
+    }
+   ],
+   "endBoard": [
+    "Dark Magician of Destruction",
+    "Red-Eyes Dark Dragoon",
+    "The Gaze of Timaeus"
+   ],
+   "endBoardText": "Dragoon negates once (discard 1); the set Gaze can make Master of Chaos off Destruction on their turn. Normal Summon is still free for a Magician's Rod if you draw or hold one.",
+   "notes": "With Magician's Rod also in hand, Normal Summon it before step 4 and use the Rod line instead for Chaos Angel as well."
+  }
+ ]
+}

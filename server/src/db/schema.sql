@@ -268,3 +268,10 @@ CREATE TABLE IF NOT EXISTS drill_reviews (
 );
 
 CREATE INDEX IF NOT EXISTS idx_drill_reviews_deck_due ON drill_reviews(deck_id, due_at);
+
+-- Line generator: the checkable plan behind a generated line (card moves,
+-- summons, activations per step; replayable by a rules engine later) and the
+-- latest check report ({ ok, issues, verifiers, generator, checkedAt }).
+-- check_json is cleared when the line is edited, since it no longer applies.
+ALTER TABLE combo_lines ADD COLUMN IF NOT EXISTS plan_json TEXT;
+ALTER TABLE combo_lines ADD COLUMN IF NOT EXISTS check_json TEXT;
