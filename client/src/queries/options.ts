@@ -11,6 +11,7 @@ import { getSyncStatus } from '../api/sync';
 import { getSavedDecks } from '../api/deckIO';
 import { getGames, getSpread } from '../api/personalGames';
 import { getOpponentDossier, getPilotDossier, type DossierDepth } from '../api/dossiers';
+import { getLines, getDrillReviews, resolveCards } from '../api/lines';
 
 // One place for every server read: its cache key, fetcher, freshness and
 // persistence. Components call useQuery(xxxQuery(...)), so two components
@@ -20,6 +21,7 @@ import { getOpponentDossier, getPilotDossier, type DossierDepth } from '../api/d
 //   ['personal', ...]  anything derived from logged games
 //   ['matchups', ...]  matchup analytics (some blend personal games)
 //   ['saved-decks']    the user's deck list
+//   ['lines', deckId]  Line Trainer lines (and, beneath it, their drill reviews)
 //
 // Shared meta data does not pass the AbortSignal through: if the user leaves a
 // page mid-request, the response still lands in the cache for next time.
@@ -205,4 +207,32 @@ export const pilotDossierQuery = (deckId: number, depth: DossierDepth) =>
     queryKey: ['dossier', 'pilot', deckId, depth],
     queryFn: () => getPilotDossier(deckId, depth),
     meta: USER,
+  });
+
+// ── Line Trainer ──
+
+export const comboLinesQuery = (deckId: number) =>
+  queryOptions({
+    queryKey: ['lines', deckId],
+    queryFn: () => getLines(deckId),
+    meta: USER,
+  });
+
+// Nested under ['lines', deckId] so invalidating a deck's lines (e.g. after a
+// delete, which also drops drill history) refreshes its reviews too.
+export const drillReviewsQuery = (deckId: number) =>
+  queryOptions({
+    queryKey: ['lines', deckId, 'reviews'],
+    queryFn: () => getDrillReviews(deckId),
+    meta: USER,
+  });
+
+/** Names and images for a set of passcodes (a saved deck's cards). Card data barely changes. */
+export const resolvedCardsQuery = (passcodes: number[]) =>
+  queryOptions({
+    queryKey: ['cards', 'resolve', [...new Set(passcodes)].sort((a, b) => a - b)],
+    queryFn: () => resolveCards([...new Set(passcodes)]),
+    enabled: passcodes.length > 0,
+    staleTime: 24 * HOUR,
+    meta: PUBLIC,
   });
