@@ -142,10 +142,6 @@ CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_pla
 -- This allows the tier-list endpoint to run as a single SELECT with no joins
 ALTER TABLE deck_types ADD COLUMN IF NOT EXISTS computed_cards_json TEXT;
 
--- 'quick' dossiers use a faster model and a terser prompt for low-latency,
--- mid-duel use; 'detailed' is the original thorough treatment.
-ALTER TABLE dossiers ADD COLUMN IF NOT EXISTS depth TEXT NOT NULL DEFAULT 'detailed';
-
 -- Indexes for tier-list performance (window function + card image lookups)
 CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type_name));
 CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
@@ -207,6 +203,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_opponent_version_unique
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_pilot_version_unique
   ON dossiers(deck_id, version) WHERE kind = 'pilot';
 
+-- 'quick' dossiers use a faster model and a terser prompt for low-latency,
+-- mid-duel use; 'detailed' is the original thorough treatment. Kept after
+-- CREATE TABLE dossiers so a fresh database can run this file; a no-op there.
+ALTER TABLE dossiers ADD COLUMN IF NOT EXISTS depth TEXT NOT NULL DEFAULT 'detailed';
+
 -- Personal notes layered onto a dossier. category slots the note into the
 -- matching dossier section in the UI. game_id is unused until Phase 2 (review
 -- loop) but included now to avoid a later migration.
@@ -227,3 +228,43 @@ CREATE TABLE IF NOT EXISTS dossier_notes (
 
 CREATE INDEX IF NOT EXISTS idx_dossier_notes_opponent ON dossier_notes(LOWER(archetype)) WHERE kind = 'opponent';
 CREATE INDEX IF NOT EXISTS idx_dossier_notes_pilot ON dossier_notes(deck_id) WHERE kind = 'pilot';
+
+-- Line Trainer: the user's own combo lines for a saved deck, plus
+-- spaced-repetition state for drilling them. See
+-- docs/superpowers/specs/2026-11-06-line-trainer-design.md.
+--   starters_json: [[passcode, ...], ...] — every slot must be filled by a
+--     distinct card in hand; a slot lists the interchangeable cards for it.
+--   steps_json: [{ id, text, branches: [{ id, interruption, response }] }]
+--   rank: lower = better end board; picks the "correct" line when a hand
+--     can play several.
+CREATE TABLE IF NOT EXISTS combo_lines (
+  id            SERIAL PRIMARY KEY,
+  deck_id       INTEGER NOT NULL REFERENCES user_decks(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  rank          INTEGER NOT NULL DEFAULT 100,
+  status        TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'verified')),
+  source        TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'ai-draft', 'guide', 'solver')),
+  starters_json TEXT NOT NULL DEFAULT '[]',
+  steps_json    TEXT NOT NULL DEFAULT '[]',
+  end_board     TEXT,
+  created_at    INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
+  updated_at    INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
+);
+
+CREATE INDEX IF NOT EXISTS idx_combo_lines_deck ON combo_lines(deck_id, rank);
+
+-- One row per drilled item: 'line:<lineId>' or 'branch:<lineId>:<branchId>'.
+-- No row = new item, due now.
+CREATE TABLE IF NOT EXISTS drill_reviews (
+  item_key      TEXT PRIMARY KEY,
+  deck_id       INTEGER NOT NULL REFERENCES user_decks(id) ON DELETE CASCADE,
+  ease          REAL NOT NULL DEFAULT 2.5,
+  interval_days REAL NOT NULL DEFAULT 0,
+  reps          INTEGER NOT NULL DEFAULT 0,
+  lapses        INTEGER NOT NULL DEFAULT 0,
+  due_at        INTEGER NOT NULL,
+  last_grade    TEXT,
+  updated_at    INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_drill_reviews_deck_due ON drill_reviews(deck_id, due_at);
