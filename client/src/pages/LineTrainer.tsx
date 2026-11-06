@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SavedDeck } from '../api/deckIO';
 import {
-  createLine, updateLine, deleteLine, importAiLines, gradeItem,
+  createLine, updateLine, deleteLine, setLineStatus, gradeItem,
   type ComboLine, type DrillReview, type Grade, type LinePayload,
 } from '../api/lines';
 import { savedDecksQuery, comboLinesQuery, drillReviewsQuery, resolvedCardsQuery } from '../queries/options';
@@ -15,6 +15,7 @@ import LineLibrary from '../components/trainer/LineLibrary';
 import OpeningDrill from '../components/trainer/OpeningDrill';
 import ReviewSession from '../components/trainer/ReviewSession';
 import CoverageView from '../components/trainer/CoverageView';
+import GeneratePanel from '../components/trainer/GeneratePanel';
 import type { CardMap } from '../components/trainer/shared';
 
 const DECK_KEY = 'trainer_deck_id';
@@ -60,6 +61,7 @@ export default function LineTrainer() {
   const [editorError, setEditorError] = useState('');
   const [actionError, setActionError] = useState('');
   const [flash, setFlash] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const eligible = useMemo(
     () => lines.filter((l) => includeDrafts || l.status === 'verified'),
@@ -152,14 +154,12 @@ export default function LineTrainer() {
     }
   }
 
-  async function importAi() {
-    if (!deckId) return;
+  async function setStatus(line: ComboLine, status: 'draft' | 'verified') {
     setBusy(true);
-    setActionError('');
     try {
-      const { created, skipped } = await importAiLines(deckId);
+      await setLineStatus(line.id, status);
       await refreshLines();
-      showFlash(`${created.length} AI draft${created.length === 1 ? '' : 's'} imported${skipped ? `, ${skipped} already here` : ''}. Set their starters and check them before marking verified.`);
+      if (status === 'verified') showFlash(`"${line.name}" verified`);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -251,6 +251,8 @@ export default function LineTrainer() {
           onSave={saveLine}
           onCancel={() => setEditing(null)}
         />
+      ) : tab === 'lines' && generating && deckId ? (
+        <GeneratePanel deckId={deckId} onImported={refreshLines} onClose={() => setGenerating(false)} />
       ) : tab === 'lines' ? (
         <LineLibrary
           lines={lines}
@@ -261,7 +263,8 @@ export default function LineTrainer() {
           onEdit={(l) => { setEditorError(''); setEditing({ line: l, initial: toPayload(l) }); }}
           onDelete={removeLine}
           onMove={moveLine}
-          onImportAi={importAi}
+          onGenerate={() => setGenerating(true)}
+          onSetStatus={setStatus}
         />
       ) : tab === 'coverage' ? (
         <CoverageView lines={eligible} mainDeck={mainDeck} />

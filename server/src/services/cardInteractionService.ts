@@ -43,7 +43,7 @@ export const MAX_DELTA = 0.05;
 
 // ── Classification data (Master Duel staples, lowercased) ──
 
-const HAND_TRAPS = new Set([
+export const HAND_TRAPS = new Set([
   'ash blossom & joyous spring', 'maxx "c"', 'nibiru, the primal being',
   'effect veiler', 'ghost ogre & snow rabbit', 'ghost belle & haunted mansion',
   'droll & lock bird', 'd.d. crow', 'infinite impermanence', 'skull meister',
