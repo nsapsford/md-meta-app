@@ -142,10 +142,6 @@ CREATE INDEX IF NOT EXISTS idx_personal_games_matchup ON personal_games(deck_pla
 -- This allows the tier-list endpoint to run as a single SELECT with no joins
 ALTER TABLE deck_types ADD COLUMN IF NOT EXISTS computed_cards_json TEXT;
 
--- 'quick' dossiers use a faster model and a terser prompt for low-latency,
--- mid-duel use; 'detailed' is the original thorough treatment.
-ALTER TABLE dossiers ADD COLUMN IF NOT EXISTS depth TEXT NOT NULL DEFAULT 'detailed';
-
 -- Indexes for tier-list performance (window function + card image lookups)
 CREATE INDEX IF NOT EXISTS idx_top_decks_name_lower ON top_decks(LOWER(deck_type_name));
 CREATE INDEX IF NOT EXISTS idx_top_decks_created ON top_decks(created_at DESC);
@@ -206,6 +202,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_opponent_version_unique
   ON dossiers(LOWER(archetype), version) WHERE kind = 'opponent';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dossiers_pilot_version_unique
   ON dossiers(deck_id, version) WHERE kind = 'pilot';
+
+-- 'quick' dossiers use a faster model and a terser prompt for low-latency,
+-- mid-duel use; 'detailed' is the original thorough treatment. Kept after
+-- CREATE TABLE dossiers so a fresh database can run this file; a no-op there.
+ALTER TABLE dossiers ADD COLUMN IF NOT EXISTS depth TEXT NOT NULL DEFAULT 'detailed';
 
 -- Personal notes layered onto a dossier. category slots the note into the
 -- matching dossier section in the UI. game_id is unused until Phase 2 (review
