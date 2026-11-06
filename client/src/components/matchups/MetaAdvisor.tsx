@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react';
-import {
-  getMatchupAdvisor, getLadderEv,
-  type AdvisorResult, type AdvisorOpponent, type LadderEvResult,
-} from '../../api/matchups';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { AdvisorOpponent, LadderEvResult } from '../../api/matchups';
+import { advisorQuery, ladderEvQuery } from '../../queries/options';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
 import DataValue from '../common/DataValue';
 import TierBadge from '../common/TierBadge';
 import PickStrategy from './PickStrategy';
-import axios from 'axios';
 import clsx from 'clsx';
 
 function WinRatePill({ rate, confidence }: { rate: number; confidence?: 'high' | 'medium' | 'low' }) {
@@ -40,44 +38,23 @@ interface Props {
   onTogglePersonal?: () => void;
 }
 
+const EMPTY_EV: LadderEvResult[] = [];
+
 export default function MetaAdvisor({ decks, includePersonal = false, onTogglePersonal }: Props) {
   const [mode, setMode] = useState<'ev' | 'deck' | 'pick'>('ev');
-  const [selectedDeck, setSelectedDeck] = useState('');
-  const [advisorResult, setAdvisorResult] = useState<AdvisorResult | null>(null);
-  const [evResults, setEvResults] = useState<LadderEvResult[]>([]);
-  // Start in the loading state — EV ranking fetches immediately on mount, so the
-  // initial paint should show the spinner, not a transient "no data" empty state.
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [deckChoice, setSelectedDeck] = useState('');
+  const selectedDeck = deckChoice || decks[0] || '';
   const [tierFilter, setTierFilter] = useState<number | null>(null);
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
 
-  useEffect(() => {
-    if (decks.length > 0 && !selectedDeck) setSelectedDeck(decks[0]);
-  }, [decks, selectedDeck]);
-
-  // Load EV ranking
-  useEffect(() => {
-    if (mode !== 'ev') return;
-    const controller = new AbortController();
-    setLoading(true);
-    getLadderEv(controller.signal, includePersonal)
-      .then(setEvResults)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [mode, includePersonal]);
-
-  // Load per-deck advisor
-  useEffect(() => {
-    if (mode !== 'deck' || !selectedDeck) return;
-    const controller = new AbortController();
-    setLoading(true);
-    getMatchupAdvisor(selectedDeck, controller.signal, includePersonal)
-      .then(setAdvisorResult)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [mode, selectedDeck, includePersonal]);
+  // Cached per (mode inputs), so flipping EV ⇄ By Deck ⇄ back is instant.
+  const evQ = useQuery({ ...ladderEvQuery(includePersonal), enabled: mode === 'ev' });
+  const advisorQ = useQuery({ ...advisorQuery(selectedDeck, includePersonal), enabled: mode === 'deck' && selectedDeck !== '' });
+  const evResults: LadderEvResult[] = evQ.data ?? EMPTY_EV;
+  const advisorResult = advisorQ.data ?? null;
+  const loading = mode === 'ev' ? evQ.isPending : advisorQ.isPending;
+  const rawError = (mode === 'ev' ? !evQ.data && evQ.error : !advisorQ.data && advisorQ.error) || null;
+  const error = rawError && rawError !== dismissedError ? rawError.message : '';
 
   const filteredEv = tierFilter != null
     ? evResults.filter((r) => r.tier != null && r.tier <= tierFilter)
@@ -134,7 +111,7 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
         </div>
       </div>
 
-      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+      {error && <ErrorBanner message={error} onRetry={() => { setDismissedError(rawError); void (mode === 'ev' ? evQ.refetch() : advisorQ.refetch()); }} />}
 
       {/* EV Ranking mode */}
       {mode === 'ev' && (

@@ -1,12 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getSavedDecks, type SavedDeck } from '../api/deckIO';
-import { getGames, logGame } from '../api/personalGames';
+import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SavedDeck } from '../api/deckIO';
+import { logGame } from '../api/personalGames';
 import {
-  getOpponentDossier, getPilotDossier,
   generateOpponentDossier, generatePilotDossier,
   addDossierNote, type OpponentDossierContent, type PilotDossierContent,
   type DossierRow, type DossierNote, type NoteCategory, type DossierDepth,
 } from '../api/dossiers';
+import { savedDecksQuery, personalGamesQuery, opponentDossierQuery, pilotDossierQuery } from '../queries/options';
+import { invalidatePersonalData } from '../queries/invalidate';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { hapticLight } from '../utils/haptics';
 
@@ -104,9 +106,22 @@ function Section({ title, items, accentClass }: { title: string; items: string[]
   );
 }
 
+const EMPTY_DECKS: SavedDeck[] = [];
+type DossierResponse = { dossier: DossierRow<unknown> | null; notes: DossierNote[]; stale: boolean };
+
 export default function DuelMode() {
-  const [decks, setDecks] = useState<SavedDeck[]>([]);
-  const [recentOpponents, setRecentOpponents] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const decksQ = useQuery(savedDecksQuery());
+  const decks = decksQ.data ?? EMPTY_DECKS;
+  const gamesQ = useQuery(personalGamesQuery({ limit: 50 }));
+  const recentOpponents = useMemo(() => {
+    const seen = new Set<string>();
+    const recent: string[] = [];
+    for (const g of gamesQ.data ?? []) {
+      if (!seen.has(g.opponent_deck)) { seen.add(g.opponent_deck); recent.push(g.opponent_deck); }
+    }
+    return recent.slice(0, 8);
+  }, [gamesQ.data]);
   const [myDeckId, setMyDeckId] = useState<number | null>(() => {
     const stored = localStorage.getItem(MY_DECK_KEY);
     return stored ? Number(stored) : null;
@@ -115,43 +130,32 @@ export default function DuelMode() {
   const [activeOpponent, setActiveOpponent] = useState<string | null>(null);
   const [tab, setTab] = useState<'opponent' | 'pilot'>('opponent');
 
-  // Cached per "<key>:<depth>" so switching the depth toggle between an
-  // already-generated quick and detailed dossier is instant (no refetch);
-  // an absent cache entry (vs. one holding dossier: null) is what drives the
-  // loading indicator below.
-  type DepthEntry<T> = { dossier: DossierRow<T> | null; stale: boolean };
-  const [opponentCache, setOpponentCache] = useState<Record<string, DepthEntry<OpponentDossierContent>>>({});
-  const [opponentNotes, setOpponentNotes] = useState<DossierNote[]>([]);
-  const [pilotCache, setPilotCache] = useState<Record<string, DepthEntry<PilotDossierContent>>>({});
-  const [pilotNotes, setPilotNotes] = useState<DossierNote[]>([]);
-
   const [generating, setGenerating] = useState(false);
   // Defaults to 'quick' since Duel Mode is a live, mid-duel second screen —
   // 'detailed' is there for unhurried post-game review generation.
   const [depth, setDepth] = useState<DossierDepth>('quick');
-  const [error, setError] = useState('');
+  const [actionError, setError] = useState('');
   const [logFlash, setLogFlash] = useState('');
-
-  useEffect(() => {
-    getSavedDecks().then(setDecks).catch(() => {});
-    getGames({ limit: 50 })
-      .then((games) => {
-        const seen = new Set<string>();
-        const recent: string[] = [];
-        for (const g of games) {
-          if (!seen.has(g.opponent_deck)) { seen.add(g.opponent_deck); recent.push(g.opponent_deck); }
-        }
-        setRecentOpponents(recent.slice(0, 8));
-      })
-      .catch(() => {});
-  }, []);
 
   const myDeck = useMemo(() => decks.find((d) => d.id === myDeckId) ?? null, [decks, myDeckId]);
 
-  const opponentKey = activeOpponent ? `${activeOpponent}:${depth}` : null;
-  const opponentEntry = opponentKey ? opponentCache[opponentKey] : undefined;
-  const pilotKey = myDeckId ? `${myDeckId}:${depth}` : null;
-  const pilotEntry = pilotKey ? pilotCache[pilotKey] : undefined;
+  // Each archetype+depth (and deck+depth) is its own cache entry, so flipping
+  // the depth toggle between already-loaded dossiers is instant. An entry
+  // holding { dossier: null } means "never generated at this depth".
+  const opponentQ = useQuery({
+    ...opponentDossierQuery(activeOpponent ?? '', depth),
+    enabled: activeOpponent != null,
+  });
+  const pilotQ = useQuery({
+    ...pilotDossierQuery(myDeckId ?? 0, depth),
+    enabled: myDeckId != null,
+  });
+  const opponentEntry = opponentQ.data;
+  const pilotEntry = pilotQ.data;
+  const opponentNotes = opponentEntry?.notes ?? [];
+  const pilotNotes = pilotEntry?.notes ?? [];
+  const loadError = (tab === 'opponent' ? !opponentQ.data && opponentQ.error : !pilotQ.data && pilotQ.error) || null;
+  const error = actionError || (loadError ? loadError.message || 'Failed to load dossier' : '');
 
   function pickMyDeck(id: number) {
     setMyDeckId(id);
@@ -163,44 +167,14 @@ export default function DuelMode() {
     setActiveOpponent(archetype);
   }
 
-  // Fetches the archetype+depth combo the first time it's viewed; already-seen
-  // combos are served straight from opponentCache, so flipping the toggle
-  // back and forth between a previously-generated quick/detailed pair is instant.
-  useEffect(() => {
-    if (!activeOpponent || !opponentKey || opponentCache[opponentKey] !== undefined) return;
-    let cancelled = false;
-    getOpponentDossier(activeOpponent, depth)
-      .then((res) => {
-        if (cancelled) return;
-        setOpponentCache((prev) => ({ ...prev, [opponentKey]: { dossier: res.dossier, stale: res.stale } }));
-        setOpponentNotes(res.notes);
-      })
-      .catch((e: any) => !cancelled && setError(e.message || 'Failed to load dossier'));
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeOpponent, depth]);
-
-  useEffect(() => {
-    if (!myDeckId || !pilotKey || pilotCache[pilotKey] !== undefined) return;
-    let cancelled = false;
-    getPilotDossier(myDeckId, depth)
-      .then((res) => {
-        if (cancelled) return;
-        setPilotCache((prev) => ({ ...prev, [pilotKey]: { dossier: res.dossier, stale: res.stale } }));
-        setPilotNotes(res.notes);
-      })
-      .catch((e: any) => !cancelled && setError(e.message || 'Failed to load dossier'));
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myDeckId, depth]);
-
   async function handleGenerateOpponent() {
-    if (!activeOpponent || !opponentKey) return;
+    if (!activeOpponent) return;
+    const key = opponentDossierQuery(activeOpponent, depth).queryKey;
     setGenerating(true);
     setError('');
     try {
       const generated = await generateOpponentDossier(activeOpponent, depth);
-      setOpponentCache((prev) => ({ ...prev, [opponentKey]: { dossier: generated, stale: false } }));
+      queryClient.setQueryData(key, (prev) => ({ notes: prev?.notes ?? [], dossier: generated, stale: false }));
     } catch (e: any) {
       setError(e.message || 'Generation failed');
     } finally {
@@ -209,12 +183,13 @@ export default function DuelMode() {
   }
 
   async function handleGeneratePilot() {
-    if (!myDeckId || !pilotKey) return;
+    if (!myDeckId) return;
+    const key = pilotDossierQuery(myDeckId, depth).queryKey;
     setGenerating(true);
     setError('');
     try {
       const generated = await generatePilotDossier(myDeckId, depth);
-      setPilotCache((prev) => ({ ...prev, [pilotKey]: { dossier: generated, stale: false } }));
+      queryClient.setQueryData(key, (prev) => ({ notes: prev?.notes ?? [], dossier: generated, stale: false }));
     } catch (e: any) {
       setError(e.message || 'Generation failed');
     } finally {
@@ -228,8 +203,12 @@ export default function DuelMode() {
         ? { kind, archetype: activeOpponent!, category, note }
         : { kind, deck_id: myDeckId!, category, note }
     );
-    if (kind === 'opponent') setOpponentNotes((prev) => [note_, ...prev]);
-    else setPilotNotes((prev) => [note_, ...prev]);
+    // Notes belong to the archetype/deck, not the depth: add to every cached depth.
+    const prefix = kind === 'opponent' ? ['dossier', 'opponent', activeOpponent!] : ['dossier', 'pilot', myDeckId!];
+    queryClient.setQueriesData<DossierResponse>(
+      { queryKey: prefix },
+      (prev) => (prev ? { ...prev, notes: [note_, ...prev.notes] } : prev)
+    );
   }
 
   async function handleLogResult(result: 'win' | 'loss' | 'draw') {
@@ -237,6 +216,7 @@ export default function DuelMode() {
     hapticLight();
     try {
       await logGame({ deck_played: myDeck.archetype || myDeck.name, opponent_deck: activeOpponent, result, went_first: null, notes: null });
+      void invalidatePersonalData(queryClient);
       setLogFlash(`✓ ${result.toUpperCase()} logged`);
       setTimeout(() => setLogFlash(''), 2500);
     } catch (e: any) {

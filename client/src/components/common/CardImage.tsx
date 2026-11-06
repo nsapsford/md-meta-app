@@ -58,11 +58,15 @@ export default function CardImage({
             src={src}
             alt={alt}
             loading="lazy"
+            decoding="async"
             onLoad={() => setLoaded(true)}
             onError={() => setError(true)}
             className={clsx(
-              'w-full h-full object-cover transition-all duration-500',
-              loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'
+              // Opacity only: the old scale(1.1)→1 transform tween made every
+              // image a separate animating GPU layer for 500ms as it loaded —
+              // 60 at once when a decklist expands.
+              'w-full h-full object-cover transition-opacity duration-200',
+              loaded ? 'opacity-100' : 'opacity-0'
             )}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

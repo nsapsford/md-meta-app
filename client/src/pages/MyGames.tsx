@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { getDecks } from '../api/meta';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logGame } from '../api/personalGames';
+import { decksQuery } from '../queries/options';
+import { invalidatePersonalData } from '../queries/invalidate';
 import ErrorBanner from '../components/common/ErrorBanner';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import PullToRefresh from '../components/common/PullToRefresh';
@@ -8,34 +10,22 @@ import { useSyncUpdate } from '../cache/SyncUpdateContext';
 import MyMatchupSpread from '../components/matchups/MyMatchupSpread';
 
 export default function MyGames() {
-  const { dataGeneration, applyUpdate } = useSyncUpdate();
-  const [deckNames, setDeckNames] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { applyUpdate } = useSyncUpdate();
+  const queryClient = useQueryClient();
+  const decksQ = useQuery(decksQuery());
+  const deckNames = useMemo(() => [...(decksQ.data ?? []).map((d) => d.name), 'Rogue'], [decksQ.data]);
+  const loading = decksQ.isPending;
+  const error = !decksQ.data && decksQ.error ? decksQ.error.message || 'Failed to load decks' : '';
 
-  // Quick-entry form state
-  const [logDeck, setLogDeck] = useState('');
-  const [logOpponent, setLogOpponent] = useState('');
+  // Quick-entry form state ('' = default to the first deck once the list loads)
+  const [logDeckChoice, setLogDeck] = useState('');
+  const [logOpponentChoice, setLogOpponent] = useState('');
+  const logDeck = logDeckChoice || deckNames[0] || '';
+  const logOpponent = logOpponentChoice || deckNames[0] || '';
   const [logResult, setLogResult] = useState<'win' | 'loss' | 'draw'>('win');
   const [logFirst, setLogFirst] = useState<boolean | null>(null);
   const [logSaving, setLogSaving] = useState(false);
   const [logFlash, setLogFlash] = useState('');
-  // Bumped after a successful log so the spread + recent games refetch.
-  const [refreshToken, setRefreshToken] = useState(0);
-
-  // Re-runs on a Sync Update (dataGeneration bump) to refetch the deck list.
-  useEffect(() => {
-    setError('');
-    getDecks()
-      .then((decks) => {
-        const names = [...decks.map((d) => d.name), 'Rogue'];
-        setDeckNames(names);
-        setLogDeck((cur) => cur || names[0] || '');
-        setLogOpponent((cur) => cur || names[0] || '');
-      })
-      .catch((e) => setError(e.message || 'Failed to load decks'))
-      .finally(() => setLoading(false));
-  }, [dataGeneration]);
 
   const handleLogGame = async () => {
     if (!logDeck || !logOpponent) return;
@@ -44,7 +34,7 @@ export default function MyGames() {
       await logGame({ deck_played: logDeck, opponent_deck: logOpponent, result: logResult, went_first: logFirst, notes: null });
       setLogFlash(`✓ ${logResult.toUpperCase()} vs ${logOpponent} logged`);
       setTimeout(() => setLogFlash(''), 3000);
-      setRefreshToken((t) => t + 1);
+      void invalidatePersonalData(queryClient);
     } catch (e: any) {
       console.error('logGame failed:', e?.response?.status, e?.response?.data, e);
       const msg = e?.response?.data?.error || e?.message || 'unknown error';
@@ -59,7 +49,7 @@ export default function MyGames() {
     <PullToRefresh onRefresh={applyUpdate}>
     <div className="space-y-8 pb-8">
       {/* Hero header with gradient */}
-      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
+      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40">
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-md-gold to-md-text bg-clip-text text-transparent">
           My Games
         </h1>
@@ -133,7 +123,7 @@ export default function MyGames() {
             </div>
           </ErrorBoundary>
 
-          <MyMatchupSpread deckNames={deckNames} refreshToken={refreshToken} />
+          <MyMatchupSpread deckNames={deckNames} />
         </>
       ) : (
         <div className="bg-gradient-to-r from-md-surface/60 to-md-surface/40 rounded-2xl p-6 border border-md-border/40">

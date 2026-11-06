@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
 import { queryAll, queryOne, run } from '../utils/dbHelpers.js';
+import { invalidateDerived } from '../utils/memo.js';
 
 const router = Router();
 
@@ -42,6 +43,8 @@ router.post('/', async (req: Request, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, EXTRACT(EPOCH FROM NOW())::INTEGER) RETURNING *`,
       [deck_played, opponent_deck, result, went_first ?? null, notes ?? null]
     );
+    // Matchup analytics can blend personal games in (include_personal).
+    invalidateDerived('matchups:');
     res.status(201).json(row);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
@@ -52,6 +55,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const pool = getPool();
     await run(pool, 'DELETE FROM personal_games WHERE id = $1', [req.params.id]);
+    invalidateDerived('matchups:');
     res.json({ success: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

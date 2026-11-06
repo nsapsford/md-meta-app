@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react';
-import axios from 'axios';
-import { getEcosystemAnalysis } from '../../api/matchups';
+import { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ecosystemQuery } from '../../queries/options';
 import type {
   EcosystemAnalysis,
   DeckEcosystemProfile,
@@ -450,27 +450,13 @@ interface Props {
 
 export default function EcosystemView({ deckNames }: Props) {
   const isNative = useIsNative();
-  const [analysis, setAnalysis] = useState<EcosystemAnalysis | null>(null);
-  const [selectedDeck, setSelectedDeck] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const ecoQ = useQuery(ecosystemQuery());
+  const analysis: EcosystemAnalysis | null = ecoQ.data ?? null;
+  const [deckChoice, setSelectedDeck] = useState('');
+  const selectedDeck = deckChoice || deckNames[0] || '';
 
-  useEffect(() => {
-    if (deckNames.length > 0 && !selectedDeck) setSelectedDeck(deckNames[0]);
-  }, [deckNames, selectedDeck]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    getEcosystemAnalysis(controller.signal)
-      .then(setAnalysis)
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
-
-  if (error) return <ErrorBanner message={error} onRetry={() => setError('')} />;
-  if (loading) return <LoadingSpinner />;
+  if (!analysis && ecoQ.error) return <ErrorBanner message={ecoQ.error.message} onRetry={() => void ecoQ.refetch()} />;
+  if (ecoQ.isPending) return <LoadingSpinner />;
   if (!analysis || analysis.profiles.length === 0) {
     return (
       <div className="bg-md-surface border border-md-border rounded-lg p-8 text-center text-md-textMuted">

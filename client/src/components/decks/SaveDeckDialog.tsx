@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateSavedDecks } from '../../queries/invalidate';
 import { createSavedDeck } from '../../api/deckIO';
 import { hapticSuccess } from '../../utils/haptics';
 
@@ -20,6 +22,7 @@ interface Props {
 const toPayload = (cards: DeckCardLike[]) => cards.map((c) => ({ passcode: c.id, count: c.count }));
 
 export default function SaveDeckDialog({ open, onClose, main, extra, side, onSaved }: Props) {
+  const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -39,6 +42,7 @@ export default function SaveDeckDialog({ open, onClose, main, extra, side, onSav
         side: toPayload(side),
         source: 'manual',
       });
+      void invalidateSavedDecks(queryClient);
       hapticSuccess();
       onSaved?.(trimmed);
       setName('');

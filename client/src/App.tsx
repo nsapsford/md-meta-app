@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, m } from 'framer-motion';
 import clsx from 'clsx';
@@ -16,20 +17,35 @@ import { hideSplashAfterFirstPaint } from './utils/splash';
 import MotionProvider from './motion/MotionProvider';
 import SplashScreen from './components/launch/SplashScreen';
 import { useAppLaunch } from './hooks/useAppLaunch';
+import { queryClient } from './queries/queryClient';
+import { pruneStorage } from './queries/persister';
 
-// Every page is lazy so the entry chunk stays small: recharts (Dashboard,
-// MetaTrends) and other page-only weight download on first navigation instead
-// of at cold start.
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const DeckProfile = lazy(() => import('./pages/DeckProfile'));
-const CardSearch = lazy(() => import('./pages/CardSearch'));
-const Matchups = lazy(() => import('./pages/Matchups'));
-const BanList = lazy(() => import('./pages/BanList'));
-const MetaTrends = lazy(() => import('./pages/MetaTrends'));
-const DeckBuilder = lazy(() => import('./pages/DeckBuilder'));
-const MyDecks = lazy(() => import('./pages/MyDecks'));
-const MyGames = lazy(() => import('./pages/MyGames'));
-const DuelMode = lazy(() => import('./pages/DuelMode'));
+// Dashboard is the cold-start route on Android, so it is bundled into the
+// entry: no second chunk request after the entry has run, and no Suspense
+// fallback flash before the first real content. (Its recharts chart is split
+// out separately and only loads when scrolled near.) Every other page is lazy
+// and gets preloaded at idle once the app is up — see App() below.
+import Dashboard from './pages/Dashboard';
+const pageImports = {
+  deckProfile: () => import('./pages/DeckProfile'),
+  cardSearch: () => import('./pages/CardSearch'),
+  matchups: () => import('./pages/Matchups'),
+  banList: () => import('./pages/BanList'),
+  metaTrends: () => import('./pages/MetaTrends'),
+  deckBuilder: () => import('./pages/DeckBuilder'),
+  myDecks: () => import('./pages/MyDecks'),
+  myGames: () => import('./pages/MyGames'),
+  duelMode: () => import('./pages/DuelMode'),
+};
+const DeckProfile = lazy(pageImports.deckProfile);
+const CardSearch = lazy(pageImports.cardSearch);
+const Matchups = lazy(pageImports.matchups);
+const BanList = lazy(pageImports.banList);
+const MetaTrends = lazy(pageImports.metaTrends);
+const DeckBuilder = lazy(pageImports.deckBuilder);
+const MyDecks = lazy(pageImports.myDecks);
+const MyGames = lazy(pageImports.myGames);
+const DuelMode = lazy(pageImports.duelMode);
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -114,9 +130,26 @@ export default function App() {
 
   useEffect(() => {
     hideSplashAfterFirstPaint();
+    // Once the first screen is up and the main thread is quiet: parse the
+    // other page chunks so a tab switch never waits on download + compile,
+    // and tidy the IndexedDB cache. One page per idle slot keeps each task short.
+    const queue: Array<() => Promise<unknown>> = [...Object.values(pageImports), pruneStorage];
+    const idle = (cb: () => void) =>
+      typeof requestIdleCallback === 'function'
+        ? requestIdleCallback(cb, { timeout: 4000 })
+        : window.setTimeout(cb, 300);
+    let cancelled = false;
+    const next = () => {
+      const task = queue.shift();
+      if (!task || cancelled) return;
+      void task().catch(() => {}).finally(() => idle(next));
+    };
+    const startTimer = window.setTimeout(() => idle(next), 2000);
+    return () => { cancelled = true; window.clearTimeout(startTimer); };
   }, []);
 
   return (
+    <QueryClientProvider client={queryClient}>
     <MotionProvider>
     <AuthProvider>
       <OfflineCacheProvider>
@@ -166,5 +199,6 @@ export default function App() {
       </OfflineCacheProvider>
     </AuthProvider>
     </MotionProvider>
+    </QueryClientProvider>
   );
 }

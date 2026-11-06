@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { getSpread, deleteGame, getGames, type PersonalSpread, type PersonalGame } from '../../api/personalGames';
-import { readLocal, writeLocal } from '../../cache/cacheStore';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { deleteGame, type PersonalSpread, type PersonalGame } from '../../api/personalGames';
+import { personalGamesQuery, personalSpreadQuery } from '../../queries/options';
+import { invalidatePersonalData } from '../../queries/invalidate';
 import ErrorBanner from '../common/ErrorBanner';
 import LoadingSpinner from '../common/LoadingSpinner';
 import clsx from 'clsx';
 
-// Cache keys are parameterized by the filters that shape the server response.
-const spreadKey = (deck: string, days: number) => `personal-spread:${deck}:${days}`;
-const gamesKey = (deck: string) => `personal-games:${deck}`;
+const EMPTY_SPREAD: PersonalSpread[] = [];
+const EMPTY_GAMES: PersonalGame[] = [];
 
 function WinRateBar({ rate }: { rate: number }) {
   const pct = Math.round(rate * 100);
@@ -30,70 +31,33 @@ function WinRateBar({ rate }: { rate: number }) {
 
 interface Props {
   deckNames: string[];
-  /** Bump to force a refetch, e.g. after logging a new game elsewhere on the page. */
-  refreshToken?: number;
 }
 
-export default function MyMatchupSpread({ deckNames, refreshToken }: Props) {
-  const [spread, setSpread] = useState<PersonalSpread[]>([]);
-  const [recentGames, setRecentGames] = useState<PersonalGame[]>([]);
-  const [selectedDeck, setSelectedDeck] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+export default function MyMatchupSpread({ deckNames }: Props) {
+  const queryClient = useQueryClient();
+  const [deckChoice, setSelectedDeck] = useState('');
+  const selectedDeck = deckChoice || deckNames[0] || '';
   const [days, setDays] = useState(90);
 
-  useEffect(() => {
-    if (deckNames.length > 0 && !selectedDeck) setSelectedDeck(deckNames[0]);
-  }, [deckNames, selectedDeck]);
-
-  useEffect(() => {
-    if (!selectedDeck) return;
-    let cancelled = false;
-    (async () => {
-      // Local-first: paint from the device cache, then revalidate.
-      const [cachedSpread, cachedGames] = await Promise.all([
-        readLocal<PersonalSpread[]>(spreadKey(selectedDeck, days)),
-        readLocal<PersonalGame[]>(gamesKey(selectedDeck)),
-      ]);
-      if (cancelled) return;
-      if (cachedSpread) setSpread(cachedSpread);
-      if (cachedGames) setRecentGames(cachedGames);
-      setLoading(!cachedSpread);
-      try {
-        const [s, g] = await Promise.all([
-          getSpread({ deck: selectedDeck, days }),
-          getGames({ deck: selectedDeck, limit: 10 }),
-        ]);
-        if (cancelled) return;
-        setSpread(s);
-        setRecentGames(g);
-        setError('');
-        void writeLocal(spreadKey(selectedDeck, days), s);
-        void writeLocal(gamesKey(selectedDeck), g);
-      } catch (e) {
-        // With cached data on screen, a failed refresh stays silent.
-        if (!cancelled && !cachedSpread && !cachedGames) setError((e as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedDeck, days, refreshToken]);
+  // Logging or deleting a game invalidates ['personal'], which refetches these
+  // in place — no refresh-token prop threading needed.
+  const spreadQ = useQuery({ ...personalSpreadQuery({ deck: selectedDeck, days }), enabled: selectedDeck !== '' });
+  const gamesQ = useQuery({ ...personalGamesQuery({ deck: selectedDeck, limit: 10 }), enabled: selectedDeck !== '' });
+  const spread = spreadQ.data ?? EMPTY_SPREAD;
+  const recentGames = gamesQ.data ?? EMPTY_GAMES;
+  const loading = selectedDeck !== '' && spreadQ.isPending;
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
+  const rawError = (!spreadQ.data && !gamesQ.data && (spreadQ.error || gamesQ.error)) || null;
+  const error = rawError && rawError !== dismissedError ? rawError.message : '';
 
   const handleDelete = async (id: number) => {
     await deleteGame(id);
-    setRecentGames((prev) => {
-      const next = prev.filter((g) => g.id !== id);
-      void writeLocal(gamesKey(selectedDeck), next);
-      return next;
-    });
-    // Refresh spread
-    getSpread({ deck: selectedDeck, days })
-      .then((s) => {
-        setSpread(s);
-        void writeLocal(spreadKey(selectedDeck, days), s);
-      })
-      .catch(() => {});
+    // Drop the row immediately, then let the refetch settle the spread.
+    queryClient.setQueryData<PersonalGame[]>(
+      personalGamesQuery({ deck: selectedDeck, limit: 10 }).queryKey,
+      (prev) => prev?.filter((g) => g.id !== id)
+    );
+    void invalidatePersonalData(queryClient);
   };
 
   const totalGames = spread.filter((s) => s.deck_played.toLowerCase() === selectedDeck.toLowerCase())
@@ -134,7 +98,7 @@ export default function MyMatchupSpread({ deckNames, refreshToken }: Props) {
           </select>
         </div>
 
-        {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+        {error && <ErrorBanner message={error} onRetry={() => { setDismissedError(rawError); void spreadQ.refetch(); void gamesQ.refetch(); }} />}
 
         {loading ? <LoadingSpinner /> : spread.length > 0 ? (
           <>

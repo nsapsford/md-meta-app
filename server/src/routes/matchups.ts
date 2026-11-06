@@ -5,6 +5,12 @@ import * as mdm from '../services/mdmService.js';
 import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendService.js';
 import { computeEcosystemAnalysis } from '../services/ecosystemAnalysisService.js';
 import { computeLadderEv } from '../services/ladderEvService.js';
+import { memoize } from '../utils/memo.js';
+
+// Matrix, ecosystem and ladder-EV are recomputed from several Neon queries
+// plus in-process modelling, yet only change when a sync runs or a personal
+// game is logged. Each parameter combination is computed once and reused until
+// one of those write paths calls invalidateDerived('matchups:').
 
 const router = Router();
 
@@ -40,7 +46,8 @@ router.get('/matrix', async (req: Request, res: Response) => {
     const infer = req.query.infer === 'true';
     const includePersonal = req.query.include_personal === 'true';
     const pool = getPool();
-    res.json(await buildFullMatrix(pool, source, infer, includePersonal));
+    res.json(await memoize(`matchups:matrix:${source}:${infer}:${includePersonal}`,
+      () => buildFullMatrix(pool, source, infer, includePersonal)));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -52,7 +59,7 @@ router.get('/ecosystem', async (req: Request, res: Response) => {
     const source = (req.query.source as string) || 'blended';
     const deckFilter = req.query.deck as string | undefined;
     const pool = getPool();
-    const analysis = await computeEcosystemAnalysis(pool, source);
+    const analysis = await memoize(`matchups:ecosystem:${source}`, () => computeEcosystemAnalysis(pool, source));
 
     if (deckFilter) {
       const profile = analysis.profiles.find(
@@ -175,7 +182,10 @@ router.get('/ladder-ev', async (req: Request, res: Response) => {
     const cwRaw = parseFloat(req.query.counter_weight as string);
     const counterWeight = Number.isFinite(cwRaw) ? Math.max(0, Math.min(1, cwRaw)) : 0.35;
     const pool = getPool();
-    const results = await computeLadderEv(pool, source, infer, includePersonal, counterWeight, reinforce);
+    const results = await memoize(
+      `matchups:ladder-ev:${source}:${infer}:${includePersonal}:${counterWeight}:${reinforce}`,
+      () => computeLadderEv(pool, source, infer, includePersonal, counterWeight, reinforce)
+    );
     res.json(results);
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

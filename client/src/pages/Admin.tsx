@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getSyncStatus, triggerSync, SYNC_TTL, SOURCE_LABEL, type SyncRecord, type SyncSource } from '../api/sync';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { triggerSync, SYNC_TTL, SOURCE_LABEL, type SyncRecord, type SyncSource } from '../api/sync';
+import { syncStatusQuery } from '../queries/options';
 import { ADMIN_TOKEN_KEY as TOKEN_KEY } from '../utils/adminToken';
 import { bulkGenerateOpponentDossiers } from '../api/dossiers';
 
@@ -19,27 +21,19 @@ function isStale(record: SyncRecord): boolean {
 export default function Admin() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '');
   const [tokenInput, setTokenInput] = useState('');
-  const [records, setRecords] = useState<SyncRecord[]>([]);
   const [running, setRunning] = useState<SyncSource | null>(null);
   const [flash, setFlash] = useState<{ source: SyncSource; ok: boolean } | null>(null);
   const [dossierBusy, setDossierBusy] = useState(false);
   const [dossierResult, setDossierResult] = useState<string>('');
 
   const authenticated = Boolean(token);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(async () => {
-    try {
-      setRecords(await getSyncStatus());
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (authenticated) {
-      refresh();
-      const id = setInterval(refresh, 30_000);
-      return () => clearInterval(id);
-    }
-  }, [authenticated, refresh]);
+  // Same cache entry as the app-wide poll; this observer just polls faster
+  // (30s) while the admin page is open.
+  const statusQ = useQuery({ ...syncStatusQuery(), enabled: authenticated, refetchInterval: 30_000 });
+  const records: SyncRecord[] = statusQ.data ?? [];
+  const refresh = () => queryClient.invalidateQueries({ queryKey: syncStatusQuery().queryKey });
 
   function saveToken() {
     localStorage.setItem(TOKEN_KEY, tokenInput);

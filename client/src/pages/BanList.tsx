@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { getBanList } from '../api/meta';
-import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import type { BanListData, BanCard } from '../types/meta';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { banListQuery } from '../queries/options';
+import { useFirstContent } from '../launch/firstContent';
+import type { BanCard } from '../types/meta';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
 
@@ -106,24 +107,12 @@ function BanSection({
 }
 
 export default function BanList() {
-  const { dataGeneration } = useSyncUpdate();
-  const [data, setData] = useState<BanListData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const banQ = useQuery(banListQuery());
+  const data = banQ.data ?? null;
+  useFirstContent(data != null || banQ.isError);
 
-  const load = () => {
-    setLoading(true);
-    getBanList()
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, [dataGeneration]);
-
-  if (loading) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
-  if (error) return <ErrorBanner message={error} onRetry={load} />;
-  if (!data) return null;
+  if (banQ.isPending) return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
+  if (!data) return <ErrorBanner message={banQ.error?.message ?? 'Failed to load ban list'} onRetry={() => void banQ.refetch()} />;
 
   return (
     <div className="space-y-6">

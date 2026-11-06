@@ -68,6 +68,32 @@ export async function cacheWrite<T>(key: string, data: T): Promise<void> {
   });
 }
 
+export async function cacheRemove(key: string): Promise<void> {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(key);
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed'));
+    });
+  } catch {
+    // Nothing to remove if the DB never opened.
+  }
+}
+
+/** Every stored entry as [key, data] pairs. */
+export async function cacheEntries<T = unknown>(): Promise<Array<[string, T]>> {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(STORE, 'readonly');
+    const all = await requestToPromise<CacheEntry<T>[]>(tx.objectStore(STORE).getAll());
+    return all.map((e) => [e.key, e.data]);
+  } catch {
+    return [];
+  }
+}
+
 export async function cacheClear(): Promise<void> {
   try {
     const db = await openDb();

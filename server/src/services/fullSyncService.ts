@@ -8,6 +8,7 @@ import { clearCache } from './cacheService.js';
 import { invalidateInteractionProfiles } from './cardInteractionService.js';
 import { invalidateTierListCache, warmTierListCache } from '../routes/tierList.js';
 import { invalidateFeaturedCache, warmFeaturedCache } from '../routes/decks.js';
+import { invalidateDerived } from '../utils/memo.js';
 
 export interface FullSyncResult {
   cards: number | null;
@@ -120,6 +121,7 @@ async function runFullSyncNow(): Promise<FullSyncResult> {
   await stage('cacheRefresh', async () => {
     invalidateTierListCache();
     invalidateFeaturedCache();
+    invalidateDerived(); // matchup analytics + card popularity ordering
     await warmTierListCache();
     await warmFeaturedCache();
   });

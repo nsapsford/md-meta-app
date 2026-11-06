@@ -2,6 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary';
+// Inter ships inside the bundle (and so inside the APK) instead of coming from
+// fonts.googleapis.com: that stylesheet was render-blocking, so every cold
+// start waited on a DNS + TLS round trip to Google before first paint — and
+// offline it stalled until the request failed.
+import '@fontsource-variable/inter/wght.css';
 import './index.css';
 
 async function initNative() {

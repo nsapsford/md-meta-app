@@ -61,7 +61,10 @@ html {
      who opt out. Pairs with hapticLight() at the call sites. */
   .press {
     @apply transition-transform duration-100 ease-out;
-    will-change: transform;
+    /* No will-change here: .press sits on every tier-list row and card, and
+       will-change promotes each one to its own GPU layer for its whole life —
+       dozens of layers in one scroller. Chrome promotes on its own for the
+       100ms the press transition actually runs. */
   }
   @media (prefers-reduced-motion: no-preference) {
     .press:active {
@@ -73,23 +76,33 @@ html {
   .card-hover {
     @apply transition-all duration-300 ease-out;
   }
-  .card-hover:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.12);
+  /* Hover effects only where a real pointer can hover. On touch, a tap
+     leaves :hover stuck, which would start a 300ms transform + box-shadow
+     transition (a repaint every frame) on whatever was tapped. Tailwind's
+     hover: utilities get the same treatment via hoverOnlyWhenSupported. */
+  @media (hover: hover) and (pointer: fine) {
+    .card-hover:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.12);
+    }
   }
 
   /* Featured card glassmorphism with enhanced effects */
+  /* No backdrop-filter: these cards scroll over the plain page background,
+     where a 16px blur is invisible but still costs a GPU blur pass per card
+     on every frame they're on screen. */
   .featured-card {
     background: rgba(17,17,19,0.75);
-    backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.08);
     @apply transition-all duration-300;
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
   }
-  .featured-card:hover {
-    border-color: rgba(255,255,255,0.18);
-    background: rgba(17,17,19,0.85);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  @media (hover: hover) and (pointer: fine) {
+    .featured-card:hover {
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(17,17,19,0.85);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
   }
 
   /* Enhanced glass surface effect */
@@ -129,32 +142,40 @@ html {
     box-shadow: 0 0 24px rgba(255, 45, 85, 0.35);
     @apply transition-all duration-300;
   }
-  .tier-glow-0:hover {
-    box-shadow: 0 0 32px rgba(255, 45, 85, 0.5);
+  @media (hover: hover) and (pointer: fine) {
+    .tier-glow-0:hover {
+      box-shadow: 0 0 32px rgba(255, 45, 85, 0.5);
+    }
   }
 
   .tier-glow-1 {
     box-shadow: 0 0 24px rgba(255, 140, 56, 0.35);
     @apply transition-all duration-300;
   }
-  .tier-glow-1:hover {
-    box-shadow: 0 0 32px rgba(255, 140, 56, 0.5);
+  @media (hover: hover) and (pointer: fine) {
+    .tier-glow-1:hover {
+      box-shadow: 0 0 32px rgba(255, 140, 56, 0.5);
+    }
   }
 
   .tier-glow-2 {
     box-shadow: 0 0 24px rgba(255, 214, 10, 0.28);
     @apply transition-all duration-300;
   }
-  .tier-glow-2:hover {
-    box-shadow: 0 0 32px rgba(255, 214, 10, 0.4);
+  @media (hover: hover) and (pointer: fine) {
+    .tier-glow-2:hover {
+      box-shadow: 0 0 32px rgba(255, 214, 10, 0.4);
+    }
   }
 
   .tier-glow-3 {
     box-shadow: 0 0 24px rgba(56, 201, 110, 0.28);
     @apply transition-all duration-300;
   }
-  .tier-glow-3:hover {
-    box-shadow: 0 0 32px rgba(56, 201, 110, 0.4);
+  @media (hover: hover) and (pointer: fine) {
+    .tier-glow-3:hover {
+      box-shadow: 0 0 32px rgba(56, 201, 110, 0.4);
+    }
   }
 
   /* Enhanced gold shimmer text */

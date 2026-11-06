@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { getSyncStatus, SYNC_TTL, SOURCE_LABEL, type SyncRecord } from '../../api/sync';
+import { useMemo } from 'react';
+import { SYNC_TTL, SOURCE_LABEL, type SyncRecord } from '../../api/sync';
+import { useSyncUpdate } from '../../cache/SyncUpdateContext';
 
 function isStale(record: SyncRecord): boolean {
   const age = Math.floor(Date.now() / 1000) - record.synced_at;
@@ -7,26 +8,11 @@ function isStale(record: SyncRecord): boolean {
 }
 
 export default function SyncStatusBanner() {
-  const [problems, setProblems] = useState<SyncRecord[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function check() {
-      try {
-        const records = await getSyncStatus();
-        if (!cancelled) {
-          setProblems(records.filter(r => r.status === 'failed' || isStale(r)));
-        }
-      } catch {
-        // silently ignore — don't banner on a status-check failure
-      }
-    }
-
-    check();
-    const id = setInterval(check, 5 * 60 * 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  const { syncRecords } = useSyncUpdate();
+  const problems = useMemo(
+    () => syncRecords.filter((r) => r.status === 'failed' || isStale(r)),
+    [syncRecords]
+  );
 
   if (problems.length === 0) return null;
 

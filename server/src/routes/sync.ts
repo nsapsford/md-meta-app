@@ -10,8 +10,17 @@ import { config } from '../config.js';
 import { updateTiersFromScrape } from '../services/tierListService.js';
 import { invalidateTierListCache } from './tierList.js';
 import { invalidateFeaturedCache } from './decks.js';
+import { invalidateDerived } from '../utils/memo.js';
 
 const router = Router();
+
+// Any sync can change what the memoized analytics and card ordering are built
+// from, so drop them once each sync request completes (success or not —
+// a partial sync still changes data).
+router.use((req, res, next) => {
+  if (req.method === 'POST') res.on('finish', () => invalidateDerived());
+  next();
+});
 
 router.post('/cards', async (_req: Request, res: Response) => {
   try {

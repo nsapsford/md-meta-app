@@ -31,7 +31,17 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   };
 
   return (
-    <header className="sticky top-0 z-50 h-16 border-b border-md-border/60 bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl shadow-lg shadow-black/10">
+    <header
+      className={clsx(
+        'sticky top-0 z-50 h-16 border-b border-md-border/60 shadow-lg shadow-black/10',
+        // In the app the header is opaque: a sticky backdrop-blur-xl re-blurs
+        // everything scrolling beneath it on every frame (the single most
+        // expensive thing on screen during a scroll on a mid-range GPU).
+        isNative
+          ? 'bg-md-bg/[0.97]'
+          : 'bg-gradient-to-r from-md-bg/80 via-md-bg/90 to-md-bg/80 backdrop-blur-xl'
+      )}
+    >
       <div
         className={clsx(
           'flex items-center justify-between px-4 md:px-6 h-full origin-left will-change-transform transition-transform duration-300',

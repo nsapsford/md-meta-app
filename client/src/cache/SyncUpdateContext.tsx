@@ -4,11 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { getSyncStatus, type SyncRecord } from '../api/sync';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SyncRecord } from '../api/sync';
+import { syncStatusQuery } from '../queries/options';
 import { isUpdateAvailable } from '../utils/syncFreshness';
 import { computeServerVersion, getStoredVersion, setStoredVersion } from './syncVersion';
 
@@ -17,83 +18,63 @@ export interface SyncUpdateContextValue {
   updateAvailable: boolean;
   /** True while a pull-only refresh is in flight (for badge feedback). */
   applying: boolean;
-  /**
-   * Bumped by applyUpdate(). Data pages add this to their primary fetch
-   * effect's deps so they refetch + re-render in place without a full reload.
-   */
-  dataGeneration: number;
   /** Latest sync status records, shared so pages don't each re-poll. */
   syncRecords: SyncRecord[];
-  /** Pull the newer server data into the cache and re-render active pages. */
+  /** Refetch every query on screen (and mark the rest stale), then clear the prompt. */
   applyUpdate: () => Promise<void>;
 }
 
 const SyncUpdateContext = createContext<SyncUpdateContextValue | null>(null);
 
-// How often we quietly re-check the server's data version while the app is open.
-const CHECK_INTERVAL_MS = 5 * 60_000;
+const EMPTY: SyncRecord[] = [];
 
 export function SyncUpdateProvider({ children }: { children: ReactNode }) {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const queryClient = useQueryClient();
+  // The single sync-status poll for the whole app (5 min interval + on focus).
+  // Pages read syncRecords from here instead of requesting it themselves.
+  const { data: syncRecords = EMPTY } = useQuery(syncStatusQuery());
+  const [storedVersion, setStoredVersionState] = useState<number | null | undefined>(undefined);
   const [applying, setApplying] = useState(false);
-  const [dataGeneration, setDataGeneration] = useState(0);
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-  // Most recently observed server version, used by applyUpdate to set the baseline.
-  const serverVersionRef = useRef<number | null>(null);
-
-  const check = useCallback(async () => {
-    let records: SyncRecord[];
-    try {
-      records = await getSyncStatus();
-    } catch {
-      // A status-check failure should never surface as a spurious update prompt.
-      return;
-    }
-    setSyncRecords(records);
-    const serverVersion = computeServerVersion(records);
-    serverVersionRef.current = serverVersion;
-
-    const stored = await getStoredVersion();
-    if (stored == null) {
-      // First run: establish a silent baseline so we only flag genuine changes.
-      await setStoredVersion(serverVersion);
-      return;
-    }
-    setUpdateAvailable(isUpdateAvailable(serverVersion, stored));
-  }, []);
 
   useEffect(() => {
-    void check();
-    const interval = window.setInterval(() => void check(), CHECK_INTERVAL_MS);
-    const onFocus = () => void check();
-    window.addEventListener('focus', onFocus);
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [check]);
+    let cancelled = false;
+    void getStoredVersion().then((v) => { if (!cancelled) setStoredVersionState(v); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const serverVersion = syncRecords.length > 0 ? computeServerVersion(syncRecords) : null;
+
+  // First run: establish a silent baseline so we only flag genuine changes.
+  useEffect(() => {
+    if (storedVersion === null && serverVersion != null) {
+      setStoredVersionState(serverVersion);
+      void setStoredVersion(serverVersion);
+    }
+  }, [storedVersion, serverVersion]);
+
+  const updateAvailable =
+    storedVersion != null && serverVersion != null && isUpdateAvailable(serverVersion, storedVersion);
 
   const applyUpdate = useCallback(async () => {
     setApplying(true);
     try {
-      // Re-render every mounted data page in place: they refetch on the bump,
-      // which repopulates the local cache from the network as a side effect.
-      setDataGeneration((g) => g + 1);
-      if (serverVersionRef.current != null) {
-        await setStoredVersion(serverVersionRef.current);
+      // Active queries refetch now (and the persister rewrites them); inactive
+      // ones are marked stale and refetch when their page next mounts.
+      await queryClient.invalidateQueries();
+      const latest = queryClient.getQueryData<SyncRecord[]>(syncStatusQuery().queryKey);
+      if (latest && latest.length > 0) {
+        const v = computeServerVersion(latest);
+        setStoredVersionState(v);
+        await setStoredVersion(v);
       }
-      setUpdateAvailable(false);
-      // The page refetch runs in its own effect (not awaited here), so hold the
-      // "Updating…" feedback long enough to register while it lands.
-      await new Promise((resolve) => setTimeout(resolve, 600));
     } finally {
       setApplying(false);
     }
-  }, []);
+  }, [queryClient]);
 
   const value = useMemo<SyncUpdateContextValue>(
-    () => ({ updateAvailable, applying, dataGeneration, syncRecords, applyUpdate }),
-    [updateAvailable, applying, dataGeneration, syncRecords, applyUpdate]
+    () => ({ updateAvailable, applying, syncRecords, applyUpdate }),
+    [updateAvailable, applying, syncRecords, applyUpdate]
   );
 
   return <SyncUpdateContext.Provider value={value}>{children}</SyncUpdateContext.Provider>;
