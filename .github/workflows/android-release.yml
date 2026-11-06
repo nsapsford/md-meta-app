@@ -99,6 +99,15 @@ jobs:
       - name: Stage signed APK with versioned name
         run: cp "$GITHUB_WORKSPACE/client/android/app/build/outputs/apk/release/app-release.apk" "$RUNNER_TEMP/md-meta-app-${APP_VERSION_NAME}.apk"
 
+      # Hand-written notes for this version, if any (docs/release-notes/<tag>.md);
+      # GitHub's generated "What's Changed" list is appended after them.
+      - name: Find release notes
+        id: notes
+        working-directory: ${{ github.workspace }}
+        run: |
+          f="docs/release-notes/${APP_VERSION_NAME}.md"
+          if [ -f "$f" ]; then echo "path=$f" >> "$GITHUB_OUTPUT"; fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -108,5 +117,6 @@ jobs:
           # checked-out commit. Ignored when the tag already exists (tag push).
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.path }}
           fail_on_unmatched_files: true
           files: ${{ runner.temp }}/md-meta-app-${{ env.APP_VERSION_NAME }}.apk
