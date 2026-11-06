@@ -1,23 +1,18 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { getMatchupMatrix, type MatchupMatrix } from '../api/matchups';
-import { getDecks } from '../api/meta';
-import { getSyncStatus, type SyncRecord } from '../api/sync';
-import type { DeckType } from '../types/deck';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { MatchupMatrixSkeleton } from '../components/common/Skeleton';
 import CountUp from '../components/common/CountUp';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
+import { decksQuery, matchupMatrixQuery, type MatrixSource } from '../queries/options';
+import { useFirstContent } from '../launch/firstContent';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
 import MobileMatchupFocus from '../components/matchups/MobileMatchupFocus';
 import { useIsNative } from '../hooks/useIsNative';
 import clsx from 'clsx';
-
-type MatrixSource = 'blended' | 'untapped' | 'tournament';
 
 function getWinRateColor(rate: number): string {
   if (rate >= 0.60) return 'bg-md-green/30 text-md-green';
@@ -45,57 +40,34 @@ function _getRelationshipIcon(rate: number): string {
 
 export default function Matchups() {
   const isNative = useIsNative();
-  const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
+  const { applying, applyUpdate, syncRecords } = useSyncUpdate();
   const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem'>('matrix');
-  const [decks, setDecks] = useState<DeckType[]>([]);
-  const [matrix, setMatrix] = useState<MatchupMatrix | null>(null);
   const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
   const [inferGaps, setInferGaps] = useState(true);
   const [includePersonal, setIncludePersonal] = useState(true);
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
 
-  // Re-runs on a Sync Update (dataGeneration bump) to refetch decks + status.
-  useEffect(() => {
-    getSyncStatus().then(setSyncRecords).catch(() => {});
-    getDecks()
-      .then((d) => {
-        const filtered = d.filter((dk) => dk.tier != null && dk.tier <= 3);
-        setDecks(filtered);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [dataGeneration]);
+  const decksQ = useQuery(decksQuery());
+  const decks = useMemo(
+    () => (decksQ.data ?? []).filter((dk) => dk.tier != null && dk.tier <= 3),
+    [decksQ.data]
+  );
+  const deckNames = useMemo(() => decks.map((d) => d.name), [decks]);
+  const advisorDecks = useMemo(() => [...deckNames, 'Rogue'], [deckNames]);
 
-  useEffect(() => {
-    if (tab !== 'matrix') return;
-    const controller = new AbortController();
-    // Cache key carries the params so each source/toggle combo caches separately.
-    const cacheKey = `${LOCAL_KEYS.matchupMatrix}:${matrixSource}:${inferGaps}:${includePersonal}`;
-    let cancelled = false;
-    setLoading(true);
+  // Each source/toggle combination is its own cache entry, so flipping back to
+  // one you've already viewed is instant; switching tabs no longer refetches.
+  const matrixQ = useQuery({
+    ...matchupMatrixQuery(matrixSource, inferGaps, includePersonal),
+    enabled: tab === 'matrix',
+  });
+  const matrix = matrixQ.data ?? null;
+  const loading = matrixQ.isPending;
 
-    void (async () => {
-      // Local-first: paint a cached matrix for these params if we have one.
-      const cached = await readLocal<MatchupMatrix>(cacheKey);
-      if (cancelled) return;
-      if (cached) { setMatrix(cached); setLoading(false); }
-      try {
-        const fresh = await getMatchupMatrix(matrixSource, inferGaps, controller.signal, includePersonal);
-        if (cancelled) return;
-        setMatrix(fresh);
-        void writeLocal(cacheKey, fresh);
-      } catch (e) {
-        // Keep the cached matrix on a network failure.
-        if (!axios.isCancel(e) && !cached) setError((e as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; controller.abort(); };
-  }, [tab, matrixSource, inferGaps, includePersonal, dataGeneration]);
+  // Surface an error only when there's nothing (cached or fresh) to show.
+  const rawError = (!decksQ.data && decksQ.error) || (!matrix && matrixQ.error) || null;
+  const error = rawError && rawError !== dismissedError ? rawError.message : '';
+  useFirstContent(matrix != null || error !== '');
 
   const tabClass = (t: string) => clsx(
     'px-4 py-2 text-sm font-semibold rounded-lg transition-colors',
@@ -118,7 +90,7 @@ export default function Matchups() {
         <button className={tabClass('advisor')} onClick={() => setTab('advisor')}>Meta Advisor</button>
       </div>
 
-      {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+      {error && <ErrorBanner message={error} onRetry={() => { setDismissedError(rawError); void decksQ.refetch(); void matrixQ.refetch(); }} />}
 
       {tab === 'matrix' && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
@@ -233,11 +205,11 @@ export default function Matchups() {
       )}
 
       {tab === 'ecosystem' && (
-        <EcosystemView deckNames={decks.map((d) => d.name)} />
+        <EcosystemView deckNames={deckNames} />
       )}
 
       {tab === 'advisor' && (
-        <MetaAdvisor decks={[...decks.map((d) => d.name), 'Rogue']} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
+        <MetaAdvisor decks={advisorDecks} includePersonal={includePersonal} onTogglePersonal={() => setIncludePersonal(!includePersonal)} />
       )}
     </div>
     </PullToRefresh>

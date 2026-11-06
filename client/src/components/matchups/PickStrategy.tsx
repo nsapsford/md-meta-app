@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { getLadderEv, type LadderEvResult, type LadderEvMatchup } from '../../api/matchups';
-import { getSpread, type PersonalSpread } from '../../api/personalGames';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { LadderEvResult, LadderEvMatchup } from '../../api/matchups';
+import type { PersonalSpread } from '../../api/personalGames';
+import { ladderEvQuery, personalSpreadQuery } from '../../queries/options';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
 import TierBadge from '../common/TierBadge';
@@ -290,30 +291,17 @@ function CounterQueueBanner({ top3, picks }: { top3: LadderEvResult[]; picks: La
 
 // ── Main ──
 
+const EMPTY_RESULTS: LadderEvResult[] = [];
+const EMPTY_SPREAD: PersonalSpread[] = [];
+
 export default function PickStrategy({ decks, includePersonal = false, onTogglePersonal }: Props) {
   const isNative = useIsNative();
-  const [results, setResults] = useState<LadderEvResult[]>([]);
-  const [spread, setSpread] = useState<PersonalSpread[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    setLoading(true);
-    getLadderEv(controller.signal, includePersonal, { reinforce: true })
-      .then((data) => { if (!cancelled) setResults(data); })
-      .catch((e) => { if (!cancelled && !axios.isCancel(e)) setError(e.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; controller.abort(); };
-  }, [includePersonal]);
-
-  useEffect(() => {
-    if (!includePersonal) { setSpread([]); return; }
-    let cancelled = false;
-    getSpread().then((data) => { if (!cancelled) setSpread(data); }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [includePersonal]);
+  const resultsQ = useQuery(ladderEvQuery(includePersonal, true));
+  const spreadQ = useQuery({ ...personalSpreadQuery(), enabled: includePersonal });
+  const results: LadderEvResult[] = resultsQ.data ?? EMPTY_RESULTS;
+  const spread: PersonalSpread[] = includePersonal ? spreadQ.data ?? EMPTY_SPREAD : EMPTY_SPREAD;
+  const loading = resultsQ.isPending;
+  const error = !resultsQ.data && resultsQ.error ? resultsQ.error.message : '';
 
   const comfortMap = useMemo(() => {
     const m: Record<string, Comfort & { wins: number }> = {};
@@ -337,7 +325,7 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
   const medPop = useMemo(() => median(results.map((r) => r.popularity).filter((p) => p > 0)), [results]);
   const topPickDecks = useMemo(() => new Set(ranked.slice(0, 3).map((r) => r.deck)), [ranked]);
 
-  if (error) return <ErrorBanner message={error} onRetry={() => setError('')} />;
+  if (error) return <ErrorBanner message={error} onRetry={() => void resultsQ.refetch()} />;
   if (loading) return <LoadingSpinner />;
   if (results.length === 0) {
     return <p className="text-sm text-md-textMuted py-4 text-center">No matchup data available. Run a sync to populate.</p>;

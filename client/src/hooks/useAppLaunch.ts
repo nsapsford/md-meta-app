@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { onFirstContent } from '../launch/firstContent';
 
 export type LaunchPhase = 'splash' | 'transition' | 'done';
 
 interface UseAppLaunchOpts {
-  /** Total ms the splash holds before starting the transition into the dashboard. */
-  splashHoldMs?: number;
+  /** Never start the exit sooner than this, so the splash can't flash. */
+  minHoldMs?: number;
+  /** Start the exit by this point even if no page has content yet (cold cache, slow host). */
+  maxHoldMs?: number;
   /** Duration of the splash -> dashboard transition itself. */
   transitionMs?: number;
   /** Skip entirely (e.g. for hot reload during dev). */
@@ -13,30 +16,40 @@ interface UseAppLaunchOpts {
 
 /**
  * Drives the in-app launch sequence: 'splash' (logo + wordmark visible) ->
- * 'transition' (splash resolving into the dashboard, per SplashScreen's
- * transitionStyle) -> 'done' (unmount SplashScreen, dashboard fully interactive).
+ * 'transition' (splash resolving into the app, per SplashScreen's
+ * transitionStyle) -> 'done' (SplashScreen unmounted).
  *
- * Mirrors the timing explored in the launch-animation prototype:
- * splash holds ~800ms, transition ~420ms, then the dashboard's own
- * staggered entrance (handled inside Dashboard/App's existing motion.div's)
- * takes over.
+ * The exit starts when the first page reports content (see
+ * launch/firstContent.ts), clamped to [minHoldMs, maxHoldMs]. With a warm
+ * cache that is ~minHoldMs; with nothing cached it is maxHoldMs, which matches
+ * the old fixed 800ms hold, so no launch is slower than before.
  */
 export function useAppLaunch(opts: UseAppLaunchOpts = {}) {
-  const { splashHoldMs = 800, transitionMs = 420, disabled = false } = opts;
+  const { minHoldMs = 250, maxHoldMs = 800, transitionMs = 420, disabled = false } = opts;
   const [phase, setPhase] = useState<LaunchPhase>(disabled ? 'done' : 'splash');
-  const timers = useRef<number[]>([]);
 
   useEffect(() => {
     if (disabled) return;
-    timers.current.push(
-      window.setTimeout(() => setPhase('transition'), splashHoldMs)
-    );
-    timers.current.push(
-      window.setTimeout(() => setPhase('done'), splashHoldMs + transitionMs)
-    );
+    const start = performance.now();
+    const timers: number[] = [];
+    let started = false;
+
+    const beginExit = () => {
+      if (started) return;
+      started = true;
+      setPhase('transition');
+      timers.push(window.setTimeout(() => setPhase('done'), transitionMs));
+    };
+
+    const unsubscribe = onFirstContent(() => {
+      const wait = Math.max(0, minHoldMs - (performance.now() - start));
+      timers.push(window.setTimeout(beginExit, wait));
+    });
+    timers.push(window.setTimeout(beginExit, maxHoldMs));
+
     return () => {
-      timers.current.forEach(clearTimeout);
-      timers.current = [];
+      unsubscribe();
+      timers.forEach(clearTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

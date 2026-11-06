@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMetaTrends } from '../api/meta';
-import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
-import { searchCards } from '../api/cards';
+import { useQuery } from '@tanstack/react-query';
+import { metaTrendsQuery, tierListQuery } from '../queries/options';
+import { useFirstContent } from '../launch/firstContent';
 import type { MetaSnapshot } from '../types/meta';
 import ErrorBanner from '../components/common/ErrorBanner';
 import { TrendsSkeleton } from '../components/common/Skeleton';
@@ -36,6 +35,8 @@ function MiniCardFan({ images }: { images: string[] }) {
           }}
         >
           <img
+            loading="lazy"
+            decoding="async"
             src={src}
             alt=""
             className="rounded shadow-md border border-md-border/50"
@@ -47,16 +48,23 @@ function MiniCardFan({ images }: { images: string[] }) {
   );
 }
 
+const EMPTY_TRENDS: Record<string, MetaSnapshot[]> = {};
+
 export default function MetaTrends() {
-  const { dataGeneration } = useSyncUpdate();
-  const [trends, setTrends] = useState<Record<string, MetaSnapshot[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const trendsQ = useQuery(metaTrendsQuery());
+  // Representative card art per deck already ships with the tier list (and is
+  // usually cached from the Dashboard), so the table's card fans cost no
+  // requests. This used to run up to ~4 card searches per deck, for 10 decks,
+  // twice per visit (once for the cached trends, again for the fresh ones).
+  const tierListQ = useQuery(tierListQuery());
+  const trends = trendsQ.data ?? EMPTY_TRENDS;
+  const loading = trendsQ.isPending;
+  const error = !trendsQ.data && trendsQ.error ? trendsQ.error.message : '';
   const [metric, setMetric] = useState<'power' | 'tier'>('power');
   const [timeRange, setTimeRange] = useState(7);
-  const [deckImages, setDeckImages] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const isNative = useIsNative();
+  useFirstContent(!loading || error !== '');
 
   // Play the line-draw animation only on the first reveal. Re-animating on every
   // slider/metric change is what produces the abrupt "jump to end" — recharts
@@ -67,36 +75,26 @@ export default function MetaTrends() {
   }, [loading]);
   const animateChart = !hasAnimatedRef.current;
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      // Local-first: paint instantly from the device cache when we have a
-      // copy, so a cold start never blocks on the network.
-      const cached = await readLocal<Record<string, MetaSnapshot[]>>(LOCAL_KEYS.metaTrends);
-      if (cancelled) return;
-      if (cached) {
-        setTrends(cached);
-        setLoading(false);
+  const deckImages = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    const tl = tierListQ.data;
+    if (!tl) return out;
+    for (const tier of [tl['0'], tl['1'], tl['2'], tl['3'], tl.rogue]) {
+      for (const d of tier ?? []) {
+        const imgs = (d.cards ?? []).map((c) => c.image).filter((x): x is string => !!x).slice(0, 3);
+        if (imgs.length > 0) out[d.name] = imgs;
+        else if (d.thumbnail_image) out[d.name] = [d.thumbnail_image];
       }
-      try {
-        const fresh = await getMetaTrends();
-        if (cancelled) return;
-        setTrends(fresh);
-        void writeLocal(LOCAL_KEYS.metaTrends, fresh);
-      } catch (e: any) {
-        if (!cached) setError(e.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [dataGeneration]);
+    }
+    return out;
+  }, [tierListQ.data]);
 
-  useEffect(() => {
-    const names = Object.keys(trends);
-    if (names.length === 0) return;
-
-    const top = names
+  // Derived series, memoised so dragging the range slider only re-slices
+  // instead of re-scanning every snapshot for every deck on each input event.
+  const { topDecks, chartData, hasRealData } = useMemo(() => {
+    const deckNames = Object.keys(trends);
+    const hasRealData = deckNames.some((name) => trends[name]?.some((s) => s.power != null && s.power > 0));
+    const topDecks = deckNames
       .map((name) => {
         const latest = trends[name]?.find((s) => s.power != null && s.power > 0);
         return { name, power: latest?.power ?? 0 };
@@ -106,62 +104,34 @@ export default function MetaTrends() {
       .slice(0, 10)
       .map((d) => d.name);
 
-    const SUFFIXES = new Set(['engine', 'deck', 'turbo', 'combo', 'control', 'stun']);
-
-    async function findImages(deckName: string): Promise<string[]> {
-      const extract = (cards: { image_small_url: string }[]) =>
-        cards.filter((c) => c.image_small_url).slice(0, 3).map((c) => c.image_small_url);
-
-      const words = deckName.trim().split(/\s+/);
-      while (words.length > 1 && SUFFIXES.has(words[words.length - 1].toLowerCase())) {
-        words.pop();
+    const byDate = new Map<string, Record<string, MetaSnapshot>>();
+    for (const dn of topDecks) {
+      for (const snap of trends[dn] ?? []) {
+        let row = byDate.get(snap.snapshot_date);
+        if (!row) byDate.set(snap.snapshot_date, (row = {}));
+        if (!row[dn]) row[dn] = snap; // first snapshot per date wins, as before
       }
-      const baseWords = [...words];
-
-      // 1. Try exact archetype match, progressively dropping last word
-      while (words.length > 0) {
-        const archetype = words.join(' ');
-        const candidates = [archetype];
-        if (archetype.endsWith('s') || archetype.endsWith('S')) candidates.push(archetype.slice(0, -1));
-        for (const a of candidates) {
-          const result = await searchCards({ archetype: a, limit: '3', sort: 'name' });
-          const imgs = extract(result.cards);
-          if (imgs.length > 0) return imgs;
-        }
-        words.pop();
-      }
-
-      // 2. Fallback: text search on card names using singular base form
-      const base = baseWords.join(' ');
-      const qCandidates = [base];
-      if (base.endsWith('s') || base.endsWith('S')) qCandidates.push(base.slice(0, -1));
-      for (const q of qCandidates) {
-        const result = await searchCards({ q, limit: '3', sort: 'name' });
-        const imgs = extract(result.cards);
-        if (imgs.length > 0) return imgs;
-      }
-
-      return [];
     }
+    const allDates = new Set<string>();
+    for (const snapshots of Object.values(trends)) for (const s of snapshots) allDates.add(s.snapshot_date);
 
-    Promise.allSettled(top.map((name) => findImages(name))).then((results) => {
-      const images: Record<string, string[]> = {};
-      results.forEach((result, i) => {
-        if (result.status === 'fulfilled' && result.value.length > 0) images[top[i]] = result.value;
-      });
-      setDeckImages(images);
-    });
-  }, [trends]);
+    const chartData = Array.from(allDates).sort().map((date) => {
+      const point: Record<string, string | number | null> = { date };
+      const row = byDate.get(date);
+      for (const dn of topDecks) {
+        const snap = row?.[dn];
+        point[dn] = metric === 'power' ? (snap?.power ?? null) : (snap?.tier ?? null);
+      }
+      return point;
+    }).filter((point) => topDecks.some((dn) => point[dn] != null));
+
+    return { topDecks, chartData, hasRealData };
+  }, [trends, metric]);
 
   if (loading) return <div className="py-4"><TrendsSkeleton /></div>;
   if (error) return <ErrorBanner message={error} />;
 
-  const deckNames = Object.keys(trends);
-  const hasRealData = deckNames.some((name) =>
-    trends[name]?.some((s) => s.power != null && s.power > 0)
-  );
-
-  if (deckNames.length === 0 || !hasRealData) {
+  if (topDecks.length === 0 || !hasRealData) {
     return (
       <div className="space-y-4">
         <h2 className="text-2xl font-bold"><span className="text-shimmer">Meta Trends</span></h2>
@@ -171,33 +141,6 @@ export default function MetaTrends() {
       </div>
     );
   }
-
-  const dates = new Set<string>();
-  for (const snapshots of Object.values(trends)) {
-    for (const s of snapshots) dates.add(s.snapshot_date);
-  }
-  const sortedDates = Array.from(dates).sort();
-
-  const topDecks = deckNames
-    .map((name) => {
-      const latest = trends[name]?.find((s) => s.power != null && s.power > 0);
-      return { name, power: latest?.power ?? 0 };
-    })
-    .filter((d) => d.power > 0)
-    .sort((a, b) => b.power - a.power)
-    .slice(0, 10)
-    .map((d) => d.name);
-
-  const chartData = sortedDates.map((date) => {
-    const point: Record<string, any> = { date };
-    for (const dn of topDecks) {
-      const snap = trends[dn]?.find((s) => s.snapshot_date === date);
-      point[dn] = metric === 'power'
-        ? (snap?.power != null ? snap.power : null)
-        : (snap?.tier != null ? snap.tier : null);
-    }
-    return point;
-  }).filter((point) => topDecks.some((dn) => point[dn] != null));
 
   const visibleData = chartData.slice(-Math.min(timeRange, chartData.length));
 

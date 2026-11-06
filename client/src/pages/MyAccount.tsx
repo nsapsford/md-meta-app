@@ -86,7 +86,7 @@ export default function MyAccount() {
               {syncStatus === 'error' && ' · some sources failed, will retry'}
             </p>
             <ul className="text-xs text-md-textMuted list-disc list-inside">
-              {syncResources.map((r) => <li key={r.key}>{r.label}</li>)}
+              {syncResources.map((r) => <li key={r.label}>{r.label}</li>)}
             </ul>
             <div className="flex gap-2">
               <button

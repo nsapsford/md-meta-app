@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDeckProfile } from '../api/meta';
-import { useSyncUpdate } from '../cache/SyncUpdateContext';
+import { useQuery } from '@tanstack/react-query';
+import { deckProfileQuery } from '../queries/options';
+import { useFirstContent } from '../launch/firstContent';
 import type { DeckProfile as DeckProfileType } from '../types/deck';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -52,6 +53,8 @@ function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
           }}
         >
           <img
+            loading="lazy"
+            decoding="async"
             src={card.imageUrl!}
             alt={card.cardName}
             className="rounded shadow-lg border border-md-border/50"
@@ -66,32 +69,30 @@ function HeaderCardFan({ deck }: { deck: DeckProfileType }) {
 
 export default function DeckProfile() {
   const { name } = useParams<{ name: string }>();
-  const { dataGeneration } = useSyncUpdate();
   const navigate = useNavigate();
-  const [deck, setDeck] = useState<DeckProfileType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [expandedDeck, setExpandedDeck] = useState<string | null>(null);
+  const deckName = name ? decodeURIComponent(name) : '';
+  const deckQ = useQuery({ ...deckProfileQuery(deckName), enabled: deckName !== '' });
+  const deck: DeckProfileType | null = deckQ.data ?? null;
+  // null = "the first list", until the user picks one (or collapses it with '').
+  const [expandedChoice, setExpandedChoice] = useState<string | null>(null);
+  const expandedDeck = expandedChoice ?? deck?.topDecks?.[0]?.id ?? null;
+  const setExpandedDeck = (id: string | null) => setExpandedChoice(id ?? '');
+  useFirstContent(deck != null || deckQ.isError);
 
-  useEffect(() => {
-    if (!name) return;
-    setLoading(true);
-    getDeckProfile(decodeURIComponent(name))
-      .then((d) => {
-        setDeck(d);
-        if (d.topDecks?.[0]?.id) setExpandedDeck(d.topDecks[0].id);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [name, dataGeneration]);
+  // Sorted once per payload, not on every render (and without mutating the
+  // cached object, which the old in-place .sort() did).
+  const { mainCards, extraCards } = useMemo(() => {
+    const breakdown = deck?.breakdown_json;
+    const byUsage = (a: { percentage?: number; usage?: number }, b: { percentage?: number; usage?: number }) =>
+      (b.percentage || b.usage || 0) - (a.percentage || a.usage || 0);
+    return {
+      mainCards: Array.isArray(breakdown?.main) ? [...breakdown.main].sort(byUsage) : [],
+      extraCards: Array.isArray(breakdown?.extra) ? [...breakdown.extra].sort(byUsage) : [],
+    };
+  }, [deck]);
 
-  if (loading) return <LoadingSpinner size="lg" />;
-  if (error) return <ErrorBanner message={error} />;
-  if (!deck) return null;
-
-  const breakdown = deck.breakdown_json;
-  const mainCards = Array.isArray(breakdown?.main) ? breakdown.main : [];
-  const extraCards = Array.isArray(breakdown?.extra) ? breakdown.extra : [];
+  if (deckQ.isPending) return <LoadingSpinner size="lg" />;
+  if (!deck) return <ErrorBanner message={deckQ.error?.message ?? 'Deck not found'} />;
 
   return (
     <div className="space-y-6">
@@ -160,7 +161,7 @@ export default function DeckProfile() {
         <div className="bg-md-surface border border-md-border rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-4">Main Deck Breakdown</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {mainCards.sort((a, b) => (b.percentage || b.usage || 0) - (a.percentage || a.usage || 0)).map((card, i) => {
+            {mainCards.map((card, i) => {
               const usage = card.percentage || card.usage || 0;
               const cardName = card.cardName || card.name || '';
               return (
@@ -189,7 +190,7 @@ export default function DeckProfile() {
         <div className="bg-md-surface border border-md-border rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-4">Extra Deck Breakdown</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {extraCards.sort((a, b) => (b.percentage || b.usage || 0) - (a.percentage || a.usage || 0)).map((card, i) => {
+            {extraCards.map((card, i) => {
               const usage = card.percentage || card.usage || 0;
               const cardName = card.cardName || card.name || '';
               return (

@@ -31,6 +31,8 @@ export default function CardFan({ cards, thumbnail, max = 3, tierColor }: CardFa
       <div className="relative flex items-end justify-center" style={{ height: '130px', width: '100%' }}>
         <div className="absolute bottom-0" style={{ transformOrigin: 'bottom center', zIndex: 0 }}>
           <img
+            loading="lazy"
+            decoding="async"
             src={thumbnail}
             alt="Deck thumbnail"
             className={cardImgClass}
@@ -74,6 +76,8 @@ export default function CardFan({ cards, thumbnail, max = 3, tierColor }: CardFa
         >
           {card.image ? (
             <img
+              loading="lazy"
+              decoding="async"
               src={card.image}
               alt={card.name}
               className={cardImgClass}

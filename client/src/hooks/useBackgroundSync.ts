@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { syncResources, type SyncResource } from '../offline/resources';
-import { cacheRead, cacheWrite } from '../storage/offlineCache';
+import { onlineManager, focusManager, useQueryClient } from '@tanstack/react-query';
+import { syncResources } from '../offline/resources';
 import { kvSet } from '../storage/kvStore';
 
 export type BackgroundSyncStatus = 'idle' | 'syncing' | 'error';
@@ -13,31 +12,20 @@ export interface BackgroundSyncState {
   syncNow: () => Promise<void>;
 }
 
-// How often the engine wakes up to check resource TTLs. Each wake-up only
-// hits the network for resources whose cached copy is older than its ttlMs.
 const SYNC_CHECK_INTERVAL_MS = 5 * 60_000;
 
-async function syncResource(resource: SyncResource<unknown>, force: boolean): Promise<boolean> {
-  const cached = await cacheRead(resource.key);
-  if (!force && cached && Date.now() - cached.updatedAt < resource.ttlMs) return false;
-  const data = await resource.fetch();
-  await cacheWrite(resource.key, data);
-  return true;
-}
-
 /**
- * Silent background synchronization engine. While `enabled`, it keeps every
- * registered SyncResource fresh in IndexedDB by re-fetching stale entries:
- *  - shortly after mount (deferred to idle time so it never delays first paint)
- *  - on a fixed interval while the app is open
- *  - when the native app returns to the foreground (Capacitor App plugin)
- *  - when the network comes back online
+ * Keeps the offline datasets warm while "Enable Local Caching" is on. Each
+ * run is a prefetchQuery per resource with staleTime = its TTL, so TanStack
+ * Query skips anything still fresh, dedupes against a page that is fetching
+ * the same data, and the persister writes the result to IndexedDB.
  *
- * All work is plain async I/O (fetch + IndexedDB), so nothing here blocks the
- * main thread; failures are swallowed per-resource so one bad endpoint can't
- * stall the rest of the cache.
+ * Runs at idle after boot, on an interval, and when the app regains focus or
+ * the network — focus/online come from TanStack's managers, which
+ * queryClient.ts wires to Capacitor's appStateChange.
  */
 export function useBackgroundSync(enabled: boolean): BackgroundSyncState {
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<BackgroundSyncStatus>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
   const runningRef = useRef(false);
@@ -50,15 +38,17 @@ export function useBackgroundSync(enabled: boolean): BackgroundSyncState {
     setStatus('syncing');
     let anyFailed = false;
     try {
-      // Sequential on purpose: this is a background task, so we'd rather
-      // trickle requests than burst-compete with user-initiated fetches.
+      // Sequential on purpose: background work trickles instead of competing
+      // with the requests of the page the user is looking at.
       for (const resource of syncResources) {
         if (!enabledRef.current) return;
         try {
-          await syncResource(resource, force);
+          const opts = { ...resource.options(), staleTime: force ? 0 : resource.ttlMs };
+          // fetchQuery (not prefetchQuery) so a failure is visible here.
+          await queryClient.fetchQuery(opts);
         } catch (err) {
           anyFailed = true;
-          console.warn(`[BackgroundSync] ${resource.key} failed:`, err);
+          console.warn(`[BackgroundSync] ${resource.label} failed:`, err);
         }
       }
       const now = Date.now();
@@ -68,41 +58,24 @@ export function useBackgroundSync(enabled: boolean): BackgroundSyncState {
       runningRef.current = false;
       setStatus(anyFailed ? 'error' : 'idle');
     }
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // First pass: wait for idle time so cached pages render before we spend
-    // bandwidth refreshing the cache.
     const idleHandle: number = typeof requestIdleCallback === 'function'
       ? requestIdleCallback(() => void runSync(), { timeout: 5000 })
       : window.setTimeout(() => void runSync(), 1500);
-
     const interval = window.setInterval(() => void runSync(), SYNC_CHECK_INTERVAL_MS);
-
-    const onOnline = () => void runSync();
-    window.addEventListener('online', onOnline);
-
-    // On native, also resync when the app comes back from the background —
-    // intervals are throttled or frozen while the WebView is suspended.
-    let removeResumeListener: (() => void) | null = null;
-    if (Capacitor.isNativePlatform()) {
-      void import('@capacitor/app').then(({ App }) =>
-        App.addListener('appStateChange', ({ isActive }) => {
-          if (isActive) void runSync();
-        })
-      ).then((handle) => {
-        removeResumeListener = () => void handle.remove();
-      }).catch(() => {});
-    }
+    const unsubOnline = onlineManager.subscribe((online) => { if (online) void runSync(); });
+    const unsubFocus = focusManager.subscribe((focused) => { if (focused) void runSync(); });
 
     return () => {
       if (typeof requestIdleCallback === 'function') cancelIdleCallback(idleHandle);
       else window.clearTimeout(idleHandle);
       window.clearInterval(interval);
-      window.removeEventListener('online', onOnline);
-      removeResumeListener?.();
+      unsubOnline();
+      unsubFocus();
     };
   }, [enabled, runSync]);
 

@@ -1,9 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db/connection.js';
+import { memoize } from '../utils/memo.js';
 import { queryAll, queryOne } from '../utils/dbHelpers.js';
 import * as ygopd from '../services/ygoprodeckService.js';
 
 const router = Router();
+
+/** How often each card name appears across tournament top-deck lists. */
+async function cardPopularity(pool: ReturnType<typeof getPool>): Promise<Map<string, number>> {
+  const topDecks = await queryAll(pool, 'SELECT main_deck_json FROM top_decks WHERE main_deck_json IS NOT NULL');
+  const freq = new Map<string, number>();
+  for (const td of topDecks) {
+    try {
+      const cards = JSON.parse(td.main_deck_json);
+      for (const c of cards) {
+        const name = c.cardName?.toLowerCase();
+        if (name) freq.set(name, (freq.get(name) || 0) + 1);
+      }
+    } catch {}
+  }
+  return freq;
+}
 
 router.get('/archetypes', async (_req: Request, res: Response) => {
   try {
@@ -46,28 +63,27 @@ router.get('/search', async (req: Request, res: Response) => {
     const offset = (pageNum - 1) * limitNum;
 
     if (sort === 'popular') {
-      // Build frequency map from tournament top decks
-      const topDecks = await queryAll(pool, 'SELECT main_deck_json FROM top_decks WHERE main_deck_json IS NOT NULL');
-      const freq = new Map<string, number>();
-      for (const td of topDecks) {
-        try {
-          const cards = JSON.parse(td.main_deck_json);
-          for (const c of cards) {
-            const name = c.cardName?.toLowerCase();
-            if (name) freq.set(name, (freq.get(name) || 0) + 1);
-          }
-        } catch {}
-      }
-
-      const allCards = await queryAll(pool, `SELECT * FROM cards ${where} ORDER BY name`, params);
-      allCards.sort((a: any, b: any) => {
-        const fa = freq.get(a.name.toLowerCase()) || 0;
-        const fb = freq.get(b.name.toLowerCase()) || 0;
-        return fb - fa;
+      // Previously every page request re-read every top-deck list and every
+      // matching card row (full rows, descriptions included) from Neon, then
+      // sorted in JS and threw away all but 30 — and infinite scroll asks for
+      // a page every few seconds. Now the popularity-ordered id list per
+      // filter is computed once (memoised until the next sync), and each page
+      // fetches only its own rows by primary key.
+      const filterKey = JSON.stringify(params) + where;
+      const orderedIds = await memoize(`cards:popular:${filterKey}`, async () => {
+        const freq = await memoize('cards:popularity', () => cardPopularity(pool));
+        const rows = await queryAll(pool, `SELECT id, name FROM cards ${where} ORDER BY name`, params) as { id: number; name: string }[];
+        rows.sort((a, b) => (freq.get(b.name.toLowerCase()) || 0) - (freq.get(a.name.toLowerCase()) || 0));
+        return rows.map((r) => r.id);
       });
 
-      const total = allCards.length;
-      const cards = allCards.slice(offset, offset + limitNum);
+      const total = orderedIds.length;
+      const pageIds = orderedIds.slice(offset, offset + limitNum);
+      const pageRows = pageIds.length > 0
+        ? await queryAll(pool, 'SELECT * FROM cards WHERE id = ANY($1::int[])', [pageIds])
+        : [];
+      const byId = new Map(pageRows.map((c: any) => [c.id, c]));
+      const cards = pageIds.map((id) => byId.get(id)).filter(Boolean);
       res.json({ cards, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
     } else {
       const countRow = await queryOne(pool, `SELECT COUNT(*) as total FROM cards ${where}`, params);

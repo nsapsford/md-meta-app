@@ -2,6 +2,13 @@ import type { Config } from 'tailwindcss';
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  future: {
+    // hover: utilities only apply on devices that can really hover. On
+    // Android a tap otherwise leaves :hover stuck on the element, which kicks
+    // off the transition-all / shadow / scale hover effects and repaints
+    // mid-scroll.
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       colors: {
@@ -41,7 +48,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       spacing: {
         'safe-t': 'env(safe-area-inset-top)',

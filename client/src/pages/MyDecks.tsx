@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
 import { hapticMedium } from '../utils/haptics';
 import ErrorBanner from '../components/common/ErrorBanner';
 import CardFan from '../components/common/CardFan';
-import { useOfflineQuery } from '../hooks/useOfflineQuery';
-import { useOfflineCache } from '../offline/OfflineCacheContext';
-import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import { savedDecksResource } from '../offline/resources';
+import { savedDecksQuery } from '../queries/options';
+import { invalidateSavedDecks } from '../queries/invalidate';
 
 const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
   rows.flatMap((r) => Array(r.count).fill(r.passcode));
@@ -27,27 +26,23 @@ const fanCardsFor = (deck: SavedDeck) =>
     : deck.main_json.slice(0, 3).map((c) => ({ name: String(c.passcode), image: cardImageSmall(c.passcode) }));
 
 export default function MyDecks() {
-  const { enabled: cachingEnabled } = useOfflineCache();
-  // Offline-first: renders instantly from the local cache (when enabled) and
-  // silently revalidates against the server.
-  const { data, loading, error: loadError, refresh, source } =
-    useOfflineQuery(savedDecksResource, cachingEnabled);
-  // A Sync Update revalidates this page in place. useOfflineQuery already loads
-  // on mount, so skip the initial generation (0) to avoid a redundant fetch.
-  const { dataGeneration } = useSyncUpdate();
-  const firstGen = useRef(dataGeneration);
-  useEffect(() => {
-    if (dataGeneration === firstGen.current) return;
-    void refresh();
-  }, [dataGeneration, refresh]);
+  const queryClient = useQueryClient();
+  // Offline-first: restored from IndexedDB when "Enable Local Caching" is on,
+  // then revalidated against the server.
+  const decksQ = useQuery(savedDecksQuery());
+  const refresh = () => decksQ.refetch();
+  const loading = decksQ.isPending;
+  // Showing a stored copy because the latest refresh failed.
+  const offlineCopy = decksQ.data != null && decksQ.isRefetchError;
   const [actionError, setActionError] = useState('');
-  const decks = data ?? [];
+  const decks = decksQ.data ?? [];
+  const loadError = !decksQ.data && decksQ.error ? decksQ.error.message : '';
   const error = actionError || loadError || '';
 
   const remove = async (id: number) => {
     if (!window.confirm('Delete this deck?')) return;
     hapticMedium();
-    try { await deleteSavedDeck(id); await refresh(); }
+    try { await deleteSavedDeck(id); await invalidateSavedDecks(queryClient); }
     catch (e) { setActionError(e instanceof Error ? e.message : String(e)); }
   };
 
@@ -62,7 +57,7 @@ export default function MyDecks() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <h2 className="page-title">My Decks</h2>
-        {source === 'cache' && (
+        {offlineCopy && (
           <span className="text-[10px] uppercase font-semibold text-md-textMuted border border-md-border rounded px-1.5 py-0.5">
             Offline copy
           </span>

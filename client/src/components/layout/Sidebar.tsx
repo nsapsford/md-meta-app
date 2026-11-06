@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
-import { getSyncStatus, type SyncRecord } from '../../api/sync';
+import type { SyncRecord } from '../../api/sync';
+import { useSyncUpdate } from '../../cache/SyncUpdateContext';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -39,11 +39,8 @@ function dotColor(record: SyncRecord): string {
 }
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-
-  useEffect(() => {
-    getSyncStatus().then(setSyncRecords).catch(() => {});
-  }, []);
+  // Shared app-wide sync-status poll (see SyncUpdateContext) — no request of its own.
+  const { syncRecords } = useSyncUpdate();
 
   return (
     <nav className={clsx(

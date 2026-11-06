@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateSavedDecks } from '../../queries/invalidate';
 import { parseYdk, exportYdk, createSavedDeck, type ResolvedCard } from '../../api/deckIO';
 import { copyText, shareYdk, openDeckPortal } from '../../utils/deckShare';
 import { buildYdke, buildKonamiDeepLink } from '../../utils/ydke';
@@ -43,6 +45,7 @@ const toPayload = (cards: BuilderCard[]) => cards.map((c) => ({ passcode: c.id, 
 const countOf = (cards: BuilderCard[]) => cards.reduce((s, c) => s + c.count, 0);
 
 export default function DeckImportExport({ open, onClose, main, extra, side, deckName, onImport, onSaved }: Props) {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'import' | 'export'>('import');
   const [ydkInput, setYdkInput] = useState('');
   const [ydkOutput, setYdkOutput] = useState('');
@@ -153,6 +156,7 @@ export default function DeckImportExport({ open, onClose, main, extra, side, dec
         side: toPayload(side),
         source: 'manual',
       });
+      void invalidateSavedDecks(queryClient);
       hapticSuccess();
       onSaved?.(name);
       ok(`Saved "${name}".`);

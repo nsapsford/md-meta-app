@@ -17,7 +17,10 @@ export default function MobileBottomNav() {
   return (
     <>
       <nav
-        className="fixed bottom-0 inset-x-0 z-40 border-t border-md-border/60 bg-md-bg/95 backdrop-blur-xl shadow-2xl shadow-black/30"
+        // Opaque rather than backdrop-blur: a blurred fixed bar re-blurs the content
+        // scrolling under it on every frame, a classic source of scroll jank on
+        // mid-range Android GPUs. At 97% opacity the blur was barely visible anyway.
+        className="fixed bottom-0 inset-x-0 z-40 border-t border-md-border/60 bg-md-bg/[0.97] shadow-2xl shadow-black/30"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="grid grid-cols-5 h-14">

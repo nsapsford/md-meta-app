@@ -19,7 +19,7 @@ export default function TierListView({ tierList }: TierListViewProps) {
         const tierNum = tierKey === 'rogue' ? null : parseInt(tierKey);
 
         return (
-          <div key={tierKey} className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 rounded-2xl border border-md-border/40 overflow-hidden backdrop-blur-sm shadow-lg shadow-black/5">
+          <div key={tierKey} className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 rounded-2xl border border-md-border/40 overflow-hidden shadow-lg shadow-black/5">
             {/* Tier header with enhanced styling */}
             <div className={clsx('border-b border-md-border/30 flex items-center gap-4 bg-md-surface/40', isNative ? 'px-3 py-3' : 'px-6 py-5')}>
               <TierBadge tier={tierNum} size="lg" />
@@ -66,6 +66,8 @@ export default function TierListView({ tierList }: TierListViewProps) {
                           {/* Image layer */}
                           {card.image && (
                             <img
+                              loading="lazy"
+                              decoding="async"
                               src={card.image}
                               alt={card.name}
                               className="absolute inset-0 w-full h-full object-cover object-top"
@@ -84,6 +86,8 @@ export default function TierListView({ tierList }: TierListViewProps) {
                           </svg>
                         </div>
                         <img
+                          loading="lazy"
+                          decoding="async"
                           src={deck.thumbnail_image}
                           alt={deck.name}
                           className="absolute inset-0 w-full h-full object-cover object-top"

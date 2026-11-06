@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { getMetaMovers, type MoverEntry, type MoversResult } from '../../api/meta';
+import type { MoverEntry } from '../../api/meta';
+import { metaMoversQuery } from '../../queries/options';
 import clsx from 'clsx';
 
 function MoverRow({ deck, rank }: { deck: MoverEntry; rank: number }) {
@@ -19,6 +21,8 @@ function MoverRow({ deck, rank }: { deck: MoverEntry; rank: number }) {
       <div className="w-10 h-7 rounded overflow-hidden border border-md-border/30 bg-md-surface shrink-0 relative">
         {deck.thumbnail_image ? (
           <img
+            loading="lazy"
+            decoding="async"
             src={deck.thumbnail_image}
             alt={deck.deck_type_name}
             className="absolute inset-0 w-full h-full object-cover object-top"
@@ -42,17 +46,10 @@ function MoverRow({ deck, rank }: { deck: MoverEntry; rank: number }) {
 }
 
 export default function MoversWidget() {
-  const [data, setData] = useState<MoversResult | null>(null);
   const [windowDays, setWindowDays] = useState<7 | 14>(7);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    getMetaMovers(windowDays)
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [windowDays]);
+  const moversQ = useQuery(metaMoversQuery(windowDays));
+  const data = moversQ.data ?? null;
+  const loading = moversQ.isPending;
 
   // Only render if we have meaningful data
   if (!loading && (!data || ((data.risers?.length ?? 0) === 0 && (data.fallers?.length ?? 0) === 0))) {
@@ -60,7 +57,7 @@ export default function MoversWidget() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 backdrop-blur-sm">
+    <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-orange to-md-red"></div>

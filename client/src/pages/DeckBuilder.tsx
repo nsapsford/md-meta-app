@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { searchCards } from '../api/cards';
-import { scoreDeck, validateDeck } from '../api/meta';
+import { useQuery } from '@tanstack/react-query';
+import { cardQuickSearchQuery, deckScoreQuery } from '../queries/options';
 import { useDebounce } from '../hooks/useDebounce';
 import SearchInput from '../components/common/SearchInput';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -26,14 +25,10 @@ function isExtraDeck(type: string): boolean {
 
 export default function DeckBuilder() {
   const [query, setQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Card[]>([]);
+
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
   const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
-  const [score, setScore] = useState<any>(null);
-  const [validation, setValidation] = useState<any>(null);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState('');
   const [ioOpen, setIoOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
@@ -41,16 +36,11 @@ export default function DeckBuilder() {
 
   const debouncedQuery = useDebounce(query, 300);
 
-  useEffect(() => {
-    if (!debouncedQuery) { setSearchResults([]); return; }
-    const controller = new AbortController();
-    setSearching(true);
-    searchCards({ q: debouncedQuery, limit: '20' }, controller.signal)
-      .then((r) => setSearchResults(r.cards))
-      .catch((e) => { if (!axios.isCancel(e)) setError(e.message); })
-      .finally(() => setSearching(false));
-    return () => controller.abort();
-  }, [debouncedQuery]);
+  // A superseded search is aborted instead of racing the newer one, and a
+  // query you typed before comes straight from cache.
+  const searchQ = useQuery(cardQuickSearchQuery(debouncedQuery));
+  const searchResults: Card[] = debouncedQuery ? searchQ.data ?? [] : [];
+  const searching = searchQ.isFetching;
 
   const addCard = useCallback((card: Card, toSide = false) => {
     hapticLight();
@@ -99,18 +89,18 @@ export default function DeckBuilder() {
   const extraCount = extraDeck.reduce((s, c) => s + c.count, 0);
   const sideCount = sideDeck.reduce((s, c) => s + c.count, 0);
 
-  // Score deck
-  useEffect(() => {
-    const mainNames = mainDeck.flatMap((c) => Array(c.count).fill(c.name));
-    const extraNames = extraDeck.flatMap((c) => Array(c.count).fill(c.name));
-    if (mainNames.length === 0) { setScore(null); return; }
-
-    const timer = setTimeout(() => {
-      scoreDeck(mainNames, extraNames).then(setScore).catch((e) => setError(e.message));
-      validateDeck(mainNames, extraNames, []).then(setValidation).catch((e) => setError(e.message));
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [mainDeck, extraDeck]);
+  // Score + validate the deck 500ms after the last edit. Keyed by contents, so
+  // an out-of-order response can never overwrite a newer one, and undoing an
+  // edit reuses the earlier result.
+  const deckNames = useMemo(() => ({
+    main: mainDeck.flatMap((c) => Array<string>(c.count).fill(c.name)),
+    extra: extraDeck.flatMap((c) => Array<string>(c.count).fill(c.name)),
+  }), [mainDeck, extraDeck]);
+  const debouncedDeck = useDebounce(deckNames, 500);
+  const scoreQ = useQuery(deckScoreQuery(debouncedDeck.main, debouncedDeck.extra));
+  const score = mainDeck.length > 0 ? scoreQ.data?.score ?? null : null;
+  const validation = mainDeck.length > 0 ? scoreQ.data?.validation ?? null : null;
+  const loadError = (searchQ.error?.message ?? '') || (scoreQ.error?.message ?? '');
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-3.5rem)]">
@@ -126,7 +116,7 @@ export default function DeckBuilder() {
               className="w-full flex items-center gap-2 p-2 rounded hover:bg-md-surfaceHover transition-colors text-left"
             >
               {card.image_small_url && (
-                <img src={card.image_small_url} alt="" className="w-8 h-12 object-cover rounded" />
+                <img loading="lazy" decoding="async" src={card.image_small_url} alt="" className="w-8 h-12 object-cover rounded" />
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium truncate">{card.name}</p>
@@ -139,7 +129,15 @@ export default function DeckBuilder() {
 
       {/* Deck Area */}
       <div className="flex-1 lg:overflow-y-auto p-1 lg:p-4 space-y-4">
-        {error && <ErrorBanner message={error} onRetry={() => setError('')} />}
+        {loadError && (
+          <ErrorBanner
+            message={loadError}
+            onRetry={() => {
+              if (debouncedQuery) void searchQ.refetch();
+              if (debouncedDeck.main.length > 0) void scoreQ.refetch();
+            }}
+          />
+        )}
 
         {/* Score & Validation */}
         <div className="flex flex-wrap items-center gap-3">
@@ -189,7 +187,7 @@ export default function DeckBuilder() {
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
-                  <img src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
+                  <img loading="lazy" decoding="async" src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
                   {card.count > 1 && (
                     <span className="absolute -top-1 -right-1 bg-md-blue text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                       {card.count}
@@ -220,7 +218,7 @@ export default function DeckBuilder() {
                   className="relative group"
                   title={`${card.name} (click to remove)`}
                 >
-                  <img src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
+                  <img loading="lazy" decoding="async" src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
                   {card.count > 1 && (
                     <span className="absolute -top-1 -right-1 bg-md-purple text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                       {card.count}
@@ -246,7 +244,7 @@ export default function DeckBuilder() {
             <div className="flex flex-wrap gap-2">
               {sideDeck.map((card) => (
                 <button key={card.name} onClick={() => removeCard(card.name, 'side')} className="relative group" title={`${card.name} (click to remove)`}>
-                  <img src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
+                  <img loading="lazy" decoding="async" src={card.image_small_url} alt={card.name} className="w-14 h-20 object-cover rounded" />
                   {card.count > 1 && (
                     <span className="absolute -top-1 -right-1 bg-md-green text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{card.count}</span>
                   )}

@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useBackgroundSync, type BackgroundSyncStatus } from '../hooks/useBackgroundSync';
-import { cacheClear } from '../storage/offlineCache';
+import { clearPersistedQueries, setUserDataPersistence } from '../queries/persister';
 import { kvGet, kvRemove, kvSet } from '../storage/kvStore';
 
 export interface OfflineCacheContextValue {
@@ -25,6 +26,7 @@ export interface OfflineCacheContextValue {
 const OfflineCacheContext = createContext<OfflineCacheContextValue | null>(null);
 
 export function OfflineCacheProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [enabled, setEnabledState] = useState(false);
   const [ready, setReady] = useState(false);
   const [persistedSyncAt, setPersistedSyncAt] = useState<number | null>(null);
@@ -38,6 +40,7 @@ export function OfflineCacheProvider({ children }: { children: ReactNode }) {
         kvGet('offline.lastFullSyncAt'),
       ]);
       if (cancelled) return;
+      setUserDataPersistence(stored ?? false);
       setEnabledState(stored ?? false);
       setPersistedSyncAt(lastSync);
       setReady(true);
@@ -50,22 +53,26 @@ export function OfflineCacheProvider({ children }: { children: ReactNode }) {
   const { status: syncStatus, lastSyncAt, syncNow } = useBackgroundSync(ready && enabled);
 
   const setEnabled = useCallback(async (next: boolean) => {
+    setUserDataPersistence(next);
     setEnabledState(next);
     await kvSet('offline.cachingEnabled', next);
     if (!next) {
       // Turning the feature off is also a privacy action: drop everything
-      // we've mirrored onto the device.
-      await cacheClear();
+      // we've mirrored onto the device. Shared meta data is re-persisted the
+      // next time it is fetched; the user's own data no longer is.
+      await clearPersistedQueries();
       await kvRemove('offline.lastFullSyncAt');
       setPersistedSyncAt(null);
     }
   }, []);
 
   const clearCache = useCallback(async () => {
-    await cacheClear();
+    await clearPersistedQueries();
+    // Also forget the in-memory copies, so the next view really refetches.
+    queryClient.removeQueries({ predicate: (q) => q.meta?.persist != null });
     await kvRemove('offline.lastFullSyncAt');
     setPersistedSyncAt(null);
-  }, []);
+  }, [queryClient]);
 
   const value = useMemo<OfflineCacheContextValue>(() => ({
     enabled,

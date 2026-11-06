@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import cron from 'node-cron';
 import { config } from './config.js';
 import { initDb, getPool } from './db/connection.js';
@@ -38,6 +39,11 @@ async function main() {
   const app = express();
 
   app.use(helmet({ crossOriginResourcePolicy: false }));
+  // gzip JSON responses. The matchup matrix, meta trends and deck profiles are
+  // large, highly repetitive JSON; uncompressed they dominate transfer time on
+  // a phone connection. (A proxy in front that already compresses sees
+  // Content-Encoding set and leaves the body alone.)
+  app.use(compression());
 
   const allowedOrigins: (string | RegExp)[] = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')

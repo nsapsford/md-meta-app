@@ -1,169 +1,37 @@
-import { memo, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { getTierList, getFeaturedDecks } from '../api/meta';
-import { getSyncStatus, type SyncRecord } from '../api/sync';
-import type { TierList } from '../types/meta';
+import { lazy, Suspense, useMemo, useSyncExternalStore } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
-import ChartTooltip from '../components/common/ChartTooltip';
 import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import { readLocal, writeLocal, LOCAL_KEYS } from '../cache/cacheStore';
 import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
 import TierListView from '../components/dashboard/TierListView';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TIER_COLORS, ROGUE_INDEX } from '../constants/tierColors';
+import type { PopularityDatum } from '../components/dashboard/PowerRankingsChart';
+import { tierListQuery, featuredDecksQuery } from '../queries/options';
+import { useFirstContent } from '../launch/firstContent';
+import { useNearViewport } from '../hooks/useNearViewport';
+
+const PowerRankingsChart = lazy(() => import('../components/dashboard/PowerRankingsChart'));
 
 const smallQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null;
 const subscribe = (cb: () => void) => { smallQuery?.addEventListener('change', cb); return () => smallQuery?.removeEventListener('change', cb); };
 const getSnapshot = () => smallQuery?.matches ?? false;
 function useIsSmall() { return useSyncExternalStore(subscribe, getSnapshot); }
 
-interface PopularityDatum {
-  name: string;
-  power: number | null;
-  tier: number;
-}
-
-// Memoized so Dashboard's state changes (sync badges, loading flags) don't
-// re-render recharts — the chart only redraws when its data or the
-// small-screen breakpoint actually change.
-const PowerRankingsChart = memo(function PowerRankingsChart({
-  data,
-  isSmall,
-}: {
-  data: PopularityDatum[];
-  isSmall: boolean;
-}) {
-  // Draw-in only on the first render; when local-first data is replaced by the
-  // network refresh the bars update in place instead of re-animating.
-  const hasAnimatedRef = useRef(false);
-  const animate = !hasAnimatedRef.current;
-  useEffect(() => {
-    hasAnimatedRef.current = true;
-  }, []);
-
-  return (
-    <div className="h-64 sm:h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: isSmall ? 10 : 120, right: 10 }}>
-          <defs>
-            {TIER_COLORS.map((color, i) => (
-              <linearGradient key={i} id={`tier-bar-grad-${i}`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={color} stopOpacity={0.45} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.95} />
-              </linearGradient>
-            ))}
-          </defs>
-          <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            stroke="#a1a1aa"
-            fontSize={12}
-            width={isSmall ? 0 : 110}
-            hide={isSmall}
-            tickLine={false}
-            axisLine={false}
-            tick={{ fill: '#eceef4' }}
-          />
-          <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} content={<ChartTooltip />} />
-          <Bar
-            dataKey="power"
-            name="Power"
-            radius={[0, 6, 6, 0]}
-            barSize={20}
-            isAnimationActive={animate}
-            animationDuration={700}
-            animationEasing="ease-out"
-          >
-            {data.map((entry, i) => (
-              <Cell
-                key={i}
-                fill={`url(#tier-bar-grad-${TIER_COLORS[entry.tier] ? entry.tier : ROGUE_INDEX})`}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
-interface FeaturedDeck {
-  id: string;
-  name: string;
-  tier: number | null;
-  power: number | null;
-  power_trend: number | null;
-  thumbnail_image: string | null;
-  win_rate: number | null;
-  play_rate: number | null;
-  cards: Array<{ name: string; image: string | null }>;
-}
-
 export default function Dashboard() {
   const isSmall = useIsSmall();
-  const { dataGeneration, applying, applyUpdate } = useSyncUpdate();
-  const [tierList, setTierList] = useState<TierList | null>(null);
-  const [featured, setFeatured] = useState<FeaturedDeck[]>([]);
-  const [syncRecords, setSyncRecords] = useState<SyncRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  // Tracked separately from loading so the Top Decks grid can paint from
-  // cache instantly instead of waiting on the rest of the background load.
-  const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const load = async () => {
-    setError('');
-
-    setFeaturedLoading(true);
-
-    // Local-first: paint instantly from the device cache when we have a copy,
-    // so a cold start (or a Sync Update re-render) never blocks on the network.
-    const [cached, cachedFeatured] = await Promise.all([
-      readLocal<TierList>(LOCAL_KEYS.tierList),
-      readLocal<FeaturedDeck[]>(LOCAL_KEYS.featuredDecks),
-    ]);
-    if (cached) {
-      setTierList(cached);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-    if (cachedFeatured) {
-      setFeatured(cachedFeatured);
-      setFeaturedLoading(false);
-    }
-
-    try {
-      // Critical path: tier list only — show the page as soon as this resolves
-      const data = await getTierList();
-      setTierList(data);
-      void writeLocal(LOCAL_KEYS.tierList, data);
-      setLoading(false);
-
-      // Background: load supplementary data without blocking render
-      Promise.all([
-        getFeaturedDecks().catch(() => [] as FeaturedDeck[]),
-        getSyncStatus().catch(() => [] as SyncRecord[]),
-      ]).then(([feat, sync]) => {
-        const featList = Array.isArray(feat) ? feat : [];
-        setFeatured(featList);
-        if (featList.length > 0) void writeLocal(LOCAL_KEYS.featuredDecks, featList);
-        setFeaturedLoading(false);
-        setSyncRecords(sync);
-      });
-    } catch (e: any) {
-      // Keep showing cached data on a network failure — that's the point of
-      // local-first. Only surface the error when we have nothing to show.
-      if (!cached) setError(e.message || 'Failed to load tier list');
-      setLoading(false);
-      setFeaturedLoading(false);
-    }
-  };
-
-  // Re-run on a Sync Update (dataGeneration bump) to refetch + re-render in place.
-  useEffect(() => { load(); }, [dataGeneration]);
+  const { applying, applyUpdate, syncRecords } = useSyncUpdate();
+  // Both requests start together on mount (they used to run one after the
+  // other). Each paints from the persisted cache first when it has a copy,
+  // then revalidates in the background.
+  const tierListQ = useQuery(tierListQuery());
+  const featuredQ = useQuery(featuredDecksQuery());
+  const tierList = tierListQ.data ?? null;
+  const featured = featuredQ.data ?? [];
+  // Background revalidation failures stay silent while cached data is shown.
+  const error = !tierList && tierListQ.error ? tierListQ.error.message || 'Failed to load tier list' : '';
+  const [chartRef, chartNear] = useNearViewport<HTMLDivElement>();
+  useFirstContent(tierList != null || error !== '');
 
   // Derived before the early returns (hooks must be unconditional) and memoized
   // on tierList so unrelated state changes don't recompute or re-render the chart.
@@ -188,7 +56,7 @@ export default function Dashboard() {
     [allDecks]
   );
 
-  if (loading) return (
+  if (!tierList && !error) return (
     <div className="flex justify-center items-center py-20">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-md-blue/30 border-t-md-blue rounded-full animate-spin"></div>
@@ -197,14 +65,14 @@ export default function Dashboard() {
     </div>
   );
 
-  if (error) return <ErrorBanner message={error} onRetry={load} />;
+  if (error) return <ErrorBanner message={error} onRetry={() => void tierListQ.refetch()} />;
   if (!tierList) return null;
 
   return (
     <PullToRefresh onRefresh={applyUpdate}>
     <div className="space-y-8 pb-8">
       {/* Hero header with gradient */}
-      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40 backdrop-blur-sm">
+      <div className="relative py-6 px-6 rounded-2xl bg-gradient-to-r from-md-surface/60 to-md-surface/40 border border-md-border/40">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMCIvPjxwYXRoIGQ9Ik0wIDBINzAgTDIwIDEwMFoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAxKSIgc3Ryb2tlLXdpZHRoPSIxcHgiLz48L3N2Zz4=')] opacity-5"></div>
         <div className="relative flex items-start justify-between gap-4">
           <div>
@@ -231,7 +99,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        <TopArchetypesGrid featured={featured} loading={featuredLoading} />
+        <TopArchetypesGrid featured={featured} loading={featuredQ.isPending} />
       </div>
 
       {/* Stats Grid */}
@@ -244,7 +112,7 @@ export default function Dashboard() {
         ].map((s) => (
           <div
             key={s.label}
-            className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm group hover:shadow-lg hover:shadow-black/10 transition-all duration-300"
+            className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-5 relative overflow-hidden group hover:shadow-lg hover:shadow-black/10 transition-all duration-300"
           >
             <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${s.accent}10 0%, transparent 50%)` }}></div>
             <div className="flex items-center justify-between gap-3">
@@ -305,13 +173,20 @@ export default function Dashboard() {
 
       {/* Power Rankings Chart */}
       {popularityData.length > 0 && (
-        <div className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-6 backdrop-blur-sm">
+        <div ref={chartRef} className="bg-gradient-to-br from-md-surface/70 to-md-surface/50 border border-md-border/40 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-1.5 h-6 rounded-full bg-gradient-to-b from-md-green to-md-blue"></div>
             <h3 className="text-lg font-bold text-md-text">Power Rankings</h3>
             <span className="text-xs text-md-textMuted ml-auto">Top 12 decks</span>
           </div>
-          <PowerRankingsChart data={popularityData} isSmall={isSmall} />
+          {/* Fixed-height placeholder until recharts loads, so nothing shifts. */}
+          {chartNear ? (
+            <Suspense fallback={<div className="h-64 sm:h-80" />}>
+              <PowerRankingsChart data={popularityData} isSmall={isSmall} />
+            </Suspense>
+          ) : (
+            <div className="h-64 sm:h-80" />
+          )}
         </div>
       )}
     </div>
