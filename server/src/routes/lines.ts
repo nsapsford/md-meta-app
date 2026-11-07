@@ -324,7 +324,7 @@ router.post('/import-generated/:deckId', async (req: Request, res: Response) => 
     const failing = good.filter((g) => g.issues.some((i) => i.severity === 'error'));
     const repairPrompt = failing.length
       ? failing.map((f) => buildRepairPrompt(ctx, f.line, f.issues.filter((i) => i.severity === 'error'))).join('\n\n---\n\n')
-        + '\n\nRespond with ONLY JSON: {"lines": [ ...every corrected line... ]}'
+        + '\n\nRespond with ONLY the JSON, inside one ```json code block: {"lines": [ ...every corrected line... ]}'
       : null;
     res.status(201).json({ created, rejected, failing: failing.length, repairPrompt });
   } catch (err: any) {
