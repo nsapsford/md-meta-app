@@ -92,7 +92,7 @@ export function buildRepairPrompt(ctx: DeckContext, line: GeneratedLine, issues:
     issues.map((i) => `- ${i.step ? `Step ${i.step}: ` : ''}${i.message}`).join('\n'),
     'Fix every problem. If a step can\'t be made legal, change the route or end the line earlier with a smaller board; never keep an illegal step. Keep the same starters unless they are the problem.',
     PLAN_FORMAT,
-    'Respond with ONLY JSON: {"line": { ...the corrected line... }}',
+    'Inside text values, write quotes as single quotes, never double quotes. Respond with ONLY the JSON, inside one ```json code block: {"line": { ...the corrected line... }}',
   ].join('\n\n');
 }
 
@@ -116,7 +116,8 @@ export function buildPastePrompt(ctx: DeckContext, max = 8): string {
     `Task: work out the opening hands this deck most often combos from (single-card starters first, then common 2-card hands; at most ${max}), and write the best line for each.`,
     PLAN_FORMAT,
     'When you have written all lines, re-check each one step by step against the card text as a strict judge and fix anything illegal before answering.',
-    'Respond with ONLY JSON (no commentary): {"lines": [ ...lines... ]}',
+    'Inside text values, write quotes as single quotes (e.g. Maxx \'C\'), never double quotes.',
+    'Respond with ONLY the JSON, inside one ```json code block (no other commentary): {"lines": [ ...lines... ]}',
   ].join('\n\n');
 }
 
@@ -124,12 +125,49 @@ export function buildPastePrompt(ctx: DeckContext, max = 8): string {
 
 export function extractJson(raw: string): unknown {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(raw);
-  const text = (fenced ? fenced[1] : raw).trim();
+  const text = (fenced ? fenced[1] : raw).trim()
+    .replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"); // phone keyboards / rich text
   const start = text.search(/[[{]/);
   if (start < 0) throw new Error('No JSON found in the response');
   const opener = text[start];
   const end = text.lastIndexOf(opener === '{' ? '}' : ']');
-  return JSON.parse(text.slice(start, end + 1));
+  const body = text.slice(start, end + 1);
+  try {
+    return JSON.parse(body);
+  } catch (first) {
+    // Copying JSON out of a rendered chat drops the backslash in \" (Markdown
+    // treats it as an escape), leaving bare quotes inside strings. Try again
+    // with those quotes re-escaped before giving up with the original error.
+    try { return JSON.parse(escapeInnerQuotes(body)); } catch { throw first; }
+  }
+}
+
+/**
+ * Re-escape double quotes that sit inside a JSON string. A quote is taken as
+ * the end of a string only when the next non-space character could follow a
+ * string (, : } ]); anything else (e.g. `Maxx "C" (or`) is part of the text.
+ */
+export function escapeInnerQuotes(s: string): string {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+    if (ch === '\\') { out += ch + (s[i + 1] ?? ''); i++; continue; }
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < s.length && /\s/.test(s[j])) j++;
+      if (j >= s.length || ',:}]'.includes(s[j])) { inString = false; out += ch; }
+      else out += '\\"';
+      continue;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;

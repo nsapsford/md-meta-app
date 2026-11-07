@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { buildDeckContext, type CardRow } from './deckContext.js';
 import { checkLineLedger, matchesPhrase, optRules } from './ledgerChecker.js';
-import { parseGeneratedLine, buildPastePrompt } from './prompts.js';
+import { parseGeneratedLine, buildPastePrompt, extractJson } from './prompts.js';
 import { toTrainerLine } from './convert.js';
 import { validateLineInput } from '../comboLineService.js';
 import type { GeneratedLine } from './types.js';
@@ -195,4 +195,25 @@ describe('Dark Magician lines written with the paste-in prompt', () => {
       if (r.ok) expect(errors(r.line)).toEqual([]);
     });
   }
+});
+
+describe('pasting JSON copied out of a chat', () => {
+  const clean = readFileSync(new URL('./fixtures/darkMagicianLines.json', import.meta.url), 'utf8');
+  const withQuote = JSON.stringify({ lines: [{ ...JSON.parse(clean).lines[0], notes: 'If they Maxx "C" (or Mulcharmy Fuwalos), stop early: end on "Red-Eyes Dark Dragoon".' }] });
+
+  it('recovers when the backslashes before inner quotes were lost', () => {
+    const mangled = withQuote.replace(/\\"/g, '"');
+    expect(() => JSON.parse(mangled)).toThrow();
+    const parsed = extractJson(mangled) as any;
+    expect(parsed.lines[0].notes).toBe('If they Maxx "C" (or Mulcharmy Fuwalos), stop early: end on "Red-Eyes Dark Dragoon".');
+  });
+
+  it('accepts curly quotes from a phone keyboard and a ```json fence', () => {
+    const curly = '```json\n' + JSON.stringify({ lines: [] }).replace(/"/g, '“') + '\n```';
+    expect(extractJson(curly)).toEqual({ lines: [] });
+  });
+
+  it('leaves valid JSON untouched', () => {
+    expect(extractJson(withQuote)).toEqual(JSON.parse(withQuote));
+  });
 });
