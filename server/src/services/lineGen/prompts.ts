@@ -132,14 +132,45 @@ export function extractJson(raw: string): unknown {
   const opener = text[start];
   const end = text.lastIndexOf(opener === '{' ? '}' : ']');
   const body = text.slice(start, end + 1);
+  let first: Error;
   try {
     return JSON.parse(body);
-  } catch (first) {
-    // Copying JSON out of a rendered chat drops the backslash in \" (Markdown
-    // treats it as an escape), leaving bare quotes inside strings. Try again
-    // with those quotes re-escaped before giving up with the original error.
-    try { return JSON.parse(escapeInnerQuotes(body)); } catch { throw first; }
+  } catch (e) {
+    first = e as Error;
   }
+  // Copying JSON out of a rendered chat drops the backslash in \" (Markdown
+  // treats it as an escape), leaving bare quotes inside strings. Try a quick
+  // heuristic pass, then a repair driven by the parser's own error positions.
+  try { return JSON.parse(escapeInnerQuotes(body)); } catch { /* next */ }
+  try { return parseRepairingQuotes(body); } catch { /* report the original */ }
+  const pos = Number(/position (\d+)/.exec(first.message)?.[1]);
+  const near = Number.isFinite(pos)
+    ? ` Near: …${body.slice(Math.max(0, pos - 40), pos)}⟦here⟧${body.slice(pos, pos + 25)}…`
+    : '';
+  // "importer v3" lets a screenshot show which parser produced the error.
+  throw new Error(`${first.message} (importer v3, quote repair also failed).${near}`);
+}
+
+/**
+ * Repeatedly parse; when the parser stops at position p, the culprit is
+ * almost always a bare quote that ended a string early, i.e. the last
+ * unescaped quote before p. Escape it and try again.
+ */
+export function parseRepairingQuotes(body: string, maxFixes = 400): unknown {
+  let s = body;
+  for (let i = 0; i <= maxFixes; i++) {
+    try {
+      return JSON.parse(s);
+    } catch (e) {
+      const m = /position (\d+)/.exec((e as Error).message);
+      if (!m || i === maxFixes) throw e;
+      let q = Number(m[1]) - 1;
+      while (q >= 0 && !(s[q] === '"' && s[q - 1] !== '\\')) q--;
+      if (q <= 0) throw e;
+      s = `${s.slice(0, q)}\\${s.slice(q)}`;
+    }
+  }
+  throw new Error('unreachable');
 }
 
 /**

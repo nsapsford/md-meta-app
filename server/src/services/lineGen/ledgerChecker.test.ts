@@ -218,6 +218,16 @@ describe('pasting JSON copied out of a chat', () => {
     expect(extractJson(mangled)).toEqual({ lines: [{ name: 'x', notes: 'Add "Dark Magician", then Gaze it.', tags: ['Maxx "C"', 'Ash'] }] });
   });
 
+  it('repairs any bare inner quote using the parser\'s own error positions', () => {
+    const want = { lines: [{ name: 'x', notes: 'Use "Gaze": then "Dragoon", and "C"' }] };
+    const mangled = JSON.stringify(want).replace(/\\"/g, '"');
+    expect(extractJson(mangled)).toEqual(want);
+  });
+
+  it('says which parser failed and shows where', () => {
+    expect(() => extractJson('{"lines": [ {"name": "x", } oops ]')).toThrow(/importer v3.*Near: …/);
+  });
+
   it('leaves valid JSON untouched', () => {
     expect(extractJson(withQuote)).toEqual(JSON.parse(withQuote));
   });
