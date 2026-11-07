@@ -75,7 +75,8 @@ async function main() {
 
   // Health check
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    // Render sets RENDER_GIT_COMMIT, so this shows which build is live.
+    res.json({ status: 'ok', time: new Date().toISOString(), commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? null });
   });
 
   // Warm tier-list + featured caches immediately after startup (non-blocking)
