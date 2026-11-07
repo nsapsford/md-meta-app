@@ -213,6 +213,11 @@ describe('pasting JSON copied out of a chat', () => {
     expect(extractJson(curly)).toEqual({ lines: [] });
   });
 
+  it('handles a quoted name followed by a comma in prose, and inside arrays', () => {
+    const mangled = '{"lines":[{"name":"x","notes":"Add "Dark Magician", then Gaze it.","tags":["Maxx "C"","Ash"]}]}';
+    expect(extractJson(mangled)).toEqual({ lines: [{ name: 'x', notes: 'Add "Dark Magician", then Gaze it.', tags: ['Maxx "C"', 'Ash'] }] });
+  });
+
   it('leaves valid JSON untouched', () => {
     expect(extractJson(withQuote)).toEqual(JSON.parse(withQuote));
   });

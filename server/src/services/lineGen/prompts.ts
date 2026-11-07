@@ -147,6 +147,17 @@ export function extractJson(raw: string): unknown {
  * the end of a string only when the next non-space character could follow a
  * string (, : } ]); anything else (e.g. `Maxx "C" (or`) is part of the text.
  */
+/** Is s[j] (the first non-space char after a quote) structural JSON rather than prose? */
+function closesString(s: string, j: number): boolean {
+  const c = s[j];
+  if (c === '}' || c === ']' || c === ':') return true;
+  if (c !== ',') return false;
+  // After a real comma comes another value; in prose ("add "X", then …") a word follows.
+  let k = j + 1;
+  while (k < s.length && /\s/.test(s[k])) k++;
+  return k >= s.length || /["{[\d-]/.test(s[k]) || /^(true|false|null)\b/.test(s.slice(k, k + 5));
+}
+
 export function escapeInnerQuotes(s: string): string {
   let out = '';
   let inString = false;
@@ -161,7 +172,7 @@ export function escapeInnerQuotes(s: string): string {
     if (ch === '"') {
       let j = i + 1;
       while (j < s.length && /\s/.test(s[j])) j++;
-      if (j >= s.length || ',:}]'.includes(s[j])) { inString = false; out += ch; }
+      if (j >= s.length || closesString(s, j)) { inString = false; out += ch; }
       else out += '\\"';
       continue;
     }
