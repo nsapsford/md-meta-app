@@ -1,0 +1,59 @@
+name: MD Board Scanner (Windows)
+
+# Builds tools/mdscan into a single offline Windows program and publishes it as the
+# "mdscan-latest" release, so there is always one download link for the newest build.
+on:
+  push:
+    paths:
+      - 'tools/mdscan/**'
+      - '.github/workflows/mdscan.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mdscan-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/mdscan
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/mdscan/go.mod
+          cache-dependency-path: tools/mdscan/go.sum
+
+      - name: Check the matcher (Linux build, vet)
+        run: |
+          go vet .
+          GOOS=windows go vet .
+
+      - name: Build mdscan.exe
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go build -trimpath -ldflags "-s -w" -o mdscan.exe .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdscan-windows
+          path: tools/mdscan/mdscan.exe
+
+      - name: Publish the download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mdscan-latest
+          name: MD Board Scanner (latest build)
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          body_path: tools/mdscan/RELEASE.md
+          files: tools/mdscan/mdscan.exe
+          fail_on_unmatched_files: true
