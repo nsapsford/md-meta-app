@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LadderEvResult, LadderEvMatchup } from '../../api/matchups';
+import { hasRealMatchupData } from '../../api/matchups';
+import NoMatchupData from './NoMatchupData';
 import type { PersonalSpread } from '../../api/personalGames';
 import { ladderEvQuery, personalSpreadQuery } from '../../queries/options';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -327,9 +329,7 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
 
   if (error) return <ErrorBanner message={error} onRetry={() => void resultsQ.refetch()} />;
   if (loading) return <LoadingSpinner />;
-  if (results.length === 0) {
-    return <p className="text-sm text-md-textMuted py-4 text-center">No matchup data available. Run a sync to populate.</p>;
-  }
+  if (results.length === 0 || !hasRealMatchupData(results)) return <NoMatchupData />;
 
   return (
     <div className="space-y-4 pb-24">

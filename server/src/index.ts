@@ -22,7 +22,6 @@ import dossiersRouter from './routes/dossiers.js';
 import linesRouter from './routes/lines.js';
 import authRouter from './routes/auth.js';
 import { syncCards, syncArchetypes, syncDeckTypes, syncTopDecks, syncTournaments, computeDeckTypeCards } from './services/syncService.js';
-import { updateTiersFromScrape } from './services/tierListService.js';
 import { runFullSync } from './services/fullSyncService.js';
 import { isSyncStale } from './services/syncStatusService.js';
 
@@ -104,7 +103,6 @@ async function main() {
         await syncDeckTypes();
         await syncTopDecks();
         await syncTournaments();
-        await updateTiersFromScrape();
         await computeDeckTypeCards();
         console.log('[Startup] Meta sync complete');
       } else {

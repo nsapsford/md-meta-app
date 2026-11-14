@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from '@tanstack/react-query';
 import {
-  getTierList, getDecks, getDeckProfile, getFeaturedDecks, getMetaTrends, getMetaMovers, getBanList, scoreDeck, validateDeck,
+  getTierList, type TierRank, getDecks, getDeckProfile, getFeaturedDecks, getMetaTrends, getMetaMovers, getBanList, scoreDeck, validateDeck,
 } from '../api/meta';
 import {
   getMatchupMatrix, getEcosystemAnalysis, getLadderEv, getMatchupAdvisor,
@@ -47,7 +47,7 @@ export const syncStatusQuery = () =>
     meta: PUBLIC,
   });
 
-export const tierListQuery = (rank?: number | null) =>
+export const tierListQuery = (rank?: TierRank) =>
   queryOptions({
     queryKey: rank != null ? ['tier-list', 'rank', rank] : ['tier-list'],
     queryFn: () => getTierList(rank),

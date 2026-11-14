@@ -286,3 +286,6 @@ CREATE TABLE IF NOT EXISTS deck_rank_stats (
   updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
   PRIMARY KEY (deck_name, rank)
 );
+
+-- Original (cased) Untapped archetype name; deck_name stays the lower-cased key.
+ALTER TABLE deck_rank_stats ADD COLUMN IF NOT EXISTS display_name TEXT;

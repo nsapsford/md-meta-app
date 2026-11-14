@@ -8,6 +8,7 @@ import TopArchetypesGrid from '../components/dashboard/TopArchetypesGrid';
 import TierListView from '../components/dashboard/TierListView';
 import type { PopularityDatum } from '../components/dashboard/PowerRankingsChart';
 import { tierListQuery, featuredDecksQuery } from '../queries/options';
+import type { TierRank } from '../api/meta';
 import { useFirstContent } from '../launch/firstContent';
 import { useNearViewport } from '../hooks/useNearViewport';
 
@@ -27,7 +28,7 @@ export default function Dashboard() {
   const tierListQ = useQuery(tierListQuery());
   // Rank filter: only the tier list rows change (win/play rates for that rank); the charts and
   // header stats keep using the all-ranks list above.
-  const [rank, setRank] = useState<number | null>(null);
+  const [rank, setRank] = useState<TierRank>(null);
   const rankQ = useQuery({ ...tierListQuery(rank), enabled: rank != null });
   const featuredQ = useQuery(featuredDecksQuery());
   const tierList = tierListQ.data ?? null;
@@ -109,9 +110,9 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Tier 0', count: (tierList['0'] ?? []).length, color: 'text-tier-0', accent: '#ff2d55', desc: 'Dominant' },
-          { label: 'Tier 1', count: (tierList['1'] ?? []).length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Strong' },
-          { label: 'Tier 2', count: (tierList['2'] ?? []).length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Viable' },
+          { label: 'Tier 1', count: (tierList['1'] ?? []).length, color: 'text-tier-1', accent: '#ff8c38', desc: 'Clearly above average' },
+          { label: 'Tier 2', count: (tierList['2'] ?? []).length, color: 'text-tier-2', accent: '#ffd60a', desc: 'Above average' },
+          { label: 'Tier 3', count: (tierList['3'] ?? []).length, color: 'text-tier-3', accent: '#38c96e', desc: 'Common, unproven' },
           { label: 'Total Tracked', count: allDecks.length, color: 'text-md-gold', accent: '#d4af37', desc: 'Decks' },
         ].map((s) => (
           <div
@@ -173,8 +174,8 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Rank filter">
-          <span className="text-xs text-md-textMuted uppercase tracking-wider mr-1">Win / play rate for</span>
-          {([[null, 'All ranks'], [7, 'Master'], [6, 'Diamond'], [5, 'Platinum'], [4, 'Gold'], [3, 'Silver'], [2, 'Bronze']] as const).map(([r, label]) => (
+          <span className="text-xs text-md-textMuted uppercase tracking-wider mr-1">Ladder ranks</span>
+          {([[null, 'Diamond + Master'], [7, 'Master'], [6, 'Diamond'], [5, 'Platinum'], [4, 'Gold'], [3, 'Silver'], [2, 'Bronze'], ['all', 'All ranks']] as const).map(([r, label]) => (
             <button
               key={label}
               type="button"
@@ -191,6 +192,12 @@ export default function Dashboard() {
           ))}
           {rank != null && rankQ.isFetching && <span className="text-xs text-md-textMuted">loading…</span>}
         </div>
+
+        <p className="text-xs text-md-textMuted max-w-3xl">
+          Tiers are measured from Untapped ladder games in the ranks selected. “vs avg” is a deck's win rate minus the
+          average player's in those ranks; Tier 1 must beat it by at least 1.5 points with 95% confidence, and every tier needs a
+          real share of games. Decks with too few games are left out.
+        </p>
 
         <TierListView tierList={rank != null && rankQ.data ? rankQ.data : tierList} />
       </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { AdvisorOpponent, LadderEvResult } from '../../api/matchups';
+import { hasRealMatchupData } from '../../api/matchups';
+import NoMatchupData from './NoMatchupData';
 import { advisorQuery, ladderEvQuery } from '../../queries/options';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorBanner from '../common/ErrorBanner';
@@ -132,7 +134,9 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
             ))}
           </div>
 
-          {loading ? <LoadingSpinner /> : filteredEv.length > 0 ? (
+          {loading ? <LoadingSpinner /> : !hasRealMatchupData(evResults) ? (
+            <NoMatchupData />
+          ) : filteredEv.length > 0 ? (
             <div className="space-y-2">
               {filteredEv.slice(0, 8).map((r, i) => (
                 <div

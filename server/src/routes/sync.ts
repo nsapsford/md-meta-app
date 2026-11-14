@@ -7,7 +7,6 @@ import { recordSync, getSyncStatus, SyncSource } from '../services/syncStatusSer
 import { runFullSync } from '../services/fullSyncService.js';
 import { clearCache } from '../services/cacheService.js';
 import { config } from '../config.js';
-import { updateTiersFromScrape } from '../services/tierListService.js';
 import { invalidateTierListCache } from './tierList.js';
 import { invalidateFeaturedCache } from './decks.js';
 import { invalidateDerived } from '../utils/memo.js';
@@ -126,7 +125,6 @@ router.post('/run/:source', async (req: Request, res: Response) => {
         invalidateFeaturedCache();
         await syncDeckTypes();
         await syncTopDecks();
-        await updateTiersFromScrape();
         await recordSync('mdm_deck_types', 'success');
         break;
       case 'mdm_tournaments':

@@ -89,6 +89,18 @@ export interface LadderEvResult {
   interaction?: DeckInteractionSummary;
 }
 
+/**
+ * Ladder EV is only a ranking when real games sit behind it. Without matchup samples every deck
+ * is scored on inference alone, which produces a confident-looking list with nothing under it
+ * (Untapped's public data has no per-opponent results, so this is the usual state today).
+ * Shown only when at least this many decks have this many effective games each.
+ */
+export const MIN_EV_DECKS = 5;
+export const MIN_EV_EFFECTIVE_GAMES = 30;
+export function hasRealMatchupData(results: LadderEvResult[]): boolean {
+  return results.filter((r) => r.n_effective >= MIN_EV_EFFECTIVE_GAMES).length >= MIN_EV_DECKS;
+}
+
 export async function getLadderEv(
   signal?: AbortSignal,
   includePersonal: boolean = false,

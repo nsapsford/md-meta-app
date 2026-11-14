@@ -2,7 +2,6 @@ import {
   syncCards, syncArchetypes, syncDeckTypes, syncTopDecks,
   syncTournaments, syncUntapped, syncCardNegateEffectiveness, computeDeckTypeCards,
 } from './syncService.js';
-import { updateTiersFromScrape } from './tierListService.js';
 import { recordSync, SyncSource } from './syncStatusService.js';
 import { clearCache } from './cacheService.js';
 import { invalidateInteractionProfiles } from './cardInteractionService.js';
@@ -28,7 +27,8 @@ const msg = (err: unknown) => String((err as any)?.message || err);
  * Full sync of every upstream source plus the derived data built on top of it.
  *
  * Stage order is load-bearing:
- *  - syncDeckTypes nulls tier/power, so updateTiersFromScrape has to follow it.
+ *  - Ladder tiers are computed on request from the per-rank stats syncUntapped stores;
+ *    deck_types.tier is Master Duel Meta's tournament tier and is no longer overwritten.
  *  - computeDeckTypeCards reads cards + deck_types + top_decks.
  *  - syncCardNegateEffectiveness reads deck_types.win_rate, which only syncUntapped fills.
  *  - Caches are invalidated at the very end: doing it up front lets a request
@@ -88,7 +88,6 @@ async function runFullSyncNow(): Promise<FullSyncResult> {
     await clearCache('mdm');
     result.deckTypes = await syncDeckTypes();
     result.topDecks = await syncTopDecks();
-    await updateTiersFromScrape();
   }, 'mdm_deck_types');
 
   await stage('mdm_tournaments', async () => {

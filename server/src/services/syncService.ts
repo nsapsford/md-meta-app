@@ -4,6 +4,8 @@ import { run, queryAll } from '../utils/dbHelpers.js';
 import * as ygopd from './ygoprodeckService.js';
 import * as mdm from './mdmService.js';
 import * as untapped from './untappedService.js';
+import { computeMeta } from './metaTierService.js';
+import { deckKey, isEngineAggregate, slugId } from './deckNames.js';
 import { getValidAccessToken, invalidateToken } from './untappedAuthService.js';
 
 export async function syncCards(): Promise<number> {
@@ -279,15 +281,29 @@ export async function syncUntapped(): Promise<number> {
     updated++;
   }
 
-  // Per-rank win/play data (powers the rank filter on the tier list)
+  // Per-rank win/play data: the ladder tier list is computed from this (metaTierService)
+  const runStartedAt = Math.floor(Date.now() / 1000) - 1;
   const rankStats = await untapped.scrapeRankStats();
   for (const r of rankStats) {
     await run(pool,
-      `INSERT INTO deck_rank_stats (deck_name, rank, games, wins, updated_at)
-       VALUES (LOWER($1), $2, $3, $4, extract(epoch from now())::bigint)
-       ON CONFLICT (deck_name, rank) DO UPDATE SET games = EXCLUDED.games, wins = EXCLUDED.wins, updated_at = EXCLUDED.updated_at`,
+      `INSERT INTO deck_rank_stats (deck_name, display_name, rank, games, wins, updated_at)
+       VALUES (LOWER($1), $1, $2, $3, $4, extract(epoch from now())::bigint)
+       ON CONFLICT (deck_name, rank) DO UPDATE SET display_name = EXCLUDED.display_name, games = EXCLUDED.games, wins = EXCLUDED.wins, updated_at = EXCLUDED.updated_at`,
       [r.name, r.rank, r.games, r.wins]
     );
+  }
+  if (rankStats.length > 0) {
+    // Drop archetypes Untapped no longer reports (renamed or retired); skipped when the fetch
+    // came back empty so an outage cannot wipe the table.
+    await run(pool, `DELETE FROM deck_rank_stats WHERE updated_at < $1`, [runStartedAt]);
+
+    // Give every ladder-relevant archetype a deck_types row so its page, links and art resolve
+    const ladder = computeMeta(rankStats.map((r) => ({ deck: r.name, rank: r.rank, games: r.games, wins: r.wins })));
+    const have = new Set((await queryAll<{ name: string }>(pool, 'SELECT name FROM deck_types')).map((d) => deckKey(d.name)));
+    for (const e of ladder.entries) {
+      if (have.has(deckKey(e.deck)) || isEngineAggregate(e.deck)) continue;
+      await run(pool, `INSERT INTO deck_types (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [slugId(e.deck), e.deck]);
+    }
   }
   console.log(`[Sync] Stored ${rankStats.length} per-rank archetype stats`);
 

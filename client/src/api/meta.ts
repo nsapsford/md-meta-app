@@ -2,8 +2,12 @@ import api from './client';
 import type { TierList, Matchup, MetaSnapshot, Tournament, TournamentResult, BanListData } from '../types/meta';
 import type { DeckType, DeckProfile } from '../types/deck';
 
-/** rank: 2 (Bronze) .. 7 (Master) swaps win/play rates for that rank's Untapped data. */
-export async function getTierList(rank?: number | null): Promise<TierList> {
+/**
+ * Ladder tier list measured from Untapped. No rank = Diamond + Master; 2 (Bronze) .. 7 (Master)
+ * = that rank only; 'all' = every rank, using Untapped's rank-adjusted win rates.
+ */
+export type TierRank = number | 'all' | null;
+export async function getTierList(rank?: TierRank): Promise<TierList> {
   const res = await api.get('/tier-list', { params: rank != null ? { rank } : {} });
   return res.data;
 }

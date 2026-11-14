@@ -9,6 +9,13 @@ interface TierListViewProps {
   tierList: TierList;
 }
 
+const TIER_NOTES: Record<string, string> = {
+  '1': 'Common, and clearly better than the average player',
+  '2': 'Common, and better than average',
+  '3': 'Common, but not shown to beat average',
+  rogue: 'Seen on the ladder, too rare to rank',
+};
+
 export default function TierListView({ tierList }: TierListViewProps) {
   const isNative = useIsNative();
   return (
@@ -26,10 +33,9 @@ export default function TierListView({ tierList }: TierListViewProps) {
               <span className="text-md-textMuted text-sm font-medium tabular-nums">
                 {decks.length} deck{decks.length !== 1 ? 's' : ''}
               </span>
-              <div className="ml-auto flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-md-blue animate-pulse"></div>
-                <span className="text-xs text-md-textMuted uppercase tracking-wider">Active Meta</span>
-              </div>
+              {TIER_NOTES[tierKey] && (
+                <span className="ml-auto text-xs text-md-textMuted text-right">{TIER_NOTES[tierKey]}</span>
+              )}
             </div>
 
             {/* Deck rows with enhanced styling */}
@@ -127,14 +133,22 @@ export default function TierListView({ tierList }: TierListViewProps) {
                   {/* Right: stats + arrow */}
                   <div className={clsx('flex items-center flex-shrink-0', isNative ? 'gap-3 justify-between w-full' : 'gap-3 justify-between w-full sm:gap-5 sm:justify-start sm:w-auto')}>
                     <div className={clsx('text-sm tabular-nums', isNative ? 'flex flex-row items-center gap-3' : 'flex flex-row items-center gap-3 sm:flex-col sm:items-end sm:gap-1')}>
-                      {typeof deck.win_rate === 'number' && (
-                        <span className={`font-bold ${deck.win_rate >= 55 ? 'text-md-winRate' : deck.win_rate <= 45 ? 'text-md-red' : 'text-md-text'}`}>
-                          {deck.win_rate.toFixed(1)}%<span className="text-md-textMuted font-normal ml-1 text-xs">win</span>
+                      {typeof deck.edge === 'number' && (
+                        <span
+                          className={`font-bold ${(deck.edge_floor ?? 0) > 0 ? 'text-md-winRate' : deck.edge < 0 ? 'text-md-red' : 'text-md-text'}`}
+                          title={`Win rate vs the average player in these ranks. At least ${(deck.edge_floor ?? 0) >= 0 ? '+' : ''}${(deck.edge_floor ?? 0).toFixed(1)} with 95% confidence.`}
+                        >
+                          {deck.edge > 0 ? '+' : ''}{deck.edge.toFixed(1)}<span className="text-md-textMuted font-normal ml-1 text-xs">vs avg</span>
                         </span>
                       )}
                       {typeof deck.play_rate === 'number' && (
                         <span className="text-md-playRate font-medium">
-                          {deck.play_rate.toFixed(1)}%<span className="text-md-textMuted ml-1 text-xs">play</span>
+                          {deck.play_rate.toFixed(1)}%<span className="text-md-textMuted ml-1 text-xs">of games</span>
+                        </span>
+                      )}
+                      {typeof deck.win_rate === 'number' && (
+                        <span className="text-md-textMuted text-xs">
+                          {deck.win_rate.toFixed(1)}% win{typeof deck.games === 'number' ? ` · ${deck.games.toLocaleString()} games` : ''}
                         </span>
                       )}
                       {typeof deck.power_trend === 'number' && deck.power_trend !== 0 && (
@@ -158,6 +172,28 @@ export default function TierListView({ tierList }: TierListViewProps) {
           </div>
         );
       })}
+
+      {(tierList.tournament_only?.length ?? 0) > 0 && (
+        <div className="bg-md-surface/50 rounded-2xl border border-md-border/40 px-4 py-4 sm:px-6">
+          <p className="text-sm font-semibold text-md-text">Tournament results, no ladder data</p>
+          <p className="text-xs text-md-textMuted mt-1">
+            These place in tournaments but Untapped's tracker has no games for them, so nothing here says how they do on the ladder.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {tierList.tournament_only!.map((deck) => (
+              <Link
+                key={deck.id}
+                to={`/decks/${encodeURIComponent(deck.name)}`}
+                onClick={hapticLight}
+                className="px-3 py-1.5 rounded-lg border border-md-border/40 bg-md-surface text-xs text-md-text hover:border-md-blue/50 transition-colors"
+              >
+                {deck.name}
+                {typeof deck.power === 'number' && <span className="text-md-textMuted ml-1.5 tabular-nums">{deck.power.toFixed(1)} power</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
