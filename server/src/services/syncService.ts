@@ -279,6 +279,13 @@ export async function syncUntapped(): Promise<number> {
     updated++;
   }
 
+  // Earlier versions stored per-rank stats here mislabelled as opponent matchups.
+  // Remove those rows (and their legacy-table copies) so they stop feeding Matchups / Ladder EV.
+  await run(pool,
+    `DELETE FROM matchups m USING matchup_sources s
+       WHERE s.source = 'untapped' AND LOWER(m.deck_a) = LOWER(s.deck_a) AND LOWER(m.deck_b) = LOWER(s.deck_b)`);
+  await run(pool, `DELETE FROM matchup_sources WHERE source = 'untapped'`);
+
   // Store per-matchup win rates in matchup_sources and legacy matchups table
   let matchupsStored = 0;
   for (const p of matchupPairings) {
