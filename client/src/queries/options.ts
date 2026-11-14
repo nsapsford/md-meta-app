@@ -20,6 +20,7 @@ import { getLines, getDrillReviews, resolveCards } from '../api/lines';
 // Key prefixes are what invalidation targets:
 //   ['personal', ...]  anything derived from logged games
 //   ['matchups', ...]  matchup analytics (some blend personal games)
+//   ['meta', ...]      per-rank stats from untapped.gg (not personal, not matchups)
 //   ['saved-decks']    the user's deck list
 //   ['lines', deckId]  Line Trainer lines (and, beneath it, their drill reviews)
 //
@@ -107,10 +108,10 @@ export const ecosystemQuery = () =>
     meta: PUBLIC,
   });
 
-export const ladderEvQuery = (includePersonal: boolean, reinforce = false) =>
+export const ladderEvQuery = (reinforce = false, rank = 'master') =>
   queryOptions({
-    queryKey: ['matchups', 'ladder-ev', { includePersonal, reinforce }],
-    queryFn: () => getLadderEv(undefined, includePersonal, { reinforce }),
+    queryKey: ['meta', 'ladder-ev', { rank, reinforce }],
+    queryFn: () => getLadderEv(undefined, { rank, reinforce }),
     meta: PUBLIC,
   });
 

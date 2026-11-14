@@ -22,15 +22,16 @@ function WinRatePill({ rate, confidence }: { rate: number; confidence?: 'high' |
   );
 }
 
-function EvBadge({ ev, lowConf }: { ev: number; lowConf: number }) {
-  const pct = Math.round(ev * 100);
+function EvBadge({ ev, lowSample }: { ev: number; lowSample: boolean }) {
   const color = ev >= 0.54 ? 'text-md-green' : ev >= 0.48 ? 'text-md-orange' : 'text-md-red';
   return (
-    <span className={clsx('font-bold tabular-nums text-base', color)} title={lowConf > 0.4 ? 'Low-confidence estimate' : undefined}>
-      {pct}%{lowConf > 0.4 && <span className="text-xs ml-0.5 opacity-60">◆</span>}
+    <span className={clsx('font-bold tabular-nums text-base', color)} title={lowSample ? 'Small sample — treat with caution' : undefined}>
+      {(ev * 100).toFixed(1)}%{lowSample && <span className="text-xs ml-0.5 opacity-60">◆</span>}
     </span>
   );
 }
+
+const pct = (v: number | null) => (v == null ? '—' : `${Math.round(v * 100)}%`);
 
 interface Props {
   decks: string[];
@@ -48,7 +49,7 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
   const [dismissedError, setDismissedError] = useState<unknown>(null);
 
   // Cached per (mode inputs), so flipping EV ⇄ By Deck ⇄ back is instant.
-  const evQ = useQuery({ ...ladderEvQuery(includePersonal), enabled: mode === 'ev' });
+  const evQ = useQuery({ ...ladderEvQuery(), enabled: mode === 'ev' });
   const advisorQ = useQuery({ ...advisorQuery(selectedDeck, includePersonal), enabled: mode === 'deck' && selectedDeck !== '' });
   const evResults: LadderEvResult[] = evQ.data ?? EMPTY_EV;
   const advisorResult = advisorQ.data ?? null;
@@ -107,7 +108,7 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
               My Games
             </button>
           )}
-          <span className="text-xs text-md-textMuted">Based on meta + blended rates</span>
+          <span className="text-xs text-md-textMuted">{mode === 'deck' ? 'Based on tournament field + your logged games' : 'Based on Master-rank results'}</span>
         </div>
       </div>
 
@@ -146,46 +147,26 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
                       <span className="text-sm font-semibold min-w-0 break-words">{r.deck}</span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <EvBadge ev={r.ev} lowConf={r.low_confidence_fraction} />
+                      <EvBadge ev={r.ev} lowSample={r.low_sample} />
                     </div>
                   </div>
 
-                  {(r.top_good_matchups.length > 0 || r.top_bad_matchups.length > 0) && (
-                    <div className="mt-2 flex gap-4 text-xs">
-                      {r.top_good_matchups.length > 0 && (
-                        <div className="flex gap-1 flex-wrap">
-                          {r.top_good_matchups.map((m) => (
-                            <span key={m.opponent}
-                              className="px-1.5 py-0.5 rounded bg-md-green/10 text-md-green border border-md-green/15"
-                              title={`${Math.round(m.win_rate * 100)}% vs ${m.opponent}${m.inferred ? ' (inferred)' : ''}`}
-                            >
-                              {m.opponent.split(' ')[0]} {Math.round(m.win_rate * 100)}%
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {r.top_bad_matchups.length > 0 && (
-                        <div className="flex gap-1 flex-wrap ml-auto">
-                          {r.top_bad_matchups.map((m) => (
-                            <span key={m.opponent}
-                              className="px-1.5 py-0.5 rounded bg-md-red/10 text-md-red border border-md-red/15"
-                              title={`${Math.round(m.win_rate * 100)}% vs ${m.opponent}${m.inferred ? ' (inferred)' : ''}`}
-                            >
-                              {m.opponent.split(' ')[0]} {Math.round(m.win_rate * 100)}%
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-md-textMuted">
+                    <span>1st: {pct(r.win_rate_first)}</span>
+                    <span>2nd: {pct(r.win_rate_second)}</span>
+                    <span>{(r.play_rate * 100).toFixed(1)}% played</span>
+                    <span>{r.games.toLocaleString()} games</span>
+                  </div>
                 </div>
               ))}
               <p className="text-xs text-md-textMuted pt-1">
-                EV = weighted win rate across the tier 1–3 field by play rate. ◆ = low-confidence estimate.
+                Measured win rate at Master rank (untapped.gg), mirror-match corrected: (wr − share·50%) ÷ (1 − share).
+                1st/2nd = raw win rate going first / second. ◆ = small sample, ranked below reliable decks.
+                Archetype-vs-archetype data isn't published, so this is a whole-field number, not a matchup-weighted one.
               </p>
             </div>
           ) : (
-            <p className="text-sm text-md-textMuted">No matchup data available. Run a sync to populate.</p>
+            <p className="text-sm text-md-textMuted">No per-rank data available yet. Run a sync to populate.</p>
           )}
         </>
       )}
@@ -207,7 +188,8 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
           {loading ? <LoadingSpinner /> : advisorResult && advisorResult.opponents.length > 0 ? (
             <>
               {(() => {
-                const dangerous = advisorResult.opponents.filter((o) => o.win_rate < 0.48 && o.field_pct >= 0.05);
+                if (advisorResult.coverage === 0) return null; // nothing measured → no verdict
+                const dangerous = advisorResult.opponents.filter((o) => o.win_rate != null && o.win_rate < 0.48 && o.field_pct >= 0.05);
                 const dangerPct = dangerous.reduce((s, o) => s + o.field_pct, 0);
                 if (dangerous.length === 0) return (
                   <div className="bg-md-green/5 border border-md-green/20 rounded-lg p-3 text-sm">
@@ -238,21 +220,31 @@ export default function MetaAdvisor({ decks, includePersonal = false, onTogglePe
                         {(o.field_pct * 100).toFixed(0)}% of field
                       </span>
                     </div>
-                    <WinRatePill rate={o.win_rate} confidence={o.confidence} />
+                    {o.win_rate != null
+                      ? <WinRatePill rate={o.win_rate} confidence={o.confidence ?? 'low'} />
+                      : <span className="text-xs text-md-textMuted" title="No measured data for this pairing">no data</span>}
                   </div>
                 ))}
               </div>
 
-              <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3">
-                <span className="text-sm font-semibold text-md-blue">
-                  Expected weighted win rate: {(advisorResult.weighted_win_rate * 100).toFixed(1)}%
-                </span>
-                {advisorResult.opponents[0] && advisorResult.opponents[0].win_rate < 0.48 && (
+              {advisorResult.weighted_win_rate != null ? (
+                <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3">
+                  <span className="text-sm font-semibold text-md-blue">
+                    Weighted win rate: {(advisorResult.weighted_win_rate * 100).toFixed(1)}%
+                  </span>
                   <p className="text-xs text-md-textMuted mt-1">
-                    Watch out for {advisorResult.opponents[0].opponent} ({(advisorResult.opponents[0].field_pct * 100).toFixed(0)}% of the field).
+                    Based on the {Math.round(advisorResult.coverage * 100)}% of the field with measured matchup data.
+                    {advisorResult.opponents[0]?.win_rate != null && advisorResult.opponents[0].win_rate < 0.48 && (
+                      <> Watch out for {advisorResult.opponents[0].opponent} ({(advisorResult.opponents[0].field_pct * 100).toFixed(0)}% of the field).</>
+                    )}
                   </p>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="bg-md-surfaceAlt/40 border border-md-border rounded-lg p-3 text-sm text-md-textMuted">
+                  No measured matchup data for this deck. untapped.gg doesn't publish archetype-vs-archetype win rates;
+                  log games under <strong>My Games</strong> to build your own spread.
+                </div>
+              )}
             </>
           ) : advisorResult?.opponents.length === 0 ? (
             <p className="text-sm text-md-textMuted">No tournament field data available yet. Run a sync to populate.</p>

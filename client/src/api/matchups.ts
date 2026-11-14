@@ -22,14 +22,18 @@ export interface MatchupMatrix {
 export interface AdvisorOpponent {
   opponent: string;
   field_pct: number;
-  win_rate: number;
-  confidence: 'high' | 'medium' | 'low';
+  /** null = no measured data for this pairing. */
+  win_rate: number | null;
+  confidence: 'high' | 'medium' | 'low' | null;
 }
 
 export interface AdvisorResult {
   deck: string;
   opponents: AdvisorOpponent[];
-  weighted_win_rate: number;
+  /** Weighted over opponents that have data; null when none do. */
+  weighted_win_rate: number | null;
+  /** Share of the field that has measured matchup data, 0–1. */
+  coverage: number;
 }
 
 export async function getMatchups(deck?: string, signal?: AbortSignal): Promise<Matchup[]> {
@@ -57,14 +61,6 @@ export async function getMatchupAdvisor(deck: string, signal?: AbortSignal, incl
   return res.data;
 }
 
-export interface LadderEvMatchup {
-  opponent: string;
-  win_rate: number;
-  play_rate: number;
-  confidence: 'high' | 'medium' | 'low';
-  inferred: boolean;
-}
-
 export interface DeckInteractionSummary {
   strategy_class: string;
   hand_traps: number;
@@ -77,27 +73,26 @@ export interface DeckInteractionSummary {
 export interface LadderEvResult {
   deck: string;
   tier: number | null;
+  rank: string;
+  /** Measured win rate at `rank`, mirror-match corrected, 0–1. */
   ev: number;
-  n_effective: number;
-  low_confidence_fraction: number;
-  top_good_matchups: LadderEvMatchup[];
-  top_bad_matchups: LadderEvMatchup[];
-  coverage: number;
-  popularity: number;
-  ev_vs_top3: number | null;
-  pick_score: number;
+  win_rate_raw: number;
+  win_rate_first: number | null;
+  win_rate_second: number | null;
+  games: number;
+  /** Share of games at this rank, 0–1. */
+  play_rate: number;
+  low_sample: boolean;
   interaction?: DeckInteractionSummary;
 }
 
 export async function getLadderEv(
   signal?: AbortSignal,
-  includePersonal: boolean = false,
-  opts?: { counterWeight?: number; reinforce?: boolean }
+  opts?: { rank?: string; reinforce?: boolean }
 ): Promise<LadderEvResult[]> {
   const params: Record<string, string> = {};
-  if (includePersonal) params.include_personal = 'true';
+  if (opts?.rank) params.rank = opts.rank;
   if (opts?.reinforce) params.reinforce = 'true';
-  if (opts?.counterWeight != null) params.counter_weight = String(opts.counterWeight);
   const res = await api.get('/matchups/ladder-ev', { params, signal });
   return res.data;
 }

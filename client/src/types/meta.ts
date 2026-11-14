@@ -137,6 +137,7 @@ export interface EcosystemAnalysis {
   meta_health_index: number;
   tournament_field: TournamentFieldEntry[];
   nash_equilibrium: Record<string, number>;
+  measured_matchup_cells: number;
   computed_at: string;
 }
 
@@ -144,5 +145,6 @@ export interface DeckEcosystemResponse {
   profile: DeckEcosystemProfile | null;
   related_cycles: RockPaperScissorsCycle[];
   meta_health_index: number;
+  measured_matchup_cells: number;
   computed_at: string;
 }

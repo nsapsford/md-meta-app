@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { config } from '../config.js';
 import { getCached, setCache } from './cacheService.js';
+import { parseRankStats, type ArchetypeStats, type ManifestEntry, type RankStatRow } from './untappedParse.js';
 
 export interface UntappedArchetype {
   name: string;
@@ -20,28 +21,9 @@ const api = axios.create({
   },
 });
 
-interface ArchetypeStats {
-  ALL: [number, number, number, number]; // [games_first, games_second, wins_first, wins_second]
-  tier: number | null;
-  [rank: string]: any;
-}
-
-interface ManifestEntry {
-  arch_name: string;
-  type: number;
-  type_name: string;
-}
-
 interface RawUntappedData {
   statsData: Record<string, ArchetypeStats>;
   manifestData: Record<string, ManifestEntry>;
-}
-
-export interface UntappedMatchupPairing {
-  deckA: string;
-  deckB: string;
-  winRate: number;   // 0-1 decimal
-  sampleSize: number;
 }
 
 async function fetchRawStats(): Promise<RawUntappedData> {
@@ -66,47 +48,17 @@ async function fetchRawStats(): Promise<RawUntappedData> {
 }
 
 /**
- * Returns per-opponent matchup win rates from untapped.gg's public API.
- * Each entry is win rate of deckA against deckB (0–1 decimal).
+ * Per-archetype stats broken down by rank (Bronze … Master, plus an all-ranks
+ * aggregate), including going-first / going-second splits.
+ *
+ * NOTE: `archetypes_by_rank_v3` contains no opponent-level data — its numeric
+ * keys are rank buckets. Do not derive matchup pairings from it. See
+ * untappedParse.ts. untapped.gg exposes no public archetype-vs-archetype
+ * endpoint (checked 2026-11-14), so there is no real pairing data to import.
  */
-export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
-  const cacheKey = 'untapped:matchup-pairings';
-  const cached = await getCached<UntappedMatchupPairing[]>(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const { statsData, manifestData } = await fetchRawStats();
-    const pairings: UntappedMatchupPairing[] = [];
-
-    for (const [idA, archA] of Object.entries(statsData)) {
-      const manifestA = manifestData[idA];
-      if (!manifestA) continue;
-
-      for (const [key, stats] of Object.entries(archA)) {
-        if (key === 'ALL' || key === 'tier') continue;
-        const manifestB = manifestData[key];
-        if (!manifestB) continue;
-
-        const [gFirst, gSecond, wFirst, wSecond] = stats as [number, number, number, number];
-        const totalGames = gFirst + gSecond;
-        if (totalGames < 20) continue;
-
-        pairings.push({
-          deckA: manifestA.arch_name,
-          deckB: manifestB.arch_name,
-          winRate: (wFirst + wSecond) / totalGames,
-          sampleSize: Math.round(totalGames / 2),
-        });
-      }
-    }
-
-    await setCache(cacheKey, pairings, config.cache.untappedTtl);
-    console.log(`[Untapped] Got ${pairings.length} matchup pairings`);
-    return pairings;
-  } catch (err) {
-    console.error('[Untapped] Matchup pairing fetch failed:', (err as Error).message);
-    return [];
-  }
+export async function getRankStats(): Promise<RankStatRow[]> {
+  const { statsData, manifestData } = await fetchRawStats();
+  return parseRankStats(statsData, manifestData);
 }
 
 /**

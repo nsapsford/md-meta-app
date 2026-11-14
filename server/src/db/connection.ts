@@ -3,6 +3,7 @@ import ws from 'ws';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { runMigrations } from './migrations.js';
 
 // Required for Node.js environments (Render, local dev)
 neonConfig.webSocketConstructor = ws;
@@ -33,4 +34,5 @@ export async function initDb(): Promise<void> {
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
   await p.query(schema);
   console.log('[DB] Schema initialized');
+  await runMigrations(p);
 }

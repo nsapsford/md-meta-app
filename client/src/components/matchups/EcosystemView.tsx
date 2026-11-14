@@ -465,6 +465,18 @@ export default function EcosystemView({ deckNames }: Props) {
     );
   }
 
+  if (analysis.measured_matchup_cells === 0) {
+    return (
+      <div className="bg-md-surface border border-md-border rounded-lg p-8 text-center text-md-textMuted space-y-1">
+        <p className="font-semibold text-md-textSecondary">No matchup data available</p>
+        <p className="text-sm">
+          The ecosystem view needs archetype-vs-archetype win rates, and untapped.gg doesn't publish them.
+          Log games under <strong>My Games</strong> to start building real pairings.
+        </p>
+      </div>
+    );
+  }
+
   const profile = analysis.profiles.find((p) => p.deck === selectedDeck) ?? analysis.profiles[0];
   const gt = profile.game_theory;
 

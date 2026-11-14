@@ -6,7 +6,7 @@ import CountUp from '../components/common/CountUp';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
 import PullToRefresh from '../components/common/PullToRefresh';
 import { useSyncUpdate } from '../cache/SyncUpdateContext';
-import { decksQuery, matchupMatrixQuery, type MatrixSource } from '../queries/options';
+import { decksQuery, matchupMatrixQuery } from '../queries/options';
 import { useFirstContent } from '../launch/firstContent';
 import MetaAdvisor from '../components/matchups/MetaAdvisor';
 import EcosystemView from '../components/matchups/EcosystemView';
@@ -42,8 +42,7 @@ export default function Matchups() {
   const isNative = useIsNative();
   const { applying, applyUpdate, syncRecords } = useSyncUpdate();
   const [tab, setTab] = useState<'matrix' | 'advisor' | 'ecosystem'>('matrix');
-  const [matrixSource, setMatrixSource] = useState<MatrixSource>('blended');
-  const [inferGaps, setInferGaps] = useState(true);
+  const [inferGaps, setInferGaps] = useState(false);
   const [includePersonal, setIncludePersonal] = useState(true);
   const [dismissedError, setDismissedError] = useState<unknown>(null);
 
@@ -58,11 +57,15 @@ export default function Matchups() {
   // Each source/toggle combination is its own cache entry, so flipping back to
   // one you've already viewed is instant; switching tabs no longer refetches.
   const matrixQ = useQuery({
-    ...matchupMatrixQuery(matrixSource, inferGaps, includePersonal),
+    ...matchupMatrixQuery('blended', inferGaps, includePersonal),
     enabled: tab === 'matrix',
   });
   const matrix = matrixQ.data ?? null;
   const loading = matrixQ.isPending;
+  const measuredCells = useMemo(
+    () => matrix ? Object.values(matrix.matrix).reduce((n, row) => n + Object.values(row).filter((c) => !c.inferred).length, 0) : 0,
+    [matrix]
+  );
 
   // Surface an error only when there's nothing (cached or fresh) to show.
   const rawError = (!decksQ.data && decksQ.error) || (!matrix && matrixQ.error) || null;
@@ -95,21 +98,7 @@ export default function Matchups() {
       {tab === 'matrix' && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
-            {(['blended', 'untapped', 'tournament'] as MatrixSource[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setMatrixSource(s)}
-                className={clsx(
-                  'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
-                  matrixSource === s
-                    ? 'bg-md-blue/15 text-md-blue border-md-blue/30'
-                    : 'text-md-textMuted border-md-border hover:border-md-borderLight'
-                )}
-              >
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-            <div className="sm:ml-3 sm:border-l sm:border-md-border sm:pl-3 flex gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => setInferGaps(!inferGaps)}
                 className={clsx(
@@ -118,7 +107,7 @@ export default function Matchups() {
                     ? 'bg-md-purple/15 text-md-purple border-md-purple/30'
                     : 'text-md-textMuted border-md-border hover:border-md-borderLight'
                 )}
-                title="Fill missing cells using ecosystem inference (inverse matchups, predator/prey, win-rate model)"
+                title="Fill missing cells with model estimates (inverse matchups, win-rate model). These are NOT measured results."
               >
                 Infer Gaps
               </button>
@@ -137,7 +126,17 @@ export default function Matchups() {
             </div>
           </div>
 
-          {loading || !matrix ? <MatchupMatrixSkeleton /> : matrix.decks.length > 0 ? (
+          {!loading && matrix && measuredCells === 0 && (
+            <div className="bg-md-surfaceAlt/40 border border-md-border rounded-lg p-3 text-sm text-md-textMuted">
+              <span className="font-semibold text-md-textSecondary">No measured matchup data.</span>{' '}
+              untapped.gg doesn't publish archetype-vs-archetype win rates, so the matrix only fills in from games you log
+              under <strong>My Games</strong>.
+              {inferGaps && ' Every cell shown below is a model estimate, not a result.'}
+              {' '}For how decks perform overall at Master rank, see <strong>Meta Advisor → EV Ranking</strong>.
+            </div>
+          )}
+
+          {loading || !matrix ? <MatchupMatrixSkeleton /> : matrix.decks.length > 0 && (measuredCells > 0 || inferGaps) ? (
             isNative ? (
               <MobileMatchupFocus matrix={matrix} inferGaps={inferGaps} />
             ) : (
@@ -171,7 +170,7 @@ export default function Matchups() {
                         return (
                           <td
                             key={colDeck}
-                            title={`${getRelationshipLabel(cell.rate)}${inferLabel} | Untapped n=${cell.n_untapped} Tournament n=${cell.n_tournament}${cell.n_personal ? ` Personal n=${cell.n_personal}` : ''} (${cell.confidence} confidence)`}
+                            title={`${getRelationshipLabel(cell.rate)}${inferLabel}${cell.n_untapped || cell.n_tournament || cell.n_personal ? ` | n=${cell.n_untapped + cell.n_tournament + (cell.n_personal ?? 0)}` : ''} (${cell.confidence} confidence)`}
                             className={clsx(
                               'px-2 py-1 text-center rounded cursor-default',
                               cell.inferred
@@ -197,9 +196,9 @@ export default function Matchups() {
             </div>
             )
           ) : (
-            <p className="text-sm text-md-textMuted py-4 text-center">
-              No matchup data in matrix yet. Run a full sync to populate.
-            </p>
+            matrix.decks.length === 0 && (
+              <p className="text-sm text-md-textMuted py-4 text-center">No matchup data available.</p>
+            )
           )}
         </div>
       )}

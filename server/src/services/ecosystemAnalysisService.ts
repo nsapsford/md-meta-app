@@ -62,6 +62,8 @@ export interface EcosystemAnalysis {
   meta_health_index: number;
   tournament_field: TournamentFieldEntry[];
   nash_equilibrium: Record<string, number>; // deck -> optimal play rate
+  /** Matchup cells backed by real data (personal games / imported pairings). 0 → nothing here is measured. */
+  measured_matchup_cells: number;
   computed_at: string;
 }
 
@@ -462,6 +464,7 @@ export async function computeEcosystemAnalysis(pool: Pool, source: string = 'ble
     meta_health_index: metaHealthIndex,
     tournament_field: tournamentField,
     nash_equilibrium: nashEq,
+    measured_matchup_cells: decks.reduce((n, a) => n + Object.keys(matrix[a] ?? {}).length, 0),
     computed_at: new Date().toISOString(),
   };
 }

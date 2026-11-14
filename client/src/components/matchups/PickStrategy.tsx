@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { LadderEvResult, LadderEvMatchup } from '../../api/matchups';
+import type { LadderEvResult } from '../../api/matchups';
 import type { PersonalSpread } from '../../api/personalGames';
 import { ladderEvQuery, personalSpreadQuery } from '../../queries/options';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -78,7 +78,7 @@ function StrategyScatter({
 }) {
   const [tip, setTip] = useState<ScatterTip | null>(null);
   const W = 680, H = 440, pad = 44;
-  const maxPop = Math.max(0.05, ...results.map((r) => r.popularity));
+  const maxPop = Math.max(0.05, ...results.map((r) => r.play_rate));
   const yMin = 0.40, yMax = 0.60;
   const clampY = (v: number) => Math.max(yMin, Math.min(yMax, v));
   const sx = (p: number) => pad + (p / maxPop) * (W - 2 * pad);
@@ -102,15 +102,15 @@ function StrategyScatter({
         <text x={pad + 6} y={H - pad - 6} fill="#6b7280" fontSize="11" fontWeight="600">◣ Fringe</text>
 
         {/* Axis labels */}
-        <text x={W / 2} y={H - 8} fill="#9ca3af" fontSize="11" textAnchor="middle">Archetype Popularity →</text>
-        <text x={14} y={H / 2} fill="#9ca3af" fontSize="11" textAnchor="middle" transform={`rotate(-90 14 ${H / 2})`}>Ladder EV (Power) →</text>
+        <text x={W / 2} y={H - 8} fill="#9ca3af" fontSize="11" textAnchor="middle">Play rate at Master →</text>
+        <text x={14} y={H / 2} fill="#9ca3af" fontSize="11" textAnchor="middle" transform={`rotate(-90 14 ${H / 2})`}>Master win rate (mirror-corrected) →</text>
 
         {results.map((r) => {
-          const cx = sx(r.popularity), cy = sy(r.ev);
-          const radius = 5 + Math.min(9, r.coverage * 9);
+          const cx = sx(r.play_rate), cy = sy(r.ev);
+          const radius = 5 + Math.min(9, Math.sqrt(r.games) / 12);
           const isTop = topPickDecks.has(r.deck);
           const isQueue = top3Names.has(r.deck.toLowerCase());
-          const lowConf = r.low_confidence_fraction > 0.4;
+          const lowConf = r.low_sample;
           const comfort = includePersonal ? comfortMap[r.deck.toLowerCase()] : undefined;
           const showComfort = comfort && comfort.n >= COMFORT_MIN_GAMES;
           const cyComfort = showComfort ? sy(comfort!.rate) : null;
@@ -145,11 +145,11 @@ function StrategyScatter({
         <div className="absolute pointer-events-none z-10 bg-md-bg border border-md-border rounded-lg shadow-lg p-3 max-w-[240px]"
           style={{ left: `${Math.min(Math.max(tip.x, 120), 560)}px`, top: `${tip.y}px`, transform: 'translate(-50%, -100%)' }}>
           <div className="font-semibold text-sm text-md-text">{tipResult.deck}</div>
-          <div className="text-xs text-md-textMuted">Tier {tipResult.tier ?? '?'} · {(tipResult.popularity * 100).toFixed(1)}% played</div>
-          <div className="text-xs mt-1"><span className="text-md-textMuted">EV: </span><span className={rateColor(tipResult.ev)}>{(tipResult.ev * 100).toFixed(1)}%</span>
-            {tipResult.ev_vs_top3 != null && <span className="text-md-textMuted"> · vs queue: <span className={rateColor(tipResult.ev_vs_top3)}>{(tipResult.ev_vs_top3 * 100).toFixed(1)}%</span></span>}
+          <div className="text-xs text-md-textMuted">Tier {tipResult.tier ?? '?'} · {(tipResult.play_rate * 100).toFixed(1)}% played · {tipResult.games.toLocaleString()} games</div>
+          <div className="text-xs mt-1"><span className="text-md-textMuted">Win rate: </span><span className={rateColor(tipResult.ev)}>{(tipResult.ev * 100).toFixed(1)}%</span>
+            <span className="text-md-textMuted"> (raw {(tipResult.win_rate_raw * 100).toFixed(1)}%)</span>
           </div>
-          <div className="text-xs"><span className="text-md-textMuted">Pick score: </span><span className="font-semibold text-md-text">{(tipResult.pick_score * 100).toFixed(1)}%</span></div>
+          <div className="text-xs"><SplitText r={tipResult} /></div>
           {tipComfort && tipComfort.n >= COMFORT_MIN_GAMES && (
             <div className="text-xs"><span className="text-md-gold">Comfort: </span><span className={rateColor(tipComfort.rate)}>{(tipComfort.rate * 100).toFixed(0)}%</span><span className="text-md-textMuted"> ({tipComfort.n}g)</span></div>
           )}
@@ -165,27 +165,34 @@ function StrategyScatter({
   );
 }
 
-// ── Pick card (mobile-primary + desktop ranked list) ──
-
-function lookupMatchups(r: LadderEvResult): Map<string, LadderEvMatchup> {
-  return new Map([...r.top_good_matchups, ...r.top_bad_matchups].map((m) => [m.opponent.toLowerCase(), m]));
+function pct(v: number | null): string {
+  return v == null ? '—' : `${Math.round(v * 100)}%`;
 }
 
+function SplitText({ r }: { r: LadderEvResult }) {
+  return (
+    <span className="text-md-textMuted">
+      1st: <span className={r.win_rate_first != null ? rateColor(r.win_rate_first) : ''}>{pct(r.win_rate_first)}</span>
+      {' · '}2nd: <span className={r.win_rate_second != null ? rateColor(r.win_rate_second) : ''}>{pct(r.win_rate_second)}</span>
+    </span>
+  );
+}
+
+// ── Pick card ──
+
 function PickCard({
-  r, rank, top3, medPop, comfortMap, includePersonal,
+  r, rank, medPop, comfortMap, includePersonal,
 }: {
   r: LadderEvResult;
   rank: number;
-  top3: { name: string }[];
   medPop: number;
   comfortMap: Record<string, Comfort>;
   includePersonal: boolean;
 }) {
-  const q = quadrant(r.ev, r.popularity, medPop);
-  const mLookup = useMemo(() => lookupMatchups(r), [r]);
+  const q = quadrant(r.ev, r.play_rate, medPop);
   const comfort = includePersonal ? comfortMap[r.deck.toLowerCase()] : undefined;
   const showComfort = comfort && comfort.n >= COMFORT_MIN_GAMES;
-  const lowConf = r.low_confidence_fraction > 0.4;
+  const lowConf = r.low_sample;
 
   return (
     <div className="border border-md-border/60 rounded-xl p-3 space-y-2 hover:border-md-border transition-colors">
@@ -197,14 +204,14 @@ function PickCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={clsx('px-1.5 py-0.5 rounded text-[10px] font-semibold border', q.cls)}>{q.label}</span>
-          <span className="text-base font-bold tabular-nums text-md-text" title="Pick score">
-            {Math.round(r.pick_score * 100)}%{lowConf && <span className="text-xs ml-0.5 opacity-60">◆</span>}
+          <span className="text-base font-bold tabular-nums text-md-text" title={`Win rate at ${r.rank}, mirror-corrected`}>
+            {(r.ev * 100).toFixed(1)}%{lowConf && <span className="text-xs ml-0.5 opacity-60" title="Small sample">◆</span>}
           </span>
         </div>
       </div>
 
       <div className="space-y-1">
-        <MetricBar label="Power" rate={r.ev} />
+        <MetricBar label="Win rate" rate={r.ev} />
         {showComfort
           ? <MetricBar label="Comfort" rate={comfort!.rate} muted />
           : includePersonal && (
@@ -212,21 +219,10 @@ function PickCard({
           )}
       </div>
 
-      {/* WR vs the top-3 queue */}
-      <div className="flex flex-wrap gap-1">
-        <span className="text-[10px] text-md-textMuted self-center mr-0.5">vs queue:</span>
-        {top3.map((t) => {
-          const m = mLookup.get(t.name.toLowerCase());
-          const short = t.name.split(' ')[0];
-          if (!m) return <span key={t.name} className="px-1.5 py-0.5 rounded text-[10px] bg-md-surfaceAlt/50 text-md-textMuted border border-md-border">{short} —</span>;
-          return (
-            <span key={t.name} className={clsx('px-1.5 py-0.5 rounded text-[10px] border',
-              m.win_rate >= 0.5 ? 'bg-md-green/10 text-md-green border-md-green/20' : 'bg-md-red/10 text-md-red border-md-red/20')}
-              title={`${Math.round(m.win_rate * 100)}% vs ${t.name}${m.inferred ? ' (inferred)' : ''}`}>
-              {short} {Math.round(m.win_rate * 100)}%
-            </span>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px]">
+        <SplitText r={r} />
+        <span className="text-md-textMuted">{(r.play_rate * 100).toFixed(1)}% played</span>
+        <span className="text-md-textMuted">{r.games.toLocaleString()} games{lowConf && ' (small sample)'}</span>
       </div>
 
       {/* Interaction profile */}
@@ -250,40 +246,19 @@ function PickCard({
   );
 }
 
-// ── Counter-Queue banner ──
+// ── Most-played banner ──
 
-function CounterQueueBanner({ top3, picks }: { top3: LadderEvResult[]; picks: LadderEvResult[] }) {
+function QueueBanner({ top3, rank }: { top3: LadderEvResult[]; rank: string }) {
   return (
-    <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3 space-y-2.5">
+    <div className="bg-md-blue/5 border border-md-blue/20 rounded-lg p-3 space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-semibold text-md-blue">Beating the queue</span>
-        <span className="text-xs text-md-textMuted">Top archetypes right now:</span>
+        <span className="text-sm font-semibold text-md-blue">Most played at {rank}</span>
         {top3.map((t) => (
           <span key={t.deck} className="px-2 py-0.5 rounded text-xs bg-md-surfaceAlt/60 border border-md-border text-md-textSecondary">
-            {t.deck} <span className="text-md-textMuted">{(t.popularity * 100).toFixed(0)}%</span>
+            {t.deck} <span className="text-md-textMuted">{(t.play_rate * 100).toFixed(0)}% · </span>
+            <span className={rateColor(t.ev)}>{(t.ev * 100).toFixed(1)}%</span>
           </span>
         ))}
-      </div>
-      <div className="space-y-1.5">
-        {picks.map((r, i) => {
-          const mLookup = lookupMatchups(r);
-          return (
-            <div key={r.deck} className="text-sm">
-              <span className="text-md-textMuted tabular-nums mr-1">#{i + 1}</span>
-              <span className="font-semibold text-md-text">{r.deck}</span>
-              {r.ev_vs_top3 != null && (
-                <span className={clsx('ml-2 font-semibold', rateColor(r.ev_vs_top3))}>{(r.ev_vs_top3 * 100).toFixed(0)}% vs queue</span>
-              )}
-              <span className="text-xs text-md-textMuted ml-2">
-                {[...mLookup.values()].length > 0 &&
-                  r.top_good_matchups.slice(0, 2).map((m) => `${Math.round(m.win_rate * 100)}% vs ${m.opponent.split(' ')[0]}`).join(' · ')}
-              </span>
-              {r.interaction?.vs_top3_rationale && (
-                <span className="block text-[11px] text-md-textMuted italic pl-5">{r.interaction.vs_top3_rationale}</span>
-              )}
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -296,7 +271,7 @@ const EMPTY_SPREAD: PersonalSpread[] = [];
 
 export default function PickStrategy({ decks, includePersonal = false, onTogglePersonal }: Props) {
   const isNative = useIsNative();
-  const resultsQ = useQuery(ladderEvQuery(includePersonal, true));
+  const resultsQ = useQuery(ladderEvQuery(true));
   const spreadQ = useQuery({ ...personalSpreadQuery(), enabled: includePersonal });
   const results: LadderEvResult[] = resultsQ.data ?? EMPTY_RESULTS;
   const spread: PersonalSpread[] = includePersonal ? spreadQ.data ?? EMPTY_SPREAD : EMPTY_SPREAD;
@@ -317,25 +292,31 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
   }, [spread]);
 
   const top3 = useMemo(
-    () => [...results].filter((r) => r.popularity > 0).sort((a, b) => b.popularity - a.popularity).slice(0, 3),
+    () => [...results].sort((a, b) => b.play_rate - a.play_rate).slice(0, 3),
     [results]
   );
   const top3Names = useMemo(() => new Set(top3.map((t) => t.deck.toLowerCase())), [top3]);
-  const ranked = useMemo(() => [...results].sort((a, b) => b.pick_score - a.pick_score), [results]);
-  const medPop = useMemo(() => median(results.map((r) => r.popularity).filter((p) => p > 0)), [results]);
-  const topPickDecks = useMemo(() => new Set(ranked.slice(0, 3).map((r) => r.deck)), [ranked]);
+  // Server order: reliable samples first, by win rate.
+  const ranked = results;
+  const medPop = useMemo(() => median(results.map((r) => r.play_rate).filter((p) => p > 0)), [results]);
+  const topPickDecks = useMemo(() => new Set(ranked.filter((r) => !r.low_sample).slice(0, 3).map((r) => r.deck)), [ranked]);
 
   if (error) return <ErrorBanner message={error} onRetry={() => void resultsQ.refetch()} />;
   if (loading) return <LoadingSpinner />;
   if (results.length === 0) {
-    return <p className="text-sm text-md-textMuted py-4 text-center">No matchup data available. Run a sync to populate.</p>;
+    return (
+      <p className="text-sm text-md-textMuted py-4 text-center">
+        No per-rank data available yet. Run a sync to populate.
+      </p>
+    );
   }
 
   return (
     <div className="space-y-4 pb-24">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-md-textMuted">
-          Ranked by <strong>pick score</strong> — Ladder EV blended with a bonus for beating the current top-3, reinforced by card-level interactions.
+          Ranked by measured <strong>Master-rank win rate</strong> (mirror-match corrected) from untapped.gg. Archetype-vs-archetype
+          matchup data isn't published, so no counter-picking is modelled.
         </p>
         {onTogglePersonal && (
           <button
@@ -351,11 +332,11 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
         )}
       </div>
 
-      {top3.length > 0 && <CounterQueueBanner top3={top3} picks={ranked.slice(0, 3)} />}
+      {top3.length > 0 && <QueueBanner top3={top3} rank={results[0]?.rank ?? 'master'} />}
 
       {!isNative && (
         <div className="bg-md-surface border border-md-border rounded-lg p-4">
-          <h3 className="font-semibold text-md-text mb-2">Strategy Dashboard — EV vs Popularity</h3>
+          <h3 className="font-semibold text-md-text mb-2">Strategy Dashboard — Master win rate vs play rate</h3>
           <StrategyScatter
             results={results}
             top3Names={top3Names}
@@ -365,8 +346,8 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
             topPickDecks={topPickDecks}
           />
           <p className="text-[10px] text-md-textMuted mt-1">
-            Bubble color = tier; ring = top counter-queue pick; thicker outline = a top-3 archetype; ◆ = low-confidence.
-            {includePersonal && ' Gold marker/line = your Comfort (personal WR) vs Power.'}
+            Bubble color = tier; ring = top win rate (reliable samples); thicker outline = a top-3 archetype; ◆ = small sample.
+            {includePersonal && ' Gold marker/line = your Comfort (personal WR) vs Master win rate.'}
           </p>
         </div>
       )}
@@ -377,7 +358,6 @@ export default function PickStrategy({ decks, includePersonal = false, onToggleP
             key={r.deck}
             r={r}
             rank={i + 1}
-            top3={top3.map((t) => ({ name: t.deck }))}
             medPop={medPop}
             comfortMap={comfortMap}
             includePersonal={includePersonal}
