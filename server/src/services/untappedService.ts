@@ -66,45 +66,54 @@ async function fetchRawStats(): Promise<RawUntappedData> {
 }
 
 /**
- * Returns per-opponent matchup win rates from untapped.gg's public API.
- * Each entry is win rate of deckA against deckB (0–1 decimal).
+ * Per-opponent matchup win rates are NOT available from the public
+ * `archetypes_by_rank_v3/free` query. The sub-keys under each archetype (besides
+ * `ALL` and `tier`) are rank buckets ([games_first, games_second, wins_first,
+ * wins_second] per rank), not opponent archetype ids. Their keys happen to collide
+ * with small manifest ids, which previously made every deck appear to have four
+ * "matchups" (bystial / tearlaments / spright / swordsoul) that were really its
+ * per-rank stats. Until a genuine matchup endpoint is wired in, return nothing
+ * rather than fabricate pairings.
  */
 export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
-  const cacheKey = 'untapped:matchup-pairings';
-  const cached = await getCached<UntappedMatchupPairing[]>(cacheKey);
-  if (cached) return cached;
+  return [];
+}
 
+/**
+ * Rank buckets in archetypes_by_rank_v3. Untapped's rank filter runs Bronze -> Master and the
+ * data has six buckets, "2".."7", with win rates falling steadily from 2 to 7 (inferred; there
+ * is no label in the response). Bucket "1" (Rookie) is absent from the free query.
+ */
+export const UNTAPPED_RANKS: Record<number, string> = {
+  2: 'Bronze', 3: 'Silver', 4: 'Gold', 5: 'Platinum', 6: 'Diamond', 7: 'Master',
+};
+
+export interface UntappedRankStat {
+  name: string;
+  rank: number;
+  games: number;
+  wins: number;
+}
+
+/** Per-archetype, per-rank games and wins (raw: mirror matches are not corrected). */
+export async function scrapeRankStats(): Promise<UntappedRankStat[]> {
   try {
     const { statsData, manifestData } = await fetchRawStats();
-    const pairings: UntappedMatchupPairing[] = [];
-
-    for (const [idA, archA] of Object.entries(statsData)) {
-      const manifestA = manifestData[idA];
-      if (!manifestA) continue;
-
-      for (const [key, stats] of Object.entries(archA)) {
-        if (key === 'ALL' || key === 'tier') continue;
-        const manifestB = manifestData[key];
-        if (!manifestB) continue;
-
-        const [gFirst, gSecond, wFirst, wSecond] = stats as [number, number, number, number];
-        const totalGames = gFirst + gSecond;
-        if (totalGames < 20) continue;
-
-        pairings.push({
-          deckA: manifestA.arch_name,
-          deckB: manifestB.arch_name,
-          winRate: (wFirst + wSecond) / totalGames,
-          sampleSize: Math.round(totalGames / 2),
-        });
+    const out: UntappedRankStat[] = [];
+    for (const [id, arch] of Object.entries(statsData)) {
+      const manifest = manifestData[id];
+      if (!manifest) continue;
+      for (const [key, value] of Object.entries(arch)) {
+        const rank = Number(key);
+        if (!UNTAPPED_RANKS[rank] || !Array.isArray(value)) continue;
+        const [gFirst, gSecond, wFirst, wSecond] = value as [number, number, number, number];
+        const games = gFirst + gSecond;
+        if (games > 0) out.push({ name: manifest.arch_name, rank, games, wins: wFirst + wSecond });
       }
     }
-
-    await setCache(cacheKey, pairings, config.cache.untappedTtl);
-    console.log(`[Untapped] Got ${pairings.length} matchup pairings`);
-    return pairings;
+    return out;
   } catch (err) {
-    console.error('[Untapped] Matchup pairing fetch failed:', (err as Error).message);
+    console.error('[Untapped] Rank stats fetch failed:', (err as Error).message);
     return [];
   }
 }
@@ -150,8 +159,10 @@ export async function scrapeTierList(): Promise<UntappedArchetype[]> {
       // Play rate: archetype's games / total games (each game counted once per player)
       const playRate = Math.round((totalArchGames / 2 / totalGames) * 1000) / 10;
 
-      // Sample size: number of games this archetype appeared in
-      const sampleSize = Math.round(totalArchGames / 2);
+      // Sample size: games this archetype was played in. archetypes_by_rank_v3 counts one
+      // entry per player per game, so an archetype's own total is already its game count
+      // (only the all-decks total needs halving, which the play-rate maths above does).
+      const sampleSize = totalArchGames;
 
       results.push({
         name: manifest.arch_name,

@@ -12,3 +12,7 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      # Untapped analytics (card negate data). Refresh token from a logged-in ygom.untapped.gg /
+      # Companion session; the server stores rotated tokens in the database after first use.
+      - key: UNTAPPED_REFRESH_TOKEN
+        sync: false

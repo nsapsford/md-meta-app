@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ErrorBanner from '../components/common/ErrorBanner';
 import SyncFreshnessBadge from '../components/common/SyncFreshnessBadge';
@@ -25,6 +25,10 @@ export default function Dashboard() {
   // other). Each paints from the persisted cache first when it has a copy,
   // then revalidates in the background.
   const tierListQ = useQuery(tierListQuery());
+  // Rank filter: only the tier list rows change (win/play rates for that rank); the charts and
+  // header stats keep using the all-ranks list above.
+  const [rank, setRank] = useState<number | null>(null);
+  const rankQ = useQuery({ ...tierListQuery(rank), enabled: rank != null });
   const featuredQ = useQuery(featuredDecksQuery());
   const tierList = tierListQ.data ?? null;
   const featured = featuredQ.data ?? [];
@@ -168,7 +172,27 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-md-text">Complete Tier List</h2>
         </div>
 
-        <TierListView tierList={tierList} />
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Rank filter">
+          <span className="text-xs text-md-textMuted uppercase tracking-wider mr-1">Win / play rate for</span>
+          {([[null, 'All ranks'], [7, 'Master'], [6, 'Diamond'], [5, 'Platinum'], [4, 'Gold'], [3, 'Silver'], [2, 'Bronze']] as const).map(([r, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setRank(r)}
+              aria-pressed={rank === r}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                rank === r
+                  ? 'bg-md-blue/20 border-md-blue/60 text-md-text'
+                  : 'bg-md-surface/50 border-md-border/30 text-md-textMuted hover:text-md-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          {rank != null && rankQ.isFetching && <span className="text-xs text-md-textMuted">loading…</span>}
+        </div>
+
+        <TierListView tierList={rank != null && rankQ.data ? rankQ.data : tierList} />
       </div>
 
       {/* Power Rankings Chart */}

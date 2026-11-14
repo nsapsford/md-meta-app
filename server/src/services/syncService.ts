@@ -279,6 +279,25 @@ export async function syncUntapped(): Promise<number> {
     updated++;
   }
 
+  // Per-rank win/play data (powers the rank filter on the tier list)
+  const rankStats = await untapped.scrapeRankStats();
+  for (const r of rankStats) {
+    await run(pool,
+      `INSERT INTO deck_rank_stats (deck_name, rank, games, wins, updated_at)
+       VALUES (LOWER($1), $2, $3, $4, extract(epoch from now())::bigint)
+       ON CONFLICT (deck_name, rank) DO UPDATE SET games = EXCLUDED.games, wins = EXCLUDED.wins, updated_at = EXCLUDED.updated_at`,
+      [r.name, r.rank, r.games, r.wins]
+    );
+  }
+  console.log(`[Sync] Stored ${rankStats.length} per-rank archetype stats`);
+
+  // Earlier versions stored per-rank stats here mislabelled as opponent matchups.
+  // Remove those rows (and their legacy-table copies) so they stop feeding Matchups / Ladder EV.
+  await run(pool,
+    `DELETE FROM matchups m USING matchup_sources s
+       WHERE s.source = 'untapped' AND LOWER(m.deck_a) = LOWER(s.deck_a) AND LOWER(m.deck_b) = LOWER(s.deck_b)`);
+  await run(pool, `DELETE FROM matchup_sources WHERE source = 'untapped'`);
+
   // Store per-matchup win rates in matchup_sources and legacy matchups table
   let matchupsStored = 0;
   for (const p of matchupPairings) {
