@@ -80,6 +80,45 @@ export async function getMatchupPairings(): Promise<UntappedMatchupPairing[]> {
 }
 
 /**
+ * Rank buckets in archetypes_by_rank_v3. Untapped's rank filter runs Bronze -> Master and the
+ * data has six buckets, "2".."7", with win rates falling steadily from 2 to 7 (inferred; there
+ * is no label in the response). Bucket "1" (Rookie) is absent from the free query.
+ */
+export const UNTAPPED_RANKS: Record<number, string> = {
+  2: 'Bronze', 3: 'Silver', 4: 'Gold', 5: 'Platinum', 6: 'Diamond', 7: 'Master',
+};
+
+export interface UntappedRankStat {
+  name: string;
+  rank: number;
+  games: number;
+  wins: number;
+}
+
+/** Per-archetype, per-rank games and wins (raw: mirror matches are not corrected). */
+export async function scrapeRankStats(): Promise<UntappedRankStat[]> {
+  try {
+    const { statsData, manifestData } = await fetchRawStats();
+    const out: UntappedRankStat[] = [];
+    for (const [id, arch] of Object.entries(statsData)) {
+      const manifest = manifestData[id];
+      if (!manifest) continue;
+      for (const [key, value] of Object.entries(arch)) {
+        const rank = Number(key);
+        if (!UNTAPPED_RANKS[rank] || !Array.isArray(value)) continue;
+        const [gFirst, gSecond, wFirst, wSecond] = value as [number, number, number, number];
+        const games = gFirst + gSecond;
+        if (games > 0) out.push({ name: manifest.arch_name, rank, games, wins: wFirst + wSecond });
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error('[Untapped] Rank stats fetch failed:', (err as Error).message);
+    return [];
+  }
+}
+
+/**
  * Fetches archetype stats from untapped.gg's public API.
  * Returns win rate, play rate, and sample size for each archetype.
  */
@@ -120,8 +159,10 @@ export async function scrapeTierList(): Promise<UntappedArchetype[]> {
       // Play rate: archetype's games / total games (each game counted once per player)
       const playRate = Math.round((totalArchGames / 2 / totalGames) * 1000) / 10;
 
-      // Sample size: number of games this archetype appeared in
-      const sampleSize = Math.round(totalArchGames / 2);
+      // Sample size: games this archetype was played in. archetypes_by_rank_v3 counts one
+      // entry per player per game, so an archetype's own total is already its game count
+      // (only the all-decks total needs halving, which the play-rate maths above does).
+      const sampleSize = totalArchGames;
 
       results.push({
         name: manifest.arch_name,
