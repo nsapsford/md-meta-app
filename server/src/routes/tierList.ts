@@ -3,14 +3,18 @@ import { getPool } from '../db/connection.js';
 import { queryAll } from '../utils/dbHelpers.js';
 import { syncDeckTypes, computeDeckTypeCards } from '../services/syncService.js';
 import { config } from '../config.js';
+import { UNTAPPED_RANKS } from '../services/untappedService.js';
 
 // In-memory process cache — instant lookup, no DB round-trip
 let memCache: Record<string, any[]> | null = null;
 let memCacheAt = 0;
+// Rank-filtered variants (rank bucket -> grouped tier list), same TTL
+const rankCache = new Map<number, { at: number; data: Record<string, any[]> }>();
 const MEM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function invalidateTierListCache() {
   memCache = null;
+  rankCache.clear();
 }
 
 export async function warmTierListCache(): Promise<void> {
@@ -22,10 +26,18 @@ export async function warmTierListCache(): Promise<void> {
 
 const router = Router();
 
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    // Serve from in-memory cache — zero DB round-trips
-    if (memCache && (Date.now() - memCacheAt) < MEM_CACHE_TTL_MS) {
+    // Optional ?rank=2..7 (Bronze..Master): win/play rates come from that rank's Untapped data
+    const rank = req.query.rank != null ? Number(req.query.rank) : null;
+    if (rank != null && !UNTAPPED_RANKS[rank]) {
+      return res.status(400).json({ error: 'rank must be 2 (Bronze) to 7 (Master)' });
+    }
+    if (rank != null) {
+      const hit = rankCache.get(rank);
+      if (hit && (Date.now() - hit.at) < MEM_CACHE_TTL_MS) return res.json(hit.data);
+    } else if (memCache && (Date.now() - memCacheAt) < MEM_CACHE_TTL_MS) {
+      // Serve from in-memory cache — zero DB round-trips
       return res.json(memCache);
     }
 
@@ -72,6 +84,24 @@ router.get('/', async (_req: Request, res: Response) => {
         cards,
         // breakdown_json intentionally omitted — only needed in /decks/:name
       });
+    }
+
+    if (rank != null) {
+      const rows = await queryAll<{ deck_name: string; games: number; wins: number }>(pool,
+        `SELECT archetype AS deck_name, games_first + games_second AS games, wins_first + wins_second AS wins
+           FROM archetype_rank_stats WHERE rank_id = $1`, [rank]);
+      const total = rows.reduce((n, r) => n + r.games, 0);
+      const byName = new Map(rows.map((r) => [r.deck_name.toLowerCase(), r]));
+      for (const list of Object.values(grouped)) {
+        for (const d of list) {
+          const r = byName.get(String(d.name).toLowerCase());
+          d.win_rate = r ? Math.round((r.wins / r.games) * 1000) / 10 : null;
+          d.play_rate = r && total ? Math.round((r.games / total) * 1000) / 10 : null;
+          d.sample_size = r ? r.games : null;
+        }
+      }
+      rankCache.set(rank, { at: Date.now(), data: grouped });
+      return res.json(grouped);
     }
 
     memCache = grouped;

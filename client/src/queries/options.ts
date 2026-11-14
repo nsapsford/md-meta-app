@@ -48,8 +48,12 @@ export const syncStatusQuery = () =>
     meta: PUBLIC,
   });
 
-export const tierListQuery = () =>
-  queryOptions({ queryKey: ['tier-list'], queryFn: getTierList, meta: PUBLIC });
+export const tierListQuery = (rank?: number | null) =>
+  queryOptions({
+    queryKey: rank != null ? ['tier-list', 'rank', rank] : ['tier-list'],
+    queryFn: () => getTierList(rank),
+    meta: PUBLIC,
+  });
 
 export const featuredDecksQuery = () =>
   queryOptions({

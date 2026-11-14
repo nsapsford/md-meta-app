@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { config } from '../config.js';
 import { getCached, setCache } from './cacheService.js';
-import { parseRankStats, type ArchetypeStats, type ManifestEntry, type RankStatRow } from './untappedParse.js';
+import { parseRankStats, RANK_NAMES, type ArchetypeStats, type ManifestEntry, type RankStatRow } from './untappedParse.js';
 
 export interface UntappedArchetype {
   name: string;
@@ -61,6 +61,11 @@ export async function getRankStats(): Promise<RankStatRow[]> {
   return parseRankStats(statsData, manifestData);
 }
 
+/** Rank buckets 2..7 (Bronze..Master) as returned by the free query; used to validate `?rank=`. */
+export const UNTAPPED_RANKS: Record<number, string> = Object.fromEntries(
+  [2, 3, 4, 5, 6, 7].map((id) => [id, RANK_NAMES[id][0].toUpperCase() + RANK_NAMES[id].slice(1)])
+);
+
 /**
  * Fetches archetype stats from untapped.gg's public API.
  * Returns win rate, play rate, and sample size for each archetype.
@@ -102,8 +107,10 @@ export async function scrapeTierList(): Promise<UntappedArchetype[]> {
       // Play rate: archetype's games / total games (each game counted once per player)
       const playRate = Math.round((totalArchGames / 2 / totalGames) * 1000) / 10;
 
-      // Sample size: number of games this archetype appeared in
-      const sampleSize = Math.round(totalArchGames / 2);
+      // Sample size: games this archetype was played in. archetypes_by_rank_v3 counts one
+      // entry per player per game, so an archetype's own total is already its game count
+      // (only the all-decks total needs halving, which the play-rate maths above does).
+      const sampleSize = totalArchGames;
 
       results.push({
         name: manifest.arch_name,
