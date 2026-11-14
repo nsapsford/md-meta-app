@@ -4,6 +4,8 @@ export interface TierList {
   '2': DeckTierEntry[];
   '3': DeckTierEntry[];
   rogue: DeckTierEntry[];
+  /** Decks with tournament results but no ladder data at all (not ladder meta). */
+  tournament_only?: DeckTierEntry[];
 }
 
 export interface DeckTierEntry {
@@ -20,6 +22,12 @@ export interface DeckTierEntry {
   sample_size: number | null;
   untapped_tier: number | null;
   cards?: Array<{ name: string; image: string | null }>;
+  /** Ladder win rate minus the average tracked player's, in points (selected ranks). */
+  edge?: number;
+  /** Lower bound of the 95% interval on `edge`: how sure we are it is really above average. */
+  edge_floor?: number;
+  /** Ladder games behind win_rate / play_rate. */
+  games?: number;
 }
 
 export interface MetaSnapshot {
