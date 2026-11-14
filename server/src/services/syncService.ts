@@ -4,6 +4,8 @@ import { run, queryAll } from '../utils/dbHelpers.js';
 import * as ygopd from './ygoprodeckService.js';
 import * as mdm from './mdmService.js';
 import * as untapped from './untappedService.js';
+import { invalidateDerived } from '../utils/memo.js';
+import { storeRankStats } from './rankMeta.js';
 import { getValidAccessToken, invalidateToken } from './untappedAuthService.js';
 
 export async function syncCards(): Promise<number> {
@@ -258,9 +260,9 @@ export async function syncTournaments(): Promise<number> {
 
 export async function syncUntapped(): Promise<number> {
   const pool = getPool();
-  const [archetypes, matchupPairings] = await Promise.all([
+  const [archetypes, rankStats] = await Promise.all([
     untapped.scrapeTierList(),
-    untapped.getMatchupPairings(),
+    untapped.getRankStats(),
   ]);
 
   let updated = 0;
@@ -279,45 +281,12 @@ export async function syncUntapped(): Promise<number> {
     updated++;
   }
 
-  // Per-rank win/play data (powers the rank filter on the tier list)
-  const rankStats = await untapped.scrapeRankStats();
-  for (const r of rankStats) {
-    await run(pool,
-      `INSERT INTO deck_rank_stats (deck_name, rank, games, wins, updated_at)
-       VALUES (LOWER($1), $2, $3, $4, extract(epoch from now())::bigint)
-       ON CONFLICT (deck_name, rank) DO UPDATE SET games = EXCLUDED.games, wins = EXCLUDED.wins, updated_at = EXCLUDED.updated_at`,
-      [r.name, r.rank, r.games, r.wins]
-    );
-  }
-  console.log(`[Sync] Stored ${rankStats.length} per-rank archetype stats`);
+  // Per-rank stats (win/play rate by rank, going first/second splits).
+  // These are NOT matchups — untapped.gg publishes no archetype-vs-archetype data.
+  await storeRankStats(pool, rankStats);
+  invalidateDerived('meta:');
 
-  // Earlier versions stored per-rank stats here mislabelled as opponent matchups.
-  // Remove those rows (and their legacy-table copies) so they stop feeding Matchups / Ladder EV.
-  await run(pool,
-    `DELETE FROM matchups m USING matchup_sources s
-       WHERE s.source = 'untapped' AND LOWER(m.deck_a) = LOWER(s.deck_a) AND LOWER(m.deck_b) = LOWER(s.deck_b)`);
-  await run(pool, `DELETE FROM matchup_sources WHERE source = 'untapped'`);
-
-  // Store per-matchup win rates in matchup_sources and legacy matchups table
-  let matchupsStored = 0;
-  for (const p of matchupPairings) {
-    await run(pool,
-      `INSERT INTO matchup_sources (deck_a, deck_b, source, win_rate, sample_size, updated_at)
-       VALUES (LOWER($1), LOWER($2), 'untapped', $3, $4, extract(epoch from now())::bigint)
-       ON CONFLICT (deck_a, deck_b, source) DO UPDATE SET win_rate = EXCLUDED.win_rate, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at`,
-      [p.deckA, p.deckB, p.winRate, p.sampleSize]
-    );
-    // Also populate legacy matchups table (win_rate_a stored as 0-100 percentage)
-    await run(pool,
-      `INSERT INTO matchups (deck_a, deck_b, win_rate_a, sample_size, updated_at)
-       VALUES (LOWER($1), LOWER($2), $3, $4, extract(epoch from now())::bigint)
-       ON CONFLICT (deck_a, deck_b) DO UPDATE SET win_rate_a = EXCLUDED.win_rate_a, sample_size = EXCLUDED.sample_size, updated_at = EXCLUDED.updated_at`,
-      [p.deckA, p.deckB, Math.round(p.winRate * 1000) / 10, p.sampleSize]
-    );
-    matchupsStored++;
-  }
-
-  console.log(`[Sync] Updated ${updated} deck types and ${matchupsStored} matchup pairings with untapped.gg data`);
+  console.log(`[Sync] Updated ${updated} deck types and ${rankStats.length} per-rank stat rows with untapped.gg data`);
   return archetypes.length;
 }
 

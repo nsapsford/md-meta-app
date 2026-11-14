@@ -13,6 +13,7 @@ import decksRouter, { warmFeaturedCache } from './routes/decks.js';
 import matchupsRouter from './routes/matchups.js';
 import banListRouter from './routes/banList.js';
 import metaTrendsRouter from './routes/metaTrends.js';
+import metaRouter from './routes/meta.js';
 import tournamentsRouter from './routes/tournaments.js';
 import deckBuilderRouter from './routes/deckBuilder.js';
 import syncRouter from './routes/sync.js';
@@ -64,6 +65,7 @@ async function main() {
   app.use('/api/matchups', matchupsRouter);
   app.use('/api/ban-list', banListRouter);
   app.use('/api/meta-trends', metaTrendsRouter);
+  app.use('/api/meta', metaRouter);
   app.use('/api/tournaments', tournamentsRouter);
   app.use('/api/deck-builder', deckBuilderRouter);
   app.use('/api/sync', syncRouter);

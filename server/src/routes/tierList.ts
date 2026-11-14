@@ -88,7 +88,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (rank != null) {
       const rows = await queryAll<{ deck_name: string; games: number; wins: number }>(pool,
-        'SELECT deck_name, games, wins FROM deck_rank_stats WHERE rank = $1', [rank]);
+        `SELECT archetype AS deck_name, games_first + games_second AS games, wins_first + wins_second AS wins
+           FROM archetype_rank_stats WHERE rank_id = $1`, [rank]);
       const total = rows.reduce((n, r) => n + r.games, 0);
       const byName = new Map(rows.map((r) => [r.deck_name.toLowerCase(), r]));
       for (const list of Object.values(grouped)) {

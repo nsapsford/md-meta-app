@@ -124,6 +124,22 @@ CREATE TABLE IF NOT EXISTS matchup_sources (
   PRIMARY KEY (deck_a, deck_b, source)
 );
 
+-- Per-archetype stats by rank, from untapped.gg `archetypes_by_rank_v3`.
+-- rank_id 0 = all ranks; 1..7 = Rookie, Bronze, Silver, Gold, Platinum, Diamond, Master.
+-- Counts are per player: games_first/second = games played going first/second,
+-- wins_first/second = wins in those games. These are NOT opponent matchups.
+CREATE TABLE IF NOT EXISTS archetype_rank_stats (
+  archetype TEXT NOT NULL,
+  rank_id INTEGER NOT NULL,
+  rank TEXT NOT NULL,
+  games_first INTEGER NOT NULL,
+  games_second INTEGER NOT NULL,
+  wins_first INTEGER NOT NULL,
+  wins_second INTEGER NOT NULL,
+  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
+  PRIMARY KEY (archetype, rank_id)
+);
+
 CREATE TABLE IF NOT EXISTS personal_games (
   id SERIAL PRIMARY KEY,
   deck_played TEXT NOT NULL,
@@ -275,14 +291,3 @@ CREATE INDEX IF NOT EXISTS idx_drill_reviews_deck_due ON drill_reviews(deck_id, 
 -- check_json is cleared when the line is edited, since it no longer applies.
 ALTER TABLE combo_lines ADD COLUMN IF NOT EXISTS plan_json TEXT;
 ALTER TABLE combo_lines ADD COLUMN IF NOT EXISTS check_json TEXT;
-
--- Per-archetype win/play data for each Untapped rank bucket (2 = Bronze ... 7 = Master).
--- games counts one entry per player per game; wins likewise (raw, mirror matches included).
-CREATE TABLE IF NOT EXISTS deck_rank_stats (
-  deck_name TEXT NOT NULL,
-  rank INTEGER NOT NULL,
-  games INTEGER NOT NULL,
-  wins INTEGER NOT NULL,
-  updated_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER),
-  PRIMARY KEY (deck_name, rank)
-);

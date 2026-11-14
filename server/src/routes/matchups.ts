@@ -6,6 +6,7 @@ import { blendMatchupRates, buildFullMatrix } from '../services/matchupBlendServ
 import { computeEcosystemAnalysis } from '../services/ecosystemAnalysisService.js';
 import { computeLadderEv } from '../services/ladderEvService.js';
 import { memoize } from '../utils/memo.js';
+import { rankIdFromName } from '../services/untappedParse.js';
 
 // Matrix, ecosystem and ladder-EV are recomputed from several Neon queries
 // plus in-process modelling, yet only change when a sync runs or a personal
@@ -72,6 +73,7 @@ router.get('/ecosystem', async (req: Request, res: Response) => {
         profile: profile || null,
         related_cycles: relatedCycles,
         meta_health_index: analysis.meta_health_index,
+        measured_matchup_cells: analysis.measured_matchup_cells,
         computed_at: analysis.computed_at,
       });
     }
@@ -108,7 +110,7 @@ router.get('/advisor', async (req: Request, res: Response) => {
     }
 
     if (total === 0) {
-      return res.json({ deck, opponents: [], weighted_win_rate: 0.5, note: 'No tournament placement data available' });
+      return res.json({ deck, opponents: [], weighted_win_rate: null, coverage: 0, note: 'No tournament placement data available' });
     }
 
     // Matchup rates: prefer matchup_sources, fall back to legacy matchups table
@@ -157,36 +159,41 @@ router.get('/advisor', async (req: Request, res: Response) => {
           : null;
         const tournData = tournRow ? { rate: tournRow.win_rate, n: tournRow.sample_size ?? 0 } : null;
         const personalData = includePersonal ? personalSpread.get(nl) ?? null : null;
+        // No measured data for this pairing: report null rather than a made-up 50%.
+        if (!untappedData && !tournData && !personalData) {
+          return { opponent: name, field_pct: fieldPct, win_rate: null, confidence: null };
+        }
         const blend = blendMatchupRates(untappedData, tournData, personalData);
 
         return { opponent: name, field_pct: fieldPct, win_rate: blend.rate, confidence: blend.confidence };
       })
       .sort((a, b) => b.field_pct - a.field_pct);
 
+    // Weighted only over opponents with data; `coverage` is the share of the field that has any.
+    const measured = opponents.filter((o) => o.win_rate != null);
+    const measuredWeight = measured.reduce((s, o) => s + o.field_pct, 0);
     const totalWeight = opponents.reduce((s, o) => s + o.field_pct, 0) || 1;
-    const weightedWinRate = opponents.reduce((s, o) => s + o.win_rate * o.field_pct, 0) / totalWeight;
+    const weightedWinRate = measuredWeight > 0
+      ? measured.reduce((s, o) => s + (o.win_rate as number) * o.field_pct, 0) / measuredWeight
+      : null;
 
-    res.json({ deck, opponents, weighted_win_rate: weightedWinRate });
+    res.json({ deck, opponents, weighted_win_rate: weightedWinRate, coverage: measuredWeight / totalWeight });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
-// Ladder EV ranking
+// Ladder EV ranking — measured win rate per archetype at one rank (default Master).
+// No matchup data involved; see ladderEvService.ts.
 router.get('/ladder-ev', async (req: Request, res: Response) => {
   try {
-    const source = (req.query.source as string) || 'blended';
-    const infer = req.query.infer !== 'false'; // default true
-    const includePersonal = req.query.include_personal === 'true';
+    const rank = (req.query.rank as string) || 'master';
+    if (rankIdFromName(rank) == null) {
+      return res.status(400).json({ error: `Unknown rank "${rank}"` });
+    }
     const reinforce = req.query.reinforce === 'true';
-    const cwRaw = parseFloat(req.query.counter_weight as string);
-    const counterWeight = Number.isFinite(cwRaw) ? Math.max(0, Math.min(1, cwRaw)) : 0.35;
     const pool = getPool();
-    const results = await memoize(
-      `matchups:ladder-ev:${source}:${infer}:${includePersonal}:${counterWeight}:${reinforce}`,
-      () => computeLadderEv(pool, source, infer, includePersonal, counterWeight, reinforce)
-    );
-    res.json(results);
+    res.json(await memoize(`meta:ladder-ev:${rank}:${reinforce}`, () => computeLadderEv(pool, rank, reinforce)));
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
