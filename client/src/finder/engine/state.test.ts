@@ -23,6 +23,16 @@ describe('engine state', () => {
     expect(() => ops.newState({ ...cfg, deck: { ZZ: 1 } }, ix)).toThrow(/ZZ/);
   });
 
+  it('throws for a card index outside the zones', () => {
+    expect(() => ops.newState(cfg, { ...ix, D: 4 })).toThrow(/D/);
+  });
+
+  it('stateKey tells pending effect 0 from effect 15', () => {
+    const a = ops.newState(cfg, ix), b = ops.newState(cfg, ix);
+    a.pend = [{ e: 0 }]; b.pend = [{ e: 15 }];
+    expect(ops.stateKey(a)).not.toBe(ops.stateKey(b));
+  });
+
   it('rejects more than 30 flags', () => {
     expect(() => createStateOps(4, 1, 31)).toThrow();
   });

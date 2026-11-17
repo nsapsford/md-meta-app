@@ -60,6 +60,10 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
   }
 
   function newState(cfg: Cfg, ix: Record<CardId, number>): State {
+    for (const k of Object.keys(ix)) {
+      const i = ix[k];
+      if (!Number.isInteger(i) || i < 0 || i >= nCards) throw new Error(`card index of ${k} is ${i}, outside 0..${nCards - 1}`);
+    }
     const zo = createZoneOps(ix, nCards);
     const z = (obj: Record<CardId, number>, name: string) => {
       for (const k of Object.keys(obj)) {
@@ -142,7 +146,7 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
     a = mix(a, 0x100 | (s.ns ? 1 : 0) | (s.spell ? 2 : 0) | (s.addLock ? 4 : 0) | (s.noDirect ? 8 : 0));
     a = mix(a, s.flags); b = mix(b, s.flags ^ 0x5bf03635);
     for (let i = 0; i < s.opt.length; i++) { a = mix(a, s.opt[i] | 0); b = mix(b, (s.opt[i] ^ 0x5bf03635) + 0x1f83d9ab * (i + 1)); }
-    for (let i = 0; i < s.pend.length; i++) { const v = s.pend[i].e || 15; a = mix(a, v); b = mix(b, v * 31 + 7); }
+    for (let i = 0; i < s.pend.length; i++) { const v = s.pend[i].e + 1; a = mix(a, v); b = mix(b, v * 31 + 7); }
     if (s.opp) {
       const o = s.opp;
       if (o.k === null) {
