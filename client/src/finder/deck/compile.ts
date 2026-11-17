@@ -46,9 +46,18 @@ export interface CompiledDeck {
   extra: CompiledExtraRule[]; protections: CompiledProtection[];
   finalize(s: State): { n: FinalBoard; sets: number[] };
   boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null };
+  /** Per effect id (index 0 unused): what the engine needs to know about its moves. */
+  effects: EffectInfo[];
   /** The state and card-move helpers the compiled closures use (engine/moves.ts reuses them). */
   state: StateOps; ops: Ops;
 }
+
+/**
+ * What the engine reads about an effect's moves (their keys are `key` or `key:<choice>…`):
+ * `activates` for the Spell floodgate, `fromExtra` (it Special Summons from the Extra Deck) for the
+ * Extra Deck floodgate.
+ */
+export interface EffectInfo { key: string; activates: 'spell' | 'trap' | null; fromExtra: boolean }
 
 export class DeckCompileError extends Error {
   errors: DeckFileError[];
@@ -516,6 +525,10 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
 
   const compiled = allEffects.map(({ card, def, i }) => compileEffect(card, def, i));
   const byId: (CompiledEffect | null)[] = [null, ...compiled];
+  const effects: EffectInfo[] = [
+    Object.freeze({ key: '', activates: null, fromExtra: false }),
+    ...allEffects.map(({ def }) => Object.freeze({ key: def.key, activates: def.activates ?? null, fromExtra: summonsFromExtra(def) })),
+  ];
   const byOrder = (a: CompiledEffect, b: CompiledEffect) => (a.def.order ?? 0) - (b.def.order ?? 0) || (a.def.key < b.def.key ? -1 : a.def.key > b.def.key ? 1 : 0);
   const main = compiled.filter((e) => !e.trigger && e.def.phase === 'main').sort(byOrder);
   const onTrig = (t: TrigEvent['t']) => compiled.filter((e) => e.trigger?.on === t).sort(byOrder);
@@ -659,9 +672,33 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   return {
     file, ids, ix, UNK, props, nOpt, nFlags, markBit,
     genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy,
-    extra, protections, finalize, boardValue,
+    extra, protections, finalize, boardValue, effects,
     state: so, ops,
   };
+}
+
+/**
+ * Does the effect Special Summon from the Extra Deck? True when a `summon` in its cost or `do`
+ * (at any depth) names `from: 'extra'`, or summons a choice whose pick reads the Extra Deck
+ * (`zone: 'extra'` anywhere in the pick).
+ */
+function summonsFromExtra(def: EffectDef): boolean {
+  const picks = new Map((def.choose ?? []).map((c) => [c.as, c.pick as unknown]));
+  const readsExtra = (v: unknown): boolean => {
+    if (Array.isArray(v)) return v.some(readsExtra);
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>;
+    return o.zone === 'extra' || Object.values(o).some(readsExtra);
+  };
+  const walk = (v: unknown): boolean => {
+    if (Array.isArray(v)) return v.some(walk);
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>;
+    const sm = o.summon as { what?: string; from?: string } | undefined;
+    if (sm && typeof sm === 'object' && (sm.from === 'extra' || (sm.from === undefined && sm.what !== undefined && readsExtra(picks.get(sm.what))))) return true;
+    return Object.values(o).some(walk);
+  };
+  return walk(def.cost ?? []) || walk(def.do ?? []);
 }
 
 function join(path: string, key: string): string {
