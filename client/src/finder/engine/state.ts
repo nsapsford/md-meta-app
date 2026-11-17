@@ -13,7 +13,6 @@ export interface StateOps {
 
 const ZBIT: Record<ZoneName, number> = { hand: 1, deck: 2, extra: 4, gy: 8, ban: 16 };
 const ZKEY = { hand: 'k1', deck: 'k2', extra: 'k3', gy: 'k4', ban: 'k5' } as const;
-const ZNAMES: ZoneName[] = ['hand', 'deck', 'extra', 'gy', 'ban'];
 
 function mix(h: number, v: number): number {
   h = Math.imul(h ^ v, 0x9e3779b1);
@@ -117,10 +116,12 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
   function setOpt(s: State, i: number): void { s.opt[i >>> 5] |= (1 << (i & 31)); }
 
   function stateKey(s: State): number {
-    for (const name of ZNAMES) {
-      const kk = ZKEY[name];
-      if (!s[kk]) s[kk] = zkey(s[name]);
-    }
+    // Unrolled (hot): one direct property read per zone, as in the reference.
+    if (!s.k1) s.k1 = zkey(s.hand);
+    if (!s.k2) s.k2 = zkey(s.deck);
+    if (!s.k3) s.k3 = zkey(s.extra);
+    if (!s.k4) s.k4 = zkey(s.gy);
+    if (!s.k5) s.k5 = zkey(s.ban);
     let a = 0x2545f491, b = 0x6a09e667;
     a = mix(a, s.k1 | 0); b = mix(b, (s.k1 / 4294967296) | 0);
     a = mix(a, s.k2 | 0); b = mix(b, (s.k2 / 4294967296) | 0);

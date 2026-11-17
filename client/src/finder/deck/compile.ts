@@ -52,6 +52,11 @@ export interface CompiledDeck {
   queueAfterSummon(s: State, e: number, m: Mon): void;
   finalize(s: State): { n: FinalBoard; sets: number[] };
   boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null };
+  /**
+   * Per card index: a board-value entry's `on` names this card (by `card`, or by a `group` that
+   * holds it). A monster on the final board without one is worth the scorer's default value.
+   */
+  hasBoardValue: boolean[];
   /** Per effect id (index 0 unused): what the engine needs to know about its moves. */
   effects: EffectInfo[];
   /** The state and card-move helpers the compiled closures use (engine/moves.ts reuses them). */
@@ -664,6 +669,17 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     };
   });
 
+  const hasBoardValue: boolean[] = ids.map(() => false);
+  const named = (v: unknown, field: string): void => {
+    if (Array.isArray(v)) { v.forEach((x) => named(x, field)); return; }
+    if (!v || typeof v !== 'object') return;
+    const o = v as Record<string, unknown>;
+    if (typeof o.card === 'string' && ix[o.card] !== undefined) hasBoardValue[ix[o.card]] = true;
+    if (typeof o.group === 'string') for (const i of group(o.group, (m) => { throw new DeckCompileError([{ card: null, field, message: m }]); })) hasBoardValue[i] = true;
+    for (const x of Object.values(o)) named(x, field);
+  };
+  file.boardValue.forEach((b, j) => named(b.on, `boardValue[${j}].on`));
+
   function boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null } {
     const s = n;
     const items: [string, number][] | null = full ? [] : null;
@@ -691,7 +707,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   return {
     file, ids, ix, UNK, props, nOpt, nFlags, markBit,
     genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy,
-    extra, protections, queueAfterSummon, finalize, boardValue, effects,
+    extra, protections, queueAfterSummon, finalize, boardValue, hasBoardValue, effects,
     state: so, ops,
   };
 }
