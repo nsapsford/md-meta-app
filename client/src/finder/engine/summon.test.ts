@@ -169,6 +169,18 @@ describe('fusionOptions', () => {
     expect(opts[0].mats.map((m) => (m.side === 'opp' ? m.uid : t.deck.ids[m.id]))).toEqual(['TUNER', 'o1']);
   });
 
+  it('returns options in (order, card id) rule order, whatever the file order', () => {
+    const fus = (card: CardId, order?: number): ExtraRule => ({ card, method: 'fusion', slots: [{ lpAbove: 0 }, { lpAbove: 0 }], ...(order === undefined ? {} : { order }) });
+    const cardsOf = (rules: ExtraRule[]) => {
+      const t = setup(rules);
+      const s = t.state(['SEEKER', 'BIG']);
+      return fusionOptions(s, fieldPool(s, t.deck.props, t.deck.UNK), t.deck.extra).map((o) => t.deck.ids[o.card]);
+    };
+    expect(cardsOf([fus('LINKA'), fus('FUS')])).toEqual(['FUS', 'LINKA']);
+    expect(cardsOf([fus('FUS'), fus('LINKA')])).toEqual(['FUS', 'LINKA']);
+    expect(cardsOf([fus('FUS'), fus('LINKA', -1)])).toEqual(['LINKA', 'FUS']);
+  });
+
   it('needs the Fusion Monster in the Extra Deck', () => {
     const t = setup([sameAttrDiffRace()]);
     const s = t.state(['SEEKER', 'BIG'], { extra: {} });

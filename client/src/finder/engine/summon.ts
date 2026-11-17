@@ -1,8 +1,8 @@
 // Extra Deck summons from the deck file's `extraDeck` rules. Synchro and Link Summons are moves
 // the engine offers itself (moves.ts calls genSynchro / genLinks at the end of gen); a Fusion is
 // performed by an effect, which asks `fusionOptions` what it can make from a pool of materials.
-// Port of the reference's genSynchro / mkSynchro / genLinks and the pair logic of its Super
-// Polymerization block, with each rule's data (Level, rating, material counts, Tuners, material
+// Port of the reference's genSynchro / mkSynchro / genLinks and its either-field Fusion pair
+// loop, with each rule's data (Level, rating, material counts, Tuners, material
 // conditions, relations, bottom arrows) in place of its card checks. Xyz is not built.
 
 import type { CardProps, Choice, CompiledDeck, CompiledExtraRule, CondFn, Place } from '../deck/compile';
@@ -98,6 +98,9 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       for (const r of synchros) {
         if (!s.extra[r.card] || pick.length < r.min || pick.length > r.max || sum !== r.level) continue;
         if (r.tuners === 'exactlyOne' ? tuners !== 1 : tuners > 1) continue;
+        // Unlike the reference (which marks the signature seen before any rule check), a key is marked
+        // seen only once its rule's checks pass: when two copies of a card differ in current Level or
+        // in what `mats` reads (its name on the field), a later copy can still make the move.
         const k = 'syn:' + ids[r.card] + ':' + sig(s, pick);
         if (seen.has(k)) continue;
         mats ??= pick.map((i) => fieldChoice(s, i));
@@ -132,6 +135,9 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       for (const r of links) {
         if (!s.extra[r.card] || pick.length < r.min || pick.length > r.max) continue;
         if (!(pick.length === r.rating || (pick.length <= r.rating && hi >= r.rating && anyLink))) continue;
+        // Marked seen only after the zone and rule checks pass, unlike the reference: when two copies
+        // of a card differ in zone (one in the Extra Monster Zone) or in what `mats` reads, a later
+        // copy can still make the move the first could not.
         const k = 'link:' + ids[r.card] + ':' + sig(s, pick);
         if (seen.has(k)) continue;
         mats ??= pick.map((i) => fieldChoice(s, i));
@@ -202,7 +208,7 @@ function fillsSlots(s: State, slots: CondFn[], mats: MatView[]): boolean {
 
 /**
  * The Fusion Summons the pool allows: for each set of materials (one per slot, in pool order) and
- * each Fusion rule whose monster is in the Extra Deck, in rule order, when the materials fill the
+ * each Fusion rule whose monster is in the Extra Deck, in the compiled rules' (order, card id) order, when the materials fill the
  * rule's slots and meet its relations.
  */
 export function fusionOptions(s: State, pool: MatView[], rules: CompiledExtraRule[]): { card: number; mats: MatView[] }[] {

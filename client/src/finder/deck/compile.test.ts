@@ -3,6 +3,7 @@ import { compileDeck, DeckCompileError } from './compile';
 import { validateDeckFile, type DeckFile } from './schema';
 import { TOY_FACTS, TOY_FILE } from '../engine/__toy__/toyDeck';
 import { driver } from '../engine/__toy__/driver';
+import { createMoves } from '../engine/moves';
 
 const D = driver();
 const { mainKeys, pendKeys, run, summonForTest, count, handSize, lastText } = D;
@@ -43,6 +44,24 @@ describe('compileDeck (toy deck)', () => {
     for (const h of hands) expect(R.mainKeys(R.state(h))).toEqual(mainKeys(toyState(h)));
     const withTuner = summonForTest(toyState({ SEEKER: 1, TUNER: 1 }), 'SEEKER');
     expect(R.pendKeys(withTuner)).toEqual(pendKeys(withTuner));
+  });
+
+  it('gives the same Extra Deck moves when extraDeck rules are listed in reverse; order sorts first', () => {
+    const rules: DeckFile['extraDeck'] = [
+      { card: 'WALL', method: 'link', rating: 2, min: 2, max: 2 },
+      { card: 'SYNC', method: 'synchro', level: 8, min: 2, max: 2, tuners: 'atMostOne' },
+      { card: 'BIG', method: 'link', rating: 2, min: 2, max: 2 },
+    ];
+    const keysFor = (extraDeck: DeckFile['extraDeck']) => {
+      const deck = compileDeck({ ...TOY_FILE, extraDeck }, TOY_FACTS);
+      const s = deck.state.newState({ mode: 'first', hand: {}, deck: {}, extra: { SYNC: 1, BIG: 1, WALL: 1 } }, deck.ix);
+      for (const id of ['SEEKER', 'TUNER']) s.mons.push({ id: deck.ix[id], nm: deck.ix[id], emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid: s.uid++ });
+      return createMoves(deck).gen(s).map((m) => m.k);
+    };
+    const want = ['syn:SYNC:SEEKER+TUNER', 'link:BIG:SEEKER+TUNER', 'link:WALL:SEEKER+TUNER'];
+    expect(keysFor(rules)).toEqual(want);
+    expect(keysFor([...rules!].reverse())).toEqual(want);
+    expect(keysFor(rules!.map((r) => (r.card === 'WALL' ? { ...r, order: -1 } : r)))).toEqual(['syn:SYNC:SEEKER+TUNER', 'link:WALL:SEEKER+TUNER', 'link:BIG:SEEKER+TUNER']);
   });
 
   it('fills step text from the template', () => { expect(lastText(run(summonForTest(toyState({ SEEKER: 1 }), 'SEEKER'), 'seeker-search:DRAWTWO'))).toBe('Seeker: add Draw Two.'); });

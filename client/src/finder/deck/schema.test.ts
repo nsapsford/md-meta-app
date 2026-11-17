@@ -46,6 +46,12 @@ describe('validateDeckFile', () => {
     expect(errorsOf(withEffect({ key: 'a#1' }))).toEqual([{ card: 'A', field: 'effects[0].key', message: 'effect key "a#1" cannot contain ":" or "#" (move keys use them as separators)' }]);
   });
 
+  it('accepts a numeric order on an Extra Deck rule and rejects anything else', () => {
+    const rule = { card: 'A', method: 'link', rating: 1, min: 1, max: 1 };
+    expect(validateDeckFile({ ...MINIMAL, extraDeck: [{ ...rule, order: 2 }] }, {}).ok).toBe(true);
+    expect(errorsOf({ ...MINIMAL, extraDeck: [{ ...rule, order: 'first' }] })).toEqual([{ card: null, field: 'extraDeck[0].order', message: 'expected a number, got "first"' }]);
+  });
+
   it('rejects another vocabulary version', () => {
     expect(errorsOf({ ...MINIMAL, vocab: 99 })[0].message).toBe('written for vocabulary 99, this app has 1');
     expect(VOCAB_VERSION).toBe(1);

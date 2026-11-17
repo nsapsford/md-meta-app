@@ -20,6 +20,10 @@ Extra Deck rule (`mats`, fusion `slots`). For a material, the other materials ar
 cards. On your field a monster's name is its name there; an opponent's monster is read from its
 own fields (never a Tuner; it counts as an Effect Monster); anywhere else, the printed card.
 
+Extra Deck rules (`extraDeck`) are tried in (`order`, card id, method) order, whatever their order
+in the file; `order` is an optional number (default 0), as on effects. That order is the order of
+the Synchro and Link moves and of the Fusion options.
+
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
 | `has` | condition | `{ zone, which? }` | A zone holds at least one matching card. |
@@ -38,7 +42,7 @@ own fields (never a Tuner; it counts as an Effect Monster); anywhere else, the p
 | `tuner` | condition | none | This card is a Tuner monster. |
 | `attribute` | condition | list of Attributes (≥ 1) | This card's Attribute is one of them. |
 | `race` | condition | list of monster Types (≥ 1) | This card's monster Type is one of them. |
-| `frame` | condition | list of `Normal\|Effect\|Ritual\|Fusion\|Synchro\|Xyz\|Link` (≥ 1) | This card is a monster of one of those kinds. |
+| `frame` | condition | list of `Normal\|Effect\|Ritual\|Fusion\|Synchro\|Xyz\|Link` (≥ 1) | This card is a monster of one of those kinds. Every opponent's monster counts as an Effect Monster here (while `extraDeckMonster` reads its `ext` flag). |
 | `extraDeckMonster` | condition | none | This card is a Fusion, Synchro, Xyz or Link monster. |
 | `named` | condition | card | This card's name is that card (on your field: its name there). |
 | `uniqueName` | condition | none | No other chosen card (another material) has this card's name. |

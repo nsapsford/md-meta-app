@@ -31,10 +31,11 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   choose?: { as: string; pick: Word; optional?: boolean }[]; do: Word[]; onNegated?: Word[];
   tags: Record<string, boolean | Word>; marks?: string[]; negatable?: boolean; activates?: 'spell' | 'trap';
   text: string; negText?: string; ledger?: { effect?: number } }
-export type ExtraRule =
+/** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
+export type ExtraRule = { order?: number } & (
   | { card: CardId; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats?: Word; then?: string }
   | { card: CardId; method: 'link'; rating: number; min: number; max: number; mats?: Word; bottomArrows?: boolean; then?: string }
-  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string };
+  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string });
 export interface ProtectionDef { id: string; label: string; order: number; where: Word[]; covers?: { marks?: string[]; monsterOnly?: boolean; inResponseOnly?: boolean }; limit?: string; consume: Word[]; stepNote?: string }
 export interface BoardValueDef { id: string; when: 'oppTurn' | 'endPhase'; on: Word; base: { if?: Word[]; value: number; label: string }[]; adds?: { if: Word[]; value: number; label: string }[]; extraCopies?: { value: number; label: string }; effect?: EffectDef }
 export interface DeckFileError { card: string | null; field: string; message: string }
@@ -78,9 +79,9 @@ const EFFECT: Fields = {
 
 const EXTRA_RULE: ArgSpec = {
   k: 'variant', tag: 'method', cases: {
-    synchro: { card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect) },
-    link: { card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect) },
-    fusion: { card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect) },
+    synchro: { order: opt(A.number), card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect) },
+    link: { order: opt(A.number), card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect) },
+    fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect) },
   },
 };
 

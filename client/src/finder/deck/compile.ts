@@ -592,7 +592,11 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   }
 
   // Extra Deck rules and protections, as data.
-  const extra: CompiledExtraRule[] = (file.extraDeck ?? []).map((x, j) => {
+  // Rules in (order, card id, method) order, so the file's order does not change the moves (as effects).
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const ruleOrder = (file.extraDeck ?? []).map((x, j) => ({ x, j }))
+    .sort((a, b) => (a.x.order ?? 0) - (b.x.order ?? 0) || cmp(a.x.card, b.x.card) || cmp(a.x.method, b.x.method));
+  const extra: CompiledExtraRule[] = ruleOrder.map(({ x, j }) => {
     const f = `extraDeck[${j}]`;
     const then = x.then ? effectIds.get(x.then) ?? 0 : 0;
     if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then };
