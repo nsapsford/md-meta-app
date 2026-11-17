@@ -267,6 +267,7 @@ function checkEffect(e: unknown, path: string, c: Ctx): void {
     if (choices.has(ch.as)) err(c, join(at(join(path, 'choose'), i), 'as'), `duplicate choice "${ch.as}"`);
     choices.add(ch.as);
   });
+  if (typeof e.key === 'string' && /[:#]/.test(e.key)) err(c, join(path, 'key'), `effect key "${e.key}" cannot contain ":" or "#" (move keys use them as separators)`);
   const saved = c.choices;
   c.choices = choices;
   checkFields(EFFECT, e, path, c, false);

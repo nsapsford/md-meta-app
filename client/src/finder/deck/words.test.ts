@@ -5,7 +5,9 @@ import { validateDeckFile, type CardDef, type DeckFile, type EffectDef } from '.
 import type { Word } from './vocabulary';
 import { TOY_FACTS, TOY_FILE, toyCfg } from '../engine/__toy__/toyDeck';
 import { driver } from '../engine/__toy__/driver';
-import type { CardId, State } from '../engine/types';
+import type { CardId, Cfg, State } from '../engine/types';
+import { createMoves } from '../engine/moves';
+import { fieldPool, fusionOptions } from '../engine/summon';
 
 const PROBE_FACT = { passcode: 9000099, name: 'Toy Probe', type: 'Effect Monster', race: 'Fiend', attr: 'DARK', level: 3, link: null, atk: 1200, def: 0, text: '' };
 const FACTS = [...TOY_FACTS, PROBE_FACT];
@@ -88,6 +90,71 @@ describe('conditions', () => {
     const d = probe([eff({ cond: [{ oppHasTarget: true }] })]);
     const s = d.deck.state.newState({ ...toyCfg({ PROBE: 1 }), opp: { lp: 8000, mons: [OPP.mons[1]], st: [] } }, d.deck.ix);
     expect(d.mainKeys(s)).toEqual([]);
+  });
+});
+
+describe('card property conditions', () => {
+  // A candidate in a zone (a filter's `self`): its printed properties.
+  const inZone = (filter: Word, hand: Record<CardId, number>, zone = 'hand') => offered([{ has: { zone, filter } }], () => {}, {}, hand);
+  it('tuner', () => {
+    expect(inZone({ tuner: true }, { PROBE: 1, TUNER: 1 })).toBe(true);
+    expect(inZone({ tuner: true }, { PROBE: 1, SEEKER: 1 })).toBe(false);
+  });
+  it('attribute and race (one of)', () => {
+    expect(inZone({ attribute: ['LIGHT'] }, { PROBE: 1 })).toBe(false);
+    expect(inZone({ attribute: ['LIGHT'] }, { PROBE: 1, TUNER: 1 })).toBe(true);
+    expect(inZone({ attribute: ['LIGHT', 'DARK'] }, { PROBE: 1 })).toBe(true);
+    expect(inZone({ race: ['Dragon'] }, { PROBE: 1 })).toBe(false);
+    expect(inZone({ race: ['Dragon', 'Warrior'] }, { PROBE: 1, BIG: 1 })).toBe(true);
+  });
+  it('frame and extraDeckMonster', () => {
+    expect(inZone({ frame: ['Normal'] }, { PROBE: 1 })).toBe(false);
+    expect(inZone({ frame: ['Normal'] }, { PROBE: 1, BIG: 1 })).toBe(true);
+    expect(inZone({ frame: ['Synchro'] }, { PROBE: 1 }, 'extra')).toBe(true);
+    expect(inZone({ extraDeckMonster: true }, { PROBE: 1 }, 'extra')).toBe(true);
+    expect(inZone({ extraDeckMonster: true }, { PROBE: 1, BIG: 1 })).toBe(false);
+  });
+  it('named reads the printed name off the field', () => {
+    expect(inZone({ named: 'BIG' }, { PROBE: 1, BIG: 1 })).toBe(true);
+    expect(inZone({ named: 'BIG' }, { PROBE: 1 })).toBe(false);
+  });
+
+  // A material of an Extra Deck rule: one of your monsters (its name on the field) or an opponent's.
+  const LNK_FACT = { passcode: 9000098, name: 'Toy Link', type: 'Link Effect Monster', race: 'Cyberse', attr: 'DARK', level: null, link: 2, atk: 0, def: 0, text: '' };
+  function material(rule: Record<string, unknown>, field: [CardId, CardId?][], opp?: Cfg['opp']) {
+    const f = { ...TOY_FILE, cards: [...TOY_FILE.cards, { id: 'LNK', passcodes: [9000098], short: 'Link' }], extraDeck: [{ card: 'LNK', ...rule }] } as DeckFile;
+    const v = validateDeckFile(f, {});
+    if (!v.ok) throw new Error(JSON.stringify(v.errors));
+    const deck = compileDeck(f, [...TOY_FACTS, LNK_FACT]);
+    const s = deck.state.newState({ ...toyCfg({}), extra: { LNK: 1 }, opp }, deck.ix);
+    for (const [id, nm] of field) s.mons.push({ id: deck.ix[id], nm: deck.ix[nm ?? id], emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid: s.uid++ });
+    return {
+      links: () => createMoves(deck).gen(s).map((m) => m.k).filter((k) => k.startsWith('link:')),
+      fusions: () => fusionOptions(s, fieldPool(s, deck.props, deck.UNK), deck.extra).length,
+    };
+  }
+  const link2 = (mats: Word) => ({ method: 'link', rating: 2, min: 2, max: 2, mats });
+  it('named reads the name a monster has on the field', () => {
+    expect(material(link2({ named: 'BIG' }), [['SEEKER', 'BIG'], ['TUNER', 'BIG']]).links()).toEqual(['link:LNK:SEEKER+TUNER']);
+    expect(material(link2({ named: 'BIG' }), [['SEEKER'], ['TUNER', 'BIG']]).links()).toEqual([]);
+  });
+  it('uniqueName: no other material has the same name', () => {
+    expect(material(link2({ uniqueName: true }), [['SEEKER'], ['SEEKER']]).links()).toEqual([]);
+    expect(material(link2({ uniqueName: true }), [['SEEKER'], ['TUNER']]).links()).toEqual(['link:LNK:SEEKER+TUNER']);
+    expect(material(link2({ uniqueName: true }), [['SEEKER', 'BIG'], ['TUNER', 'BIG']]).links()).toEqual([]);
+  });
+  it('tuner on a monster on the field', () => {
+    expect(material(link2({ not: { tuner: true } }), [['SEEKER'], ['TUNER']]).links()).toEqual([]);
+    expect(material(link2({ not: { tuner: true } }), [['SEEKER'], ['BIG']]).links()).toEqual(['link:LNK:BIG+SEEKER']);
+  });
+  it("reads an opponent's monster's own Attribute, Type and frame", () => {
+    const opp = { lp: 8000, mons: [{ uid: 'o1', kind: 'mon' as const, name: 'Foe', race: 'Dragon', attr: 'LIGHT', ext: true }], st: [] };
+    const fusion = (slots: Word[]) => material({ method: 'fusion', slots }, [['SEEKER']], opp).fusions();
+    expect(fusion([{ extraDeckMonster: true }, { race: ['Spellcaster'] }])).toBe(1);
+    expect(fusion([{ attribute: ['LIGHT'] }, { attribute: ['DARK'] }])).toBe(1);
+    expect(fusion([{ race: ['Dragon'] }, { race: ['Dragon'] }])).toBe(0);
+    expect(fusion([{ frame: ['Effect'] }, { not: { tuner: true } }])).toBe(1);
+    expect(fusion([{ named: 'SEEKER' }, { named: 'SEEKER' }])).toBe(0);
   });
 });
 

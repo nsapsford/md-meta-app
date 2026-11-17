@@ -15,6 +15,11 @@ Argument notation: `zone` is one of `hand`, `deck`, `extra`, `gy`, `ban`, `field
 any card. `?` marks an optional argument. `none` means the value is `true` or `{}`.
 `opp` is `{ kind?: mon|st, faceUp?, targetable?, destroyable? }`.
 
+"This card" in a condition is the effect's own card, a filter's candidate, or one material of an
+Extra Deck rule (`mats`, fusion `slots`). For a material, the other materials are its chosen
+cards. On your field a monster's name is its name there; an opponent's monster is read from its
+own fields (never a Tuner; it counts as an Effect Monster); anywhere else, the printed card.
+
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
 | `has` | condition | `{ zone, which? }` | A zone holds at least one matching card. |
@@ -30,6 +35,13 @@ any card. `?` marks an optional argument. `none` means the value is `true` or `{
 | `spellActivatedThisTurn` | condition | none | You have activated a Spell this turn. |
 | `not` | condition | condition | The nested condition is false. |
 | `any` | condition | list of conditions (≥ 1) | At least one nested condition is true. |
+| `tuner` | condition | none | This card is a Tuner monster. |
+| `attribute` | condition | list of Attributes (≥ 1) | This card's Attribute is one of them. |
+| `race` | condition | list of monster Types (≥ 1) | This card's monster Type is one of them. |
+| `frame` | condition | list of `Normal\|Effect\|Ritual\|Fusion\|Synchro\|Xyz\|Link` (≥ 1) | This card is a monster of one of those kinds. |
+| `extraDeckMonster` | condition | none | This card is a Fusion, Synchro, Xyz or Link monster. |
+| `named` | condition | card | This card's name is that card (on your field: its name there). |
+| `uniqueName` | condition | none | No other chosen card (another material) has this card's name. |
 | `fromZone` | pick | `{ zone, group \| filter }` | Each distinct card of the group or filter in the zone. |
 | `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp? }` | Each card you control on the field. |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |

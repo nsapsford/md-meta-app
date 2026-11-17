@@ -1,5 +1,6 @@
 // Move generation: the moves every deck has (Normal Summon, Tribute Summon, declining a pending
-// trigger) plus the compiled deck's own, filtered by the opponent's floodgates, with repeated keys
+// trigger) plus the compiled deck's own, then Synchro and Link Summons from the deck's Extra Deck
+// rules (summon.ts), filtered by the opponent's floodgates, with repeated keys
 // numbered. `exec` runs a move and records its key on the line's path. Port of the reference's
 // gen preamble (push, floodgates, Normal/Tribute Summon), genPending's decline, and exec. The card
 // moves themselves (place, monToGy, ...) are the compiled deck's ops (ops.ts), re-exported here.
@@ -8,19 +9,11 @@ import type { CompiledDeck } from '../deck/compile';
 import type { StateOps } from './state';
 import type { Ops, PlaceOpts } from './ops';
 import { step, done, L } from './record';
-import type { Move, State, Tags } from './types';
+import { MOVE_SPELL, MOVE_EXTRA, type EnginePush, type Move, type State, type Tags } from './types';
+import { createSummons } from './summon';
 
 export type { PlaceOpts };
-
-/** Move classes the floodgates read (a bitmask). */
-export const MOVE_SPELL = 1;
-export const MOVE_EXTRA = 2;
-
-/**
- * The engine's own push: like the deck's `Push`, plus the move's class (MOVE_SPELL / MOVE_EXTRA).
- * Engine-generated moves (Task 7's Synchro/Link/Fusion summons) push with their class directly.
- */
-export type EnginePush = (key: string, tags: Tags, run: Move['run'], negatable: boolean, cls: number) => void;
+export { MOVE_SPELL, MOVE_EXTRA, type EnginePush };
 
 export interface Moves {
   gen(s: State): Move[];
@@ -52,6 +45,7 @@ export function floodgates(s: State): Flood {
 
 export function createMoves(deck: CompiledDeck, so: StateOps = deck.state): Moves {
   const ops = deck.ops, props = deck.props;
+  const summons = createSummons(deck, so);
 
   // A deck move's class comes from its effect: the key is `<effect key>` or `<effect key>:<choice>…`.
   const classOf = new Map<string, number>();
@@ -108,6 +102,9 @@ export function createMoves(deck: CompiledDeck, so: StateOps = deck.state): Move
     }
 
     deck.genMain(s, deckPush);
+    // Synchro and Link Summons come after the deck's own moves, as at the end of the reference's gen.
+    summons.genSynchro(s, push);
+    summons.genLinks(s, push);
     return A;
   }
 

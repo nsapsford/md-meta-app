@@ -41,6 +41,11 @@ describe('validateDeckFile', () => {
     expect(errorsOf({ ...MINIMAL, groups: { g: ['A', 'ZZ'] } })).toEqual([{ card: null, field: 'groups.g[1]', message: 'unknown card "ZZ"' }]);
   });
 
+  it('rejects ":" and "#" in effect keys (move keys use them as separators)', () => {
+    expect(errorsOf(withEffect({ key: 'a:b' }))).toEqual([{ card: 'A', field: 'effects[0].key', message: 'effect key "a:b" cannot contain ":" or "#" (move keys use them as separators)' }]);
+    expect(errorsOf(withEffect({ key: 'a#1' }))).toEqual([{ card: 'A', field: 'effects[0].key', message: 'effect key "a#1" cannot contain ":" or "#" (move keys use them as separators)' }]);
+  });
+
   it('rejects another vocabulary version', () => {
     expect(errorsOf({ ...MINIMAL, vocab: 99 })[0].message).toBe('written for vocabulary 99, this app has 1');
     expect(VOCAB_VERSION).toBe(1);

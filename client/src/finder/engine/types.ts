@@ -43,6 +43,16 @@ export interface StepRec {
 
 export interface Move { k: string; tags: Tags; neg: boolean; run(s: State, negated: boolean): State }
 
+/** Move classes the floodgates read (a bitmask): a Spell activation, a summon from the Extra Deck. */
+export const MOVE_SPELL = 1;
+export const MOVE_EXTRA = 2;
+
+/**
+ * The engine's own push: like the deck's `Push`, plus the move's class (MOVE_SPELL / MOVE_EXTRA).
+ * Engine-generated moves (Synchro and Link Summons, summon.ts) push with their class directly.
+ */
+export type EnginePush = (key: string, tags: Tags, run: Move['run'], negatable: boolean, cls: number) => void;
+
 export interface Interruption {
   kind: string; src: 'hand' | 'board'; label: string; uid?: OppCard['uid'];
   cardKind?: 'mon' | 'st'; monster?: boolean; param?: number; force?: boolean;

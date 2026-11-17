@@ -6,10 +6,10 @@
 // Adding a word: one defineCond / definePick / defineAct / defineTrigger call below (doc,
 // argument spec, compile), plus a row in docs/finder/vocabulary.md. Nothing else changes.
 
-import type { CardId, FinalBoard, State } from '../engine/types';
+import type { CardId, FinalBoard, Mon, OppCardState, State } from '../engine/types';
 import type { EffectDef } from './schema';
 import { L } from '../engine/record';
-import type { ActFn, CardProps, CardRef, Choice, CondFn, CountFn, PickFn, Run, Runtime, TrigEvent, TriggerFn } from './compile';
+import type { ActFn, CardProps, CardRef, Choice, CondFn, CountFn, PickFn, Place, Run, Runtime, TrigEvent, TriggerFn } from './compile';
 
 export type Word = Record<string, unknown>;
 
@@ -324,6 +324,86 @@ defineCond('any', {
   compile: (a: Word[], ctx): CondFn => {
     const fs = a.map((w, i) => ctx.cond(w, `[${i}]`) as CondFn);
     return (s, r) => { for (const f of fs) if (f(s, r)) return true; return false; };
+  },
+});
+
+// Card properties of the run's own card (`self`): an effect's card, a filter's candidate, or a
+// material of an Extra Deck rule. Where the run says the card is one of your monsters, its name on
+// the field counts; where it is an opponent's monster (`at.zone: 'opp'`), that card's own fields
+// count (an opponent's monster is never a Tuner and counts as an Effect Monster, as the reference
+// treats it). Anywhere else, the printed card.
+
+/** Your monster the run's card is, if the run places it on the field. */
+function monOf(s: FinalBoard, r: Run): Mon | null {
+  if (r.at.zone !== 'mon') return null;
+  const m = s.mons[r.at.at];
+  if (m && m.uid === r.at.uid) return m;
+  return s.mons.find((x) => x.uid === r.at.uid) ?? null;
+}
+/** The opponent's card the run's card is, if the run places it there. */
+function oppOf(s: FinalBoard, r: { at: Place }): OppCardState | null {
+  if (r.at.zone !== 'opp' || !s.opp) return null;
+  const u = r.at.uid;
+  return s.opp.mons.find((x) => x.uid === u) ?? s.opp.st.find((x) => x.uid === u) ?? null;
+}
+/** A name to compare: your monster's name on the field, an opponent card's name, else the card. */
+function nameKey(s: FinalBoard, id: number, at: Place): number | string {
+  if (at.zone === 'mon') { const m = monOf(s, { self: id, at, chosen: [] }); return m ? m.nm : id; }
+  if (at.zone === 'opp') { const o = oppOf(s, { at }); return 'o:' + (o ? o.name || String(o.uid) : String(at.uid)); }
+  return id;
+}
+const FRAMES = ['Normal', 'Effect', 'Ritual', 'Fusion', 'Synchro', 'Xyz', 'Link'];
+
+/** A condition on one property, read off an opponent's card or the card table. */
+function propCond(ctx: CompileCtx, opp: (o: OppCardState) => boolean, mine: (p: CardProps) => boolean): CondFn {
+  const props = ctx.props;
+  return (s, r) => {
+    if (r.at.zone === 'opp') { const o = oppOf(s, r); return !!o && opp(o); }
+    const p = props[r.self];
+    return !!p && mine(p);
+  };
+}
+
+defineCond('tuner', {
+  doc: 'This card is a Tuner monster.', args: A.none,
+  compile: (_a, ctx): CondFn => propCond(ctx, () => false, (p) => p.kind === 'M' && p.tuner),
+});
+defineCond('attribute', {
+  doc: "This card's Attribute is one of the given.", args: A.list(A.string, 1),
+  compile: (a: string[], ctx): CondFn => { const set = new Set(a); return propCond(ctx, (o) => !!o.attr && set.has(o.attr), (p) => !!p.attr && set.has(p.attr)); },
+});
+defineCond('race', {
+  doc: "This card's monster Type is one of the given.", args: A.list(A.string, 1),
+  compile: (a: string[], ctx): CondFn => { const set = new Set(a); return propCond(ctx, (o) => !!o.race && set.has(o.race), (p) => !!p.race && set.has(p.race)); },
+});
+defineCond('frame', {
+  doc: 'This card is a monster of one of the given kinds (Normal, Effect, Ritual, Fusion, Synchro, Xyz, Link).', args: A.list(A.enum(...FRAMES), 1),
+  compile: (a: string[], ctx): CondFn => { const set = new Set(a); return propCond(ctx, () => set.has('Effect'), (p) => p.kind === 'M' && set.has(p.sub)); },
+});
+defineCond('extraDeckMonster', {
+  doc: 'This card is a Fusion, Synchro, Xyz or Link monster.', args: A.none,
+  compile: (_a, ctx): CondFn => propCond(ctx, (o) => !!o.ext, (p) => p.ext),
+});
+defineCond('named', {
+  doc: "This card's name is the given card (on your field: its name there).", args: A.card,
+  compile: (a: CardId, ctx): CondFn => {
+    const c = ctx.ix[a];
+    return (s, r) => {
+      if (r.at.zone === 'opp') return false;
+      const m = monOf(s, r);
+      return (m ? m.nm : r.self) === c;
+    };
+  },
+});
+defineCond('uniqueName', {
+  doc: 'No other chosen card (another material) has the same name as this card.', args: A.none,
+  compile: (): CondFn => (s, r) => {
+    const k = nameKey(s, r.self, r.at);
+    for (const c of r.chosen) {
+      if (!c) continue;
+      for (const x of c.many ?? [c]) if (nameKey(s, x.id, x) === k) return false;
+    }
+    return true;
   },
 });
 

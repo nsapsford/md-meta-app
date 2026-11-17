@@ -44,6 +44,12 @@ export interface CompiledDeck {
   onLeaveField(s: State, id: number, kind: 'mon' | 'st', wasFaceUp: boolean, to?: LedgerZone): void;
   onOppMonsterToGy(s: State): void;
   extra: CompiledExtraRule[]; protections: CompiledProtection[];
+  /**
+   * Queue effect `e` to resolve next, after monster `m` was summoned (an Extra Deck rule's `then`),
+   * if its limit is free, its card is where it must be and its conditions hold. When the effect is
+   * `m`'s own, the entry names `m`.
+   */
+  queueAfterSummon(s: State, e: number, m: Mon): void;
   finalize(s: State): { n: FinalBoard; sets: number[] };
   boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null };
   /** Per effect id (index 0 unused): what the engine needs to know about its moves. */
@@ -567,6 +573,15 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     for (const e of oppTrig) if (e.canQueue(s, null)) s.pend.push({ e: e.id });
   }
 
+  function queueAfterSummon(s: State, e: number, m: Mon): void {
+    const c = byId[e];
+    if (!c) return;
+    const mine = m.id === c.self;
+    if (mine && m.noEff) return;
+    if (!c.canQueue(s, mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null)) return;
+    s.pend.unshift(mine ? { e, a: m.uid } : { e });
+  }
+
   function genMain(s: State, push: Push): void {
     for (let k = 0; k < main.length; k++) main[k].gen(s, push, false, undefined);
   }
@@ -672,7 +687,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   return {
     file, ids, ix, UNK, props, nOpt, nFlags, markBit,
     genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy,
-    extra, protections, finalize, boardValue, effects,
+    extra, protections, queueAfterSummon, finalize, boardValue, effects,
     state: so, ops,
   };
 }
