@@ -196,6 +196,7 @@ describe('validateDeckFile', () => {
       choiceSlot: (n) => effect.choose!.findIndex((c) => c.as === n),
       cond: () => () => true, pick: () => () => [], act: () => () => null, trigger: () => () => false,
       fail: (m) => { throw new Error(m); },
+      rt: {} as CompileCtx['rt'],
     };
     // An unregistered word, as Task 5's words will be written: it resolves names once, at compile time.
     const word: WordDef = {

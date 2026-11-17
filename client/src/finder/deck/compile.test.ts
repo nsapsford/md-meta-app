@@ -1,0 +1,114 @@
+import { describe, it, expect } from 'vitest';
+import { compileDeck, DeckCompileError } from './compile';
+import { validateDeckFile, type DeckFile } from './schema';
+import { TOY_FACTS, TOY_FILE } from '../engine/__toy__/toyDeck';
+import { driver } from '../engine/__toy__/driver';
+
+const D = driver();
+const { mainKeys, pendKeys, run, summonForTest, count, handSize, lastText } = D;
+const toyState = D.state;
+
+const reversed = (f: DeckFile): DeckFile => ({
+  ...f,
+  cards: [...f.cards].reverse().map((c) => (c.effects ? { ...c, effects: [...c.effects].reverse() } : c)),
+});
+
+describe('compileDeck (toy deck)', () => {
+  it('compiles a file the validator accepts', () => {
+    expect(validateDeckFile(TOY_FILE, {}).ok).toBe(true);
+  });
+
+  it('offers moves in (order, key) order', () => { expect(mainKeys(toyState({ SEEKER: 1, DRAWTWO: 1, BIG: 1 }))).toEqual(['drawtwo:BIG', 'drawtwo:SEEKER']); });
+
+  it('queues a trigger when its card is Normal Summoned', () => {
+    const s = summonForTest(toyState({ SEEKER: 1 }), 'SEEKER');
+    expect(s.pend).toHaveLength(1); expect(pendKeys(s)).toEqual(['seeker-search:DRAWTWO']);
+  });
+
+  it('pays the cost but skips the effect when negated', () => {
+    const s = run(toyState({ DRAWTWO: 1, BIG: 1 }), 'drawtwo:BIG', true);
+    expect(count(s, 'gy', 'BIG')).toBe(1); expect(count(s, 'gy', 'DRAWTWO')).toBe(1); expect(handSize(s)).toBe(0);
+  });
+
+  it('draws two when not negated', () => { expect(handSize(run(toyState({ DRAWTWO: 1, BIG: 1 }), 'drawtwo:BIG'))).toBe(2); });
+
+  it('honours once per turn', () => { expect(mainKeys(run(toyState({ DRAWTWO: 2, BIG: 2 }), 'drawtwo:BIG'))).toEqual([]); });
+
+  it('honours a condition', () => { expect(mainKeys(toyState({ TUNER: 1 }))).toEqual([]); });
+
+  it('gives the same moves when cards and effects are listed in reverse', () => {
+    const R = driver(reversed(TOY_FILE));
+    expect(R.deck.ids).toEqual(D.deck.ids);
+    const hands: Record<string, number>[] = [{ SEEKER: 1, DRAWTWO: 1, BIG: 1 }, { TUNER: 1, DRAWTWO: 2, WALL: 1 }, { BIG: 2, DRAWTWO: 1, SEEKER: 1, TUNER: 1 }];
+    for (const h of hands) expect(R.mainKeys(R.state(h))).toEqual(mainKeys(toyState(h)));
+    const withTuner = summonForTest(toyState({ SEEKER: 1, TUNER: 1 }), 'SEEKER');
+    expect(R.pendKeys(withTuner)).toEqual(pendKeys(withTuner));
+  });
+
+  it('fills step text from the template', () => { expect(lastText(run(summonForTest(toyState({ SEEKER: 1 }), 'SEEKER'), 'seeker-search:DRAWTWO'))).toBe('Seeker: add Draw Two.'); });
+
+  it('refuses a card with no facts', () => { expect(() => compileDeck(TOY_FILE, TOY_FACTS.slice(1))).toThrow(/no card facts for/); });
+
+  it('reports every card with no facts as a DeckCompileError', () => {
+    try { compileDeck(TOY_FILE, TOY_FACTS.slice(2)); throw new Error('expected a throw'); } catch (e) {
+      expect(e).toBeInstanceOf(DeckCompileError);
+      expect((e as DeckCompileError).errors.map((x) => x.card)).toEqual(['SEEKER', 'TUNER']);
+      expect((e as DeckCompileError).errors[0]).toEqual({ card: 'SEEKER', field: 'passcodes', message: 'no card facts for SEEKER (passcodes 9000001)' });
+    }
+  });
+});
+
+describe('compiled deck tables', () => {
+  const { deck } = D;
+
+  it('numbers cards by sorted id, then UNK', () => {
+    expect(deck.ids).toEqual(['BIG', 'DRAWTWO', 'SEEKER', 'SYNC', 'TUNER', 'WALL', 'UNK']);
+    expect(deck.ix.SEEKER).toBe(2);
+    expect(deck.UNK).toBe(6);
+  });
+
+  it('reads card properties from the facts as the reference does', () => {
+    const p = (id: string) => deck.props[deck.ix[id]];
+    expect(p('TUNER')).toMatchObject({ kind: 'M', sub: 'Effect', tuner: true, lv: 4, race: 'Spellcaster', attr: 'LIGHT', atk: 1000, ext: false, st: null, short: 'Tuner' });
+    expect(p('BIG')).toMatchObject({ kind: 'M', sub: 'Normal', tuner: false, lv: 6, atk: 2400, def: 2000 });
+    expect(p('DRAWTWO')).toMatchObject({ kind: 'S', st: 'Normal', race: null, lv: null, atk: 0, short: 'Draw Two' });
+    expect(p('WALL')).toMatchObject({ kind: 'T', st: 'Continuous' });
+    expect(p('SYNC')).toMatchObject({ kind: 'M', sub: 'Synchro', ext: true, lv: 8 });
+    expect(deck.props[deck.UNK]).toMatchObject({ id: 'UNK', kind: '?', sub: '?', ext: false, discardValue: 0 });
+    expect(p('BIG')).toMatchObject({ discardValue: 3, heldValue: 0, normalSummon: true, immuneToRemoval: false });
+  });
+
+  it('gives once-per-turn limits their own slots', () => {
+    expect(deck.nOpt).toBe(2);
+    expect(deck.nFlags).toBe(0);
+  });
+
+  it('compiles the Extra Deck rule to data', () => {
+    expect(deck.extra).toEqual([{ card: deck.ix.SYNC, method: 'synchro', level: 8, min: 2, max: 2, tuners: 'exactlyOne', mats: null, then: 0 }]);
+  });
+
+  it('Sets end-of-turn cards in order without touching the state', () => {
+    const s = toyState({ WALL: 2, BIG: 1 });
+    const { n, sets } = deck.finalize(s);
+    expect(sets).toEqual([deck.ix.WALL, deck.ix.WALL]);
+    expect(n.st.map((x) => [x.id, x.up, x.endSet])).toEqual([[deck.ix.WALL, false, true], [deck.ix.WALL, false, true]]);
+    expect(n.hand[deck.ix.WALL]).toBe(0);
+    expect(s.hand[deck.ix.WALL]).toBe(2);
+    expect(s.st).toHaveLength(0);
+  });
+
+  it('returns the state itself when nothing is to be Set', () => {
+    const s = toyState({ BIG: 1 });
+    const { n, sets } = deck.finalize(s);
+    expect(sets).toEqual([]);
+    expect(n.hand).toBe(s.hand);
+  });
+
+  it('scores the board from its entries, with labels only when asked', () => {
+    const { n } = deck.finalize(toyState({ WALL: 1 }));
+    expect(deck.boardValue(n, false)).toEqual({ sum: 0.5, items: null });
+    expect(deck.boardValue(n, true)).toEqual({ sum: 0.5, items: [['Wall: negate', 0.5]] });
+    const two = deck.finalize(toyState({ WALL: 2 })).n;
+    expect(deck.boardValue(two, true)).toEqual({ sum: 1, items: [['Wall: negate', 0.5], ['Wall: negate', 0.5]] });
+  });
+});
