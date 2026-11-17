@@ -25,7 +25,7 @@ type St = { name: string; kind?: 'st'; intr?: string; noTarget?: boolean };
 type Field = { lp: number; mons: Mon[]; st: St[] };
 
 const mon = (name: string, atk: number, def: number, extra: Partial<Mon> = {}): Mon => ({ name, atk, def, pos: 'atk', ...extra });
-const FIELDS: Field[] = [
+export const FIELDS: Field[] = [
   { lp: 8000, mons: [], st: [] },
   { lp: 8000, mons: [mon('Big Vanilla', 3000, 1000)], st: [] },
   { lp: 8000, mons: [mon('Attacker', 2500, 1500), mon('Wall', 1000, 2000, { pos: 'def' })], st: [] },
@@ -42,7 +42,7 @@ const FIELDS: Field[] = [
 ];
 
 /** A fresh opponent field with uids 'o1', 'o2', ... unique within it. */
-function oppField(f: Field): NonNullable<RefCfg['opp']> {
+export function oppField(f: Field): NonNullable<RefCfg['opp']> {
   let n = 0;
   return {
     lp: f.lp,
