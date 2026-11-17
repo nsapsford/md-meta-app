@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateDeckFile, VOCAB_VERSION, type DeckFileError } from './schema';
-import { WORDS, defineCond, conds } from './vocabulary';
+import { validateDeckFile, VOCAB_VERSION, type DeckFileError, type EffectDef } from './schema';
+import { WORDS, defineCond, conds, type CompileCtx, type WordDef } from './vocabulary';
 import vocabularyDoc from '../../../../docs/finder/vocabulary.md?raw';
 
 const MINIMAL = {
@@ -178,6 +178,31 @@ describe('validateDeckFile', () => {
 
   it('collects every error rather than stopping at the first', () => {
     expect(errorsOf({ ...MINIMAL, name: 3, groups: { g: ['ZZ', 'YY'] } })).toHaveLength(3);
+  });
+
+  it('reports a duplicate choose name within one effect', () => {
+    const pick = { fromZone: { zone: 'deck', group: 'g' } };
+    expect(errorsOf(withEffect({ choose: [{ as: 'x', pick }, { as: 'x', pick }] }, { groups: { g: ['A'] } }))).toEqual([
+      { card: 'A', field: 'effects[0].choose[1].as', message: 'duplicate choice "x"' },
+    ]);
+  });
+
+  it('gives a word compile function the effect and its name lookups', () => {
+    const effect = { ...EFFECT, choose: [{ as: 'x', pick: { fromZone: { zone: 'deck', group: 'g' } } }] } as EffectDef;
+    const ctx: CompileCtx = {
+      ix: { A: 0 }, props: [], group: () => [0], flagBit: () => 1, markBit: () => 1,
+      where: { card: 'A', key: 'a-eff', field: 'do[0]' }, effect,
+      effectId: (k) => (k === 'a-eff' ? 1 : 0), limitId: () => 3,
+      choiceSlot: (n) => effect.choose!.findIndex((c) => c.as === n),
+      cond: () => () => true, pick: () => () => [], act: () => () => null, trigger: () => () => false,
+      fail: (m) => { throw new Error(m); },
+    };
+    // An unregistered word, as Task 5's words will be written: it resolves names once, at compile time.
+    const word: WordDef = {
+      doc: 'test word using every lookup', args: { k: 'none' },
+      compile: (_args, c) => { const r = [c.effectId('a-eff'), c.limitId('a-eff'), c.choiceSlot('x'), c.effect!.key]; return () => r; },
+    };
+    expect(word.compile(true, ctx)()).toEqual([1, 3, 0, 'a-eff']);
   });
 
   it('refuses a word defined twice', () => {

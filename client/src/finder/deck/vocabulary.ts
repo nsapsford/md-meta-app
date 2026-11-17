@@ -7,6 +7,7 @@
 // argument spec, compile), plus a row in docs/finder/vocabulary.md. Nothing else changes.
 
 import type { CardId } from '../engine/types';
+import type { EffectDef } from './schema';
 
 export type Word = Record<string, unknown>;
 
@@ -93,8 +94,27 @@ export interface CompileCtx<Props = unknown> {
   /** Bit of a deck-defined state flag (`flags`) and tag mark (`marks`). */
   flagBit(name: string): number;
   markBit(name: string): number;
-  /** The effect being compiled, for error messages; `card`/`key` are null outside an effect. */
+  /** Where the word being compiled sits, for error messages; `card`/`key` are null outside an effect. */
   where: { card: CardId | null; key: string | null; field: string };
+  /** The effect being compiled (validated), or null outside an effect (groups, protections, board value, end of turn). */
+  effect: EffectDef | null;
+  /**
+   * The effect id of an effect key: the number stored in `State.pend[].e` when the effect is
+   * queued. Ids start at 1 (0 is never an effect). Used by `queue` and `ExtraRule.then`.
+   */
+  effectId(key: string): number;
+  /**
+   * The once-per-turn slot of an effect key or a `limit: { shared }` name: an index into the
+   * state's `opt` bit array. Effects sharing a limit share its slot. Used by `notUsed`.
+   */
+  limitId(name: string): number;
+  /**
+   * The slot of a `choose[].as` name: its index in the current effect's `choose` list. A compiled
+   * closure receives the chosen cards as an array in that order and reads `chosen[slot]`.
+   * `'self'` is not a slot (it is the effect's own card); a word tests for it before asking.
+   * Fails (see `fail`) outside an effect or for an unbound name.
+   */
+  choiceSlot(name: string): number;
   /** Compile a nested word; `field` is its path relative to the current word (for errors). */
   cond(word: Word, field: string): Compiled;
   pick(word: Word, field: string): Compiled;

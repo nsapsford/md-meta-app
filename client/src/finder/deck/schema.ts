@@ -262,7 +262,11 @@ function checkWord(kind: WordKind, v: unknown, path: string, c: Ctx): void {
 function checkEffect(e: unknown, path: string, c: Ctx): void {
   if (!isObj(e)) return err(c, path, `expected an object, got ${show(e)}`);
   const choices = new Set<string>();
-  if (Array.isArray(e.choose)) for (const ch of e.choose) if (isObj(ch) && typeof ch.as === 'string') choices.add(ch.as);
+  if (Array.isArray(e.choose)) e.choose.forEach((ch, i) => {
+    if (!isObj(ch) || typeof ch.as !== 'string') return;
+    if (choices.has(ch.as)) err(c, join(at(join(path, 'choose'), i), 'as'), `duplicate choice "${ch.as}"`);
+    choices.add(ch.as);
+  });
   const saved = c.choices;
   c.choices = choices;
   checkFields(EFFECT, e, path, c, false);
