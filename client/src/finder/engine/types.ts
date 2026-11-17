@@ -113,7 +113,8 @@ export interface State {
   opening: string[] | null;
 }
 
-export interface FinalBoard {
-  hand: Uint8Array; deck: Uint8Array; extra: Uint8Array; gy: Uint8Array;
-  mons: Mon[]; st: ST[]; opp: State['opp']; lp: number; noDirect: boolean; flags: number;
-}
+/**
+ * The board at the end of the turn (after end-of-turn Sets). It holds every field a deck-file
+ * condition reads, so a condition (typed over this) works on a live state and on the final board.
+ */
+export type FinalBoard = Pick<State, 'hand' | 'deck' | 'extra' | 'gy' | 'ban' | 'mons' | 'st' | 'top' | 'opp' | 'lp' | 'noDirect' | 'flags' | 'opt' | 'spell' | 'addLock'>;

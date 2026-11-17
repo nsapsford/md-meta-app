@@ -71,8 +71,9 @@ export interface Choice extends CardRef { key: string; name: string; many: Choic
 /** What an effect's words see: its own card, where it is, and the choices made so far (by `choose` slot). */
 export interface Run { self: number; at: Place; chosen: (Choice | null)[] }
 
-export type CondFn = (s: State, r: Run) => boolean;
-export type CountFn = (s: State, r: Run) => number;
+/** Conditions read only the fields of `FinalBoard`, so they work on a live state and on the final board. */
+export type CondFn = (s: FinalBoard, r: Run) => boolean;
+export type CountFn = (s: FinalBoard, r: Run) => number;
 export type PickFn = (s: State, r: Run) => Choice[];
 export type ActFn = (n: State, r: Run) => void;
 export type TrigEvent =
@@ -431,6 +432,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
 
     /** Move the card for its activation (a Spell/Trap) and write the activation to the ledger. */
     function activate(n: State, r: Run): Run {
+      // A Spell/Trap that goes to the GY here (as the reference does) sets off no trigger: not even its own sentToGy.
       if (activates) {
         if (r.at.zone === 'hand') {
           takeZone(n, 'hand', self);
@@ -469,7 +471,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     function whereNow(s: State, a: number | undefined): Place | null {
       if (a !== undefined) {
         const i = s.mons.findIndex((m) => m.uid === a);
-        if (i >= 0) return { zone: 'mon', at: i, uid: a };
+        if (i >= 0) return s.mons[i].noEff ? null : { zone: 'mon', at: i, uid: a };
       }
       for (let k = 0; k < froms.length; k++) { const at = locate(s, self, froms[k]); if (at) return at; }
       return null;
@@ -537,6 +539,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     for (const e of placeTrig) {
       if (!e.trigger!(ev, e.self)) continue;
       const mine = m.id === e.self;
+      if (mine && m.noEff) continue;   // its effects are negated: its own trigger does not start
       if (!e.canQueue(s, mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null)) continue;
       s.pend.push(mine ? { e: e.id, a: m.uid } : { e: e.id });
     }
@@ -590,7 +593,10 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const R0: Run = { self: -1, at: NOWHERE, chosen: EMPTY_CHOSEN };
 
   function finalize(s: State): { n: FinalBoard; sets: number[] } {
-    const n: FinalBoard = { hand: s.hand, deck: s.deck, extra: s.extra, gy: s.gy, mons: s.mons, st: s.st, opp: s.opp, lp: s.lp, noDirect: s.noDirect, flags: s.flags };
+    const n: FinalBoard = {
+      hand: s.hand, deck: s.deck, extra: s.extra, gy: s.gy, ban: s.ban, mons: s.mons, st: s.st, top: s.top,
+      opp: s.opp, lp: s.lp, noDirect: s.noDirect, flags: s.flags, opt: s.opt, spell: s.spell, addLock: s.addLock,
+    };
     let any = false;
     for (let i = 0; i < setOrder.length; i++) if (s.hand[setOrder[i]]) { any = true; break; }
     if (!any) return { n, sets: NOSETS };
@@ -598,7 +604,6 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const sets: number[] = [];
     let keep = false;
     for (const c of keepOne) if (c(s, R0)) { keep = true; break; }
-    let view: State | null = null;
     outer: for (const id of setOrder) {
       const c = n.hand[id];
       const only = setOnly.get(id);
@@ -606,9 +611,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
         if (n.st.length >= 5) break outer;
         if (keep && total(n.hand) <= 1) break outer;
         if (only) {
-          view ??= { ...s, hand: n.hand, st: n.st };
           const r: Run = { self: id, at: NOWHERE, chosen: EMPTY_CHOSEN };
-          if (!only.every((f) => f(view!, r))) continue;
+          if (!only.every((f) => f(n, r))) continue;   // seen on the board as Set so far
         }
         n.hand[id]--; n.st.push({ id, up: false, now: false, endSet: true }); sets.push(id);
       }
@@ -629,7 +633,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   });
 
   function boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null } {
-    const s = n as unknown as State;   // board-value words read only the final board's fields
+    const s = n;
     const items: [string, number][] | null = full ? [] : null;
     let sum = 0;
     for (const e of entries) {

@@ -29,8 +29,8 @@ export interface Ops {
   fromDeck(s: State, id: number): void;
   /** Draw n: known top cards first, then unknown cards. Returns what was drawn. */
   draw(s: State, n: number): number[];
-  monFree(s: State): number;
-  stFree(s: State): number;
+  monFree(s: Pick<State, 'mons'>): number;
+  stFree(s: Pick<State, 'st'>): number;
   /** Put a monster on the field (counts a summon) and let the deck queue its triggers. */
   place(s: State, id: number, o?: PlaceOpts): Mon;
   /** A monster leaves the field for the GY (cost, material, Tribute). */
@@ -69,13 +69,13 @@ export function createOps(so: StateOps, h: OpsHooks): Ops {
     return got;
   }
 
-  function monFree(s: State): number {
+  function monFree(s: Pick<State, 'mons'>): number {
     let used = 0;
     for (const m of s.mons) if (!m.emz) used++;
     return 5 - used;
   }
 
-  function stFree(s: State): number { return 5 - s.st.length; }
+  function stFree(s: Pick<State, 'st'>): number { return 5 - s.st.length; }
 
   function place(s: State, id: number, o: PlaceOpts = {}): Mon {
     const m: Mon = {

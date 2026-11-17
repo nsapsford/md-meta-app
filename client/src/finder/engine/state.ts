@@ -6,7 +6,7 @@ export interface StateOps {
   clone(s: State): State;
   W(s: State, z: ZoneName): Uint8Array;
   OW(s: State): NonNullable<State['opp']>;
-  getOpt(s: State, i: number): boolean;
+  getOpt(s: Pick<State, 'opt'>, i: number): boolean;
   setOpt(s: State, i: number): void;
   stateKey(s: State): number;
 }
@@ -113,7 +113,7 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
     };
   }
 
-  function getOpt(s: State, i: number): boolean { return ((s.opt[i >>> 5] >>> (i & 31)) & 1) === 1; }
+  function getOpt(s: Pick<State, 'opt'>, i: number): boolean { return ((s.opt[i >>> 5] >>> (i & 31)) & 1) === 1; }
   function setOpt(s: State, i: number): void { s.opt[i >>> 5] |= (1 << (i & 31)); }
 
   function stateKey(s: State): number {

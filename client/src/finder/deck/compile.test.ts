@@ -111,4 +111,25 @@ describe('compiled deck tables', () => {
     const two = deck.finalize(toyState({ WALL: 2 })).n;
     expect(deck.boardValue(two, true)).toEqual({ sum: 1, items: [['Wall: negate', 0.5], ['Wall: negate', 0.5]] });
   });
+
+  it('lets board-value entries use any condition (banished cards, once-per-turn limits)', () => {
+    const f: DeckFile = {
+      ...TOY_FILE,
+      boardValue: [{
+        id: 'probe', when: 'oppTurn', on: { control: { card: 'WALL', kind: 'st' } },
+        base: [{ if: [{ has: { zone: 'ban', card: 'BIG' } }], value: 0.3, label: 'Wall with Big banished' }, { value: 0.1, label: 'Wall' }],
+        adds: [{ if: [{ notUsed: 'drawtwo' }], value: 0.2, label: 'Draw Two unused' }],
+      }],
+    };
+    expect(validateDeckFile(f, {}).ok).toBe(true);
+    const P = driver(f);
+    const s = P.state({ WALL: 1 });
+    const v = P.deck.boardValue(P.deck.finalize(s).n, true);
+    expect(v.sum).toBeCloseTo(0.3);
+    expect(v.items![0][0]).toBe('Wall, Draw Two unused');
+    P.deck.state.W(s, 'ban')[P.deck.ix.BIG] = 1;
+    P.deck.state.setOpt(s, 0);   // drawtwo's slot: limits are numbered by sorted name
+    const r = P.deck.boardValue(P.deck.finalize(s).n, true);
+    expect(r.items).toEqual([['Wall with Big banished', 0.3]]);
+  });
 });

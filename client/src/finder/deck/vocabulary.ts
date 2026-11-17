@@ -6,7 +6,7 @@
 // Adding a word: one defineCond / definePick / defineAct / defineTrigger call below (doc,
 // argument spec, compile), plus a row in docs/finder/vocabulary.md. Nothing else changes.
 
-import type { CardId, State } from '../engine/types';
+import type { CardId, FinalBoard, State } from '../engine/types';
 import type { EffectDef } from './schema';
 import { L } from '../engine/record';
 import type { ActFn, CardProps, CardRef, Choice, CondFn, CountFn, PickFn, Run, Runtime, TrigEvent, TriggerFn } from './compile';
@@ -180,7 +180,7 @@ const OPP = A.object({ kind: KIND, faceUp: A.optional(A.boolean), targetable: A.
 const FREE = A.oneOf(A.none, A.int(1));
 
 type Zone = 'hand' | 'deck' | 'extra' | 'gy' | 'ban' | 'field';
-type Match = (s: State, r: Run, id: number) => boolean;
+type Match = (s: FinalBoard, r: Run, id: number) => boolean;
 interface WhichArgs { card?: CardId; group?: string; filter?: Word }
 
 const ANY: Match = () => true;
@@ -195,6 +195,7 @@ function matcher(a: WhichArgs, ctx: CompileCtx): Match {
   }
   if (a.filter !== undefined) {
     const f = ctx.cond(a.filter, 'filter') as CondFn;
+    // One scratch Run per filter: not re-entrant (a filter that, through its own words, ran this same filter again would see it overwritten).
     const sub: Run = { self: 0, at: { zone: 'none', at: -1, uid: null }, chosen: [] };
     return (s, r, id) => { sub.self = id; sub.chosen = r.chosen; return f(s, sub); };
   }
@@ -242,12 +243,16 @@ function controlCounter(a: ControlArgs, ctx: CompileCtx): CountFn {
 }
 
 interface OppArgs { kind?: 'mon' | 'st'; faceUp?: boolean; targetable?: boolean; destroyable?: boolean }
-/** An opponent's card test; each given field must match, absent fields do not matter. */
+/**
+ * An opponent's card test; each given field must match. `targetable` defaults to true (as the
+ * reference's oppTargets); the other absent fields do not matter.
+ */
 function oppTest(a: OppArgs | true): (x: { faceDown?: boolean; noTarget?: boolean; noDestroy?: boolean }) => boolean {
-  if (a === true) return () => true;
-  return (x) => (a.faceUp === undefined || !x.faceDown === a.faceUp)
-    && (a.targetable === undefined || !x.noTarget === a.targetable)
-    && (a.destroyable === undefined || !x.noDestroy === a.destroyable);
+  if (a === true) a = {};
+  const tg = a.targetable ?? true, up = a.faceUp, ds = a.destroyable;
+  return (x) => !x.noTarget === tg
+    && (up === undefined || !x.faceDown === up)
+    && (ds === undefined || !x.noDestroy === ds);
 }
 
 const free = (a: true | Record<string, never> | number): number => (typeof a === 'number' ? a : 1);

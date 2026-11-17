@@ -84,6 +84,11 @@ describe('conditions', () => {
     expect(d2.mainKeys(d2.state({ PROBE: 1 }))).toEqual([]);
     expect(d2.mainKeys(withOpp(d2, { PROBE: 1 }))).toEqual(['p']);
   });
+  it('oppHasTarget with no arguments needs a targetable card', () => {
+    const d = probe([eff({ cond: [{ oppHasTarget: true }] })]);
+    const s = d.deck.state.newState({ ...toyCfg({ PROBE: 1 }), opp: { lp: 8000, mons: [OPP.mons[1]], st: [] } }, d.deck.ix);
+    expect(d.mainKeys(s)).toEqual([]);
+  });
 });
 
 describe('picks', () => {
@@ -118,7 +123,9 @@ describe('picks', () => {
   });
   it('oppCard lists matching opponent cards', () => {
     expect(keys({ oppCard: { targetable: true } }, { PROBE: 1 }, () => {}, true)).toEqual(['p:om1', 'p:os1']);
-    expect(keys({ oppCard: { kind: 'mon' } }, { PROBE: 1 }, () => {}, true)).toEqual(['p:om1', 'p:om2']);
+    expect(keys({ oppCard: { kind: 'mon' } }, { PROBE: 1 }, () => {}, true)).toEqual(['p:om1']);
+    expect(keys({ oppCard: true }, { PROBE: 1 }, () => {}, true)).toEqual(['p:om1', 'p:os1']);
+    expect(keys({ oppCard: { kind: 'mon', targetable: false } }, { PROBE: 1 }, () => {}, true)).toEqual(['p:om2']);
   });
   it('a later pick does not reuse a card an earlier one took', () => {
     const d = probe([eff({ choose: [{ as: 'a', pick: { otherHandCard: true } }, { as: 'b', pick: { otherHandCard: true } }] })]);
@@ -202,6 +209,18 @@ describe('triggers', () => {
     expect(d.pendKeys(n)).toEqual(['t']);
     expect(n.pend[0].a).toBe(n.mons[0].uid);
   });
+  it('a monster summoned with its effects negated does not run its own trigger', () => {
+    const d = probe([eff({ do: [{ summon: { what: 'self', noEff: true } }] }), eff({ key: 't', from: 'field', trigger: { specialSummoned: true }, text: 'T.' })]);
+    const n = d.run(d.state({ PROBE: 1 }), 'p');
+    expect(n.pend).toEqual([]);
+    // Nor does a pending entry for it resolve (if one was queued before its effects were negated).
+    const keys = d.deck.file.cards.flatMap((c) => (c.effects ?? []).map((e) => e.key)).sort();
+    n.pend = [{ e: keys.indexOf('t') + 1, a: n.mons[0].uid }];   // effect ids are 1.. by sorted key
+    expect(d.pendKeys(n)).toEqual([]);
+    n.mons[0] = { ...n.mons[0], noEff: false };
+    expect(d.pendKeys(n)).toEqual(['t']);
+  });
+
   it('summonedNamed fires for another card summoned under that name', () => {
     const d = probe([eff({ key: 't', from: 'hand', trigger: { summonedNamed: { name: 'SEEKER' } }, text: 'T.' })]);
     expect(d.summonForTest(d.state({ PROBE: 1, SEEKER: 1 }), 'SEEKER').pend).toHaveLength(2);
