@@ -24,6 +24,10 @@ Extra Deck rules (`extraDeck`) are tried in (`order`, card id, method) order, wh
 in the file; `order` is an optional number (default 0), as on effects. That order is the order of
 the Synchro and Link moves and of the Fusion options.
 
+Board value (`boardValue`): a monster on the final board with no entry of its own is worth
+min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `group` inside a
+`control` word in its `on` (at any depth) for its default value to be replaced.
+
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
 | `has` | condition | `{ zone, which? }` | A zone holds at least one matching card. |

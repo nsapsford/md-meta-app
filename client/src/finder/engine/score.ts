@@ -28,7 +28,7 @@ export interface Score {
   potential(s: State): number;
 }
 
-/** Opponent draw effects that the Mulcharmy-style hand-size cap applies to (the reference's `mul & 3`). */
+/** Opponent draw effects the hand-size cap on opponent draw effects applies to (the reference's `mul & 3`). */
 const CAPPED_DRAWS = DRAW_BIT.drawDeckExtraSummon | DRAW_BIT.drawHandSummon;
 
 export function createScore(deck: CompiledDeck): Score {
@@ -106,7 +106,7 @@ export function createScore(deck: CompiledDeck): Score {
     const nlog = s.log.length;
     const draws = s.oppDraws;
     let eff = draws;
-    // In the End Phase they shuffle back down to (cards you control + 6); going first they hold 4 after discarding the draw card.
+    // Hand-size cap: in the End Phase they shuffle back down to (cards you control + 6); going first they hold 4 after discarding the draw card.
     if (draws && (s.drawFx & CAPPED_DRAWS) && !(s.mode === 'second' && s.opp)) eff = Math.min(draws, n.mons.length + n.st.length + 2);
     const pen = eff * s.drawPenalty;
     let score: number, summary: Record<string, number | boolean>;

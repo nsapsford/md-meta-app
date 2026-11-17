@@ -151,4 +151,20 @@ describe('compiled deck tables', () => {
     const r = P.deck.boardValue(P.deck.finalize(s).n, true);
     expect(r.items).toEqual([['Wall with Big banished', 0.3]]);
   });
+
+  it('hasBoardValue: only cards named inside `control` words count', () => {
+    const f: DeckFile = {
+      ...TOY_FILE,
+      groups: { ...TOY_FILE.groups, tuners: ['TUNER'] },
+      boardValue: [
+        // A Spell/Trap entry that also checks the Deck for BIG: BIG keeps its default value.
+        { id: 'wall', when: 'oppTurn', on: { any: [{ control: { card: 'WALL', kind: 'st' } }, { has: { zone: 'deck', card: 'BIG' } }] }, base: [{ value: 0.5, label: 'Wall' }] },
+        { id: 'tuners', when: 'oppTurn', on: { control: { group: 'tuners', kind: 'mon' } }, base: [{ value: 0.3, label: 'Tuner' }] },
+      ],
+    };
+    expect(validateDeckFile(f, {}).ok).toBe(true);
+    const d = compileDeck(f, TOY_FACTS);
+    const named = d.ids.filter((_, i) => d.hasBoardValue[i]);
+    expect(named).toEqual(['TUNER', 'WALL']);
+  });
 });

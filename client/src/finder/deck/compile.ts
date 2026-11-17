@@ -670,12 +670,17 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   });
 
   const hasBoardValue: boolean[] = ids.map(() => false);
+  // Only cards a `control` word names (at any depth of `on`) count: a card named by another word
+  // in the same `on` (a Deck or GY check, say) keeps its default value.
   const named = (v: unknown, field: string): void => {
     if (Array.isArray(v)) { v.forEach((x) => named(x, field)); return; }
     if (!v || typeof v !== 'object') return;
     const o = v as Record<string, unknown>;
-    if (typeof o.card === 'string' && ix[o.card] !== undefined) hasBoardValue[ix[o.card]] = true;
-    if (typeof o.group === 'string') for (const i of group(o.group, (m) => { throw new DeckCompileError([{ card: null, field, message: m }]); })) hasBoardValue[i] = true;
+    const c = o.control as Record<string, unknown> | undefined;
+    if (c && typeof c === 'object') {
+      if (typeof c.card === 'string' && ix[c.card] !== undefined) hasBoardValue[ix[c.card]] = true;
+      if (typeof c.group === 'string') for (const i of group(c.group, (m) => { throw new DeckCompileError([{ card: null, field, message: m }]); })) hasBoardValue[i] = true;
+    }
     for (const x of Object.values(o)) named(x, field);
   };
   file.boardValue.forEach((b, j) => named(b.on, `boardValue[${j}].on`));
