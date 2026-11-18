@@ -24,6 +24,7 @@ export const PEND_MAP: Record<string, string> = {
  */
 export const OPT_MAP: Record<string, string> = {
   rod1: 'rod', circ1: 'circ1', circ2: 'circ2', curt: 'curt', tali3: 'tali3', ssrv2: 'ssrv2',   // group 2
+  souls1: 'souls1', souls2: 'souls2', serv: 'serv', ioc1: 'ioc',   // group 3
 };
 
 /** Map reference names through `table`, throwing on any it doesn't hold. */
@@ -67,11 +68,18 @@ export function toIntr(ref: RefIntr): Interruption {
   return out;
 }
 
+/**
+ * Reference tags that nothing in the reference reads (not kindEligible, protectionFor, the Spell or
+ * monster floodgates, done, or the line notes), so they mean no tag: dropped. `hand` is on Pharaoh's
+ * Servant's hand move only (its step has `handEff`).
+ */
+const UNREAD_REF_TAGS = new Set(['hand']);
+
 /** A reference step's tags as sorted new names (an unknown tag keeps its name behind a `?`). */
 export function refTags(tags: Record<string, unknown> | null | undefined): string[] {
   const out: string[] = [];
   for (const k in tags ?? {}) {
-    if (!tags![k]) continue;
+    if (!tags![k] || UNREAD_REF_TAGS.has(k)) continue;
     out.push(REF_MARKS.has(k) ? k : (TAG_MAP as Record<string, string>)[k] ?? '?' + k);
   }
   return out.sort();

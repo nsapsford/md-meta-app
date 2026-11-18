@@ -29,7 +29,8 @@ min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `
 `control` word in its `on` (at any depth) for its default value to be replaced.
 
 Effect fields beside the words: `tags` are the move's tags (what floodgates and protections
-read); `stepTags` adds tags to the recorded step only (what the opponent's responses read).
+read); `stepTags` adds tags to the recorded step only (what the opponent's responses read), and
+`stepMarks` adds marks to it the same way.
 `mandatory: true` on a trigger offers declining it only when it has no move to make (none, or the
 floodgates dropped them); otherwise declining is always offered. An effect with
 `activates: "spell"` sets "a Spell was activated this turn" only when its card is in the hand or
@@ -37,6 +38,12 @@ on the field (a Spell's effect in the GY does not). In `text` and `negText`, `{a
 card's short name, `{zone}` where the first choice came from, and `{as?text|other}` is `text`
 (with `$` for the chosen card's short name) when the choice `as` was made, else `other` (which may
 be left out with its `|`).
+
+Card fields beside the words: `fieldName` is the name a monster has on your field and `gyName`
+the name a card has in your GY (what `named`, `summonedNamed` and `namesPresent` see there).
+`listOrder` (a number, lower first; cards without one come after, by id) is the order in which a
+pick that walks a zone (`fromZone`, `otherHandCard`) lists its cards: it decides what `first`
+takes, how `cheapest` breaks ties, and the order of a `subsets` choice's names in a step's text.
 
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
@@ -58,16 +65,18 @@ be left out with its `|`).
 | `race` | condition | list of monster Types (≥ 1) | This card's monster Type is one of them. |
 | `frame` | condition | list of `Normal\|Effect\|Ritual\|Fusion\|Synchro\|Xyz\|Link` (≥ 1) | This card is a monster of one of those kinds. Every opponent's monster counts as an Effect Monster here (while `extraDeckMonster` reads its `ext` flag). |
 | `extraDeckMonster` | condition | none | This card is a Fusion, Synchro, Xyz or Link monster. |
-| `named` | condition | card | This card's name is that card (on your field: its name there). |
+| `named` | condition | card | This card's name is that card (on your field: its name there; in the GY: its GY name). |
+| `cardKind` | condition | `(monster\|spell\|trap)[]` (≥ 1) | This card is a Monster, Spell or Trap card of one of the given kinds (an opponent's Spell/Trap counts as either). |
 | `uniqueName` | condition | none | No other chosen card (another material) has this card's name. |
 | `chosen` | condition | `{ as: choice, zone?, filter?: condition }` | The named choice was made (an optional one may be skipped), and if given came from the zone and matches the filter (which sees the chosen card as this card). |
 | `knownTop` | condition | `{ atLeast?, atMost? }` | The number of known cards on top of the Deck is within atLeast..atMost. |
 | `namesPresent` | condition | `{ names: card[] (≥ 1), atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name) is within atLeast (default 1)..atMost. |
-| `fromZone` | pick | `{ zone, group \| filter }` | Each distinct card of the group or filter in the zone. |
+| `fromZone` | pick | `{ zone, group? \| filter?, eachCopy?, plus?: what }` | Each distinct card (of the group or filter, if given) in the zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first). |
 | `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp? }` | Each card you control on the field. |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
 | `cheapest` | pick | `{ of: pick, n? }` | Only the n (default 1) choices of the nested pick with the lowest discard value. |
-| `subsets` | pick | `{ of: pick, min, max }` | Each set of min..max choices of the nested pick. |
+| `first` | pick | `{ of: pick, n? }` | Only the first n (default 1) choices of the nested pick (a zone pick lists cards in list order). |
+| `subsets` | pick | `{ of: pick, min, max, join? }` | Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and "). |
 | `oppCard` | pick | none, or `opp` | Each of the opponent's matching cards. |
 | `union` | pick | list of picks (≥ 1) | Each choice of each nested pick, in order. |
 | `onlyIf` | pick | `{ if: conditions (≥ 1), of: pick }` | The nested pick's choices while every condition holds (they may read earlier choices), else none. |
@@ -83,6 +92,7 @@ be left out with its `|`).
 | `payLp` | action | number ≥ 1, or `"half"` | Pay that many Life Points, or half. |
 | `burn` | action | number ≥ 1 | Inflict that much damage to the opponent. |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |
+| `oppRemoveAll` | action | `{ how: destroy\|banish, kind?: mon\|st, faceUp?, destroyable? }` | Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply). |
 | `setFlag` | action | flag name (from `flags`) | Set the deck-defined state flag. |
 | `queue` | action | effect key | Queue that effect as a pending trigger to resolve next. |
 | `noDirectAttacks` | action | none | You cannot attack directly for the rest of the turn. |

@@ -57,7 +57,7 @@ const FILES = '../deck/files/';
 const readJson = (name: string): unknown => JSON.parse(readFileSync(fileURLToPath(new URL(FILES + name, import.meta.url)), 'utf8'));
 
 /** The DM Azamina deck file with its shared staples file, validated, and its card facts. Read when called (the files arrive in Task 10). */
-function loadDeckFiles(): { ok: true; engine: Engine } | { ok: false; errors: string } {
+export function loadDeckFiles(): { ok: true; engine: Engine } | { ok: false; errors: string } {
   const r = validateDeckFile(readJson('dm-azamina.json'), { staples: readJson('staples.json') });
   if (!r.ok) return { ok: false, errors: r.errors.map((e) => `${e.card ?? '-'} ${e.field}: ${e.message}`).join('\n') };
   const facts = [...(readJson('dm-azamina.cards.json') as CardFacts[]), ...(readJson('staples.cards.json') as CardFacts[])];

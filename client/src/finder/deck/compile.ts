@@ -109,6 +109,8 @@ export type TriggerFn = ((ev: TrigEvent, self: number) => boolean) & { on: TrigE
 /** Runtime helpers a word's closures call. Built once per compiled deck. */
 export interface Runtime {
   state: StateOps; ops: Ops; ids: readonly CardId[]; props: readonly CardProps[]; UNK: number;
+  /** Every card index in list order (`CardDef.listOrder`, lower first; cards without one after, by index). Picks that list cards of a zone walk them in this order. */
+  order: readonly number[];
   /** Ledger name of a zone. */
   lz(z: ZoneName | 'field'): LedgerZone;
   /** The cached choice for a card in a zone (hand, deck, extra, gy, ban), or on top of the Deck. */
@@ -284,8 +286,10 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   };
   const stIndex = (s: State, c: CardRef): number => (s.st[c.at]?.id === c.id ? c.at : s.st.findIndex((x) => x.id === c.id));
 
+  const listOrder = (i: number) => cardById.get(ids[i])?.listOrder ?? Infinity;
+  const order = Object.freeze(ids.map((_id, i) => i).sort((a, b) => listOrder(a) - listOrder(b) || a - b));
   const rt: Runtime = {
-    state: so, ops, ids, props, UNK,
+    state: so, ops, ids, props, UNK, order,
     lz: (z) => LZ[z],
     choiceIn: (z, id) => zoneChoices[z][id],
     choiceOnField: (zone, at, id, uid) => ({ id, zone, at, uid, key: ids[id], name: props[id].short, many: null }),
@@ -468,13 +472,16 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       if (typeof v === 'boolean') { if (v) stepFixed[k] = true; }
       else stepDyn.push([k, w('conds', v, `${base}.stepTags.${k}`) as CondFn]);
     }
-    const hasStepTags = Object.keys(stepFixed).length > 0 || stepDyn.length > 0;
+    const stepMarks = (def.stepMarks ?? []).reduce((m, name) => m | (1 << markBit[name]), 0);
+    const hasStepTags = Object.keys(stepFixed).length > 0 || stepDyn.length > 0 || stepMarks !== 0;
     const stepTagsFor = (s: State, r: Run): Tags => {
       const t = tagsFor(s, r);
       if (!hasStepTags) return t;
       const o = { ...t, ...stepFixed } as Record<string, boolean>;
       for (const [k, f] of stepDyn) if (f(s, r)) o[k] = true;
-      return o as Tags;
+      const out = o as Tags;
+      if (stepMarks) out.marks = (t.marks ?? 0) | stepMarks;
+      return out;
     };
 
     const text = template(def.text, scope.choose, failAt('text'));

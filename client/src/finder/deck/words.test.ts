@@ -434,3 +434,89 @@ describe('effect fields: stepTags, text alternatives, the Spell flag', () => {
     expect(d.run(d.state({ PROBE: 1 }), 'h').spell).toBe(true);
   });
 });
+
+describe('group 3 words: cardKind, first, oppRemoveAll, fromZone plus/eachCopy, subsets join, list order, names', () => {
+  const keysOf = (d: ReturnType<typeof probe>, s: State) => d.mainKeys(s).filter((k) => k === 'p' || k.startsWith('p:'));
+  const withOrder = (effects: EffectDef[], order: Record<CardId, number>) => {
+    const f = fileWith(effects);
+    f.cards = f.cards.map((c) => (c.id in order ? { ...c, listOrder: order[c.id] } : c));
+    return driver(f, FACTS);
+  };
+  it('cardKind reads Monster, Spell or Trap', () => {
+    const inHand = (k: string[], hand: Record<CardId, number>) => offered([{ has: { zone: 'hand', filter: { cardKind: k } } }], () => {}, {}, hand);
+    expect(inHand(['spell'], { PROBE: 1, DRAWTWO: 1 })).toBe(true);
+    expect(inHand(['spell'], { PROBE: 1, WALL: 1 })).toBe(false);
+    expect(inHand(['trap'], { PROBE: 1, WALL: 1 })).toBe(true);
+    expect(inHand(['spell', 'trap'], { PROBE: 1, BIG: 1 })).toBe(false);
+    expect(inHand(['monster'], { PROBE: 1 })).toBe(true);
+  });
+  it('first keeps only the first choices of the nested pick', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { first: { of: { otherHandCard: true } } } }] })]);
+    expect(keysOf(d, d.state({ PROBE: 1, BIG: 1, WALL: 1 }))).toEqual(['p:BIG']);
+    const d2 = probe([eff({ choose: [{ as: 'c', pick: { first: { of: { otherHandCard: true }, n: 2 } } }] })]);
+    expect(keysOf(d2, d2.state({ PROBE: 1, BIG: 1, WALL: 1, TUNER: 1 }))).toEqual(['p:BIG', 'p:TUNER']);
+  });
+  it('listOrder sets the order zone picks list cards in (and so what first and cheapest ties take)', () => {
+    const d = withOrder([eff({ choose: [{ as: 'c', pick: { first: { of: { otherHandCard: true } } } }] })], { WALL: 1, BIG: 2 });
+    expect(keysOf(d, d.state({ PROBE: 1, BIG: 1, WALL: 1, TUNER: 1 }))).toEqual(['p:WALL']);
+    const z = withOrder([eff({ choose: [{ as: 'c', pick: { fromZone: { zone: 'hand' } } }] })], { WALL: 0 });
+    expect(keysOf(z, z.state({ PROBE: 1, BIG: 1, WALL: 1 }))).toEqual(['p:WALL', 'p:BIG', 'p:PROBE']);
+    const c = withOrder([eff({ choose: [{ as: 'c', pick: { cheapest: { of: { otherHandCard: true } } } }] })], { WALL: 0 });
+    expect(keysOf(c, c.state({ PROBE: 1, BIG: 1, WALL: 1 }))).toEqual(['p:WALL']);
+  });
+  it('fromZone with no group or filter takes any card; eachCopy gives one choice per copy', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { fromZone: { zone: 'hand', eachCopy: true } } }] })]);
+    expect(keysOf(d, d.state({ PROBE: 1, BIG: 2 }))).toEqual(['p:BIG', 'p:BIG', 'p:PROBE']);
+  });
+  it('fromZone plus counts an earlier choice as already in the zone', () => {
+    const d = probe([eff({
+      choose: [{ as: 'a', pick: { fromZone: { zone: 'deck', group: 'spells' } } }, { as: 'b', pick: { fromZone: { zone: 'hand', plus: 'a' } } }],
+      do: [{ move: { what: 'a', to: 'hand' } }, { placeOnTop: { what: 'b' } }],
+    })]);
+    const s = d.state({ PROBE: 1, BIG: 1 });
+    expect(keysOf(d, s)).toEqual(['p:DRAWTWO:BIG', 'p:DRAWTWO:DRAWTWO', 'p:DRAWTWO:PROBE']);
+    const n = d.run(s, 'p:DRAWTWO:DRAWTWO');
+    expect(n.top).toEqual([d.deck.ix.DRAWTWO]);
+    expect(d.count(n, 'hand', 'DRAWTWO')).toBe(0);
+  });
+  it('subsets offers the same cards from the same places once, joined by join', () => {
+    const pick = { subsets: { min: 1, max: 2, join: ' + ', of: { union: [{ fromZone: { zone: 'hand', filter: { cardKind: ['spell', 'trap'] }, eachCopy: true } }, { fromField: { kind: 'st' } }] } } };
+    const d = probe([eff({ choose: [{ as: 'c', pick }], text: 'Send {c}.' })]);
+    const s = d.state({ PROBE: 1, WALL: 2 });
+    s.st.push({ id: d.deck.ix.WALL, up: false, now: false }, { id: d.deck.ix.WALL, up: true, now: false });
+    // Hand copies merge (one single, one pair); the two field Walls are different cards.
+    const ks = keysOf(d, s);
+    const n = (k: string) => ks.filter((x) => x === k || x.startsWith(k + '#')).length;
+    expect(n('p:WALL')).toBe(3);                // hand, field 0, field 1
+    expect(n('p:WALL+WALL')).toBe(1 + 2 + 1);   // hand+hand, hand+field 0, hand+field 1, field 0+field 1
+    expect(d.lastText(d.run(s, 'p:WALL+WALL'))).toBe('Send Wall + Wall.');
+  });
+  it('oppRemoveAll destroys every matching opponent card, targetable or not', () => {
+    const d = probe([eff({ do: [{ oppRemoveAll: { how: 'destroy', kind: 'st', destroyable: true } }] })]);
+    const opp = { lp: 8000, mons: [OPP.mons[0]], st: [{ uid: 's1', kind: 'st' as const, name: 'A', noTarget: true }, { uid: 's2', kind: 'st' as const, name: 'B', noDestroy: true }, { uid: 's3', kind: 'st' as const, name: 'C' }] };
+    const n = d.run(d.deck.state.newState({ ...toyCfg({ PROBE: 1 }), opp }, d.deck.ix), 'p');
+    expect(n.opp!.st.map((x) => x.uid)).toEqual(['s2']);
+    expect(n.opp!.mons.length).toBe(1);
+    expect(n.removed).toBe(2);
+  });
+  it('named reads a card by its GY name in the GY; fieldName renames it on the field', () => {
+    const cond = [{ has: { zone: 'gy', filter: { named: 'BIG' } } }];
+    const d = probe([eff({ cond })], {}, { gyName: 'BIG' });
+    const s = d.state({ PROBE: 1 });
+    expect(d.mainKeys(s)).toEqual([]);
+    gy('PROBE')(s, d);
+    expect(d.mainKeys(s)).toEqual(['p']);
+    const plain = probe([eff({ cond })]);
+    const s2 = plain.state({ PROBE: 1 });
+    gy('PROBE')(s2, plain);
+    expect(plain.mainKeys(s2)).toEqual([]);
+    const f = probe([eff({ do: [{ summon: { what: 'self' } }] })], {}, { fieldName: 'BIG' });
+    expect(f.run(f.state({ PROBE: 1 }), 'p').mons[0].nm).toBe(f.deck.ix.BIG);
+  });
+  it('stepMarks are recorded on the step, not on the move', () => {
+    const d = probe([eff({ tags: { deckAdd: true }, stepMarks: ['m'] })], { marks: ['m'] });
+    const s = d.state({ PROBE: 1 });
+    expect(d.moves(s)[0].tags).toEqual({ deckAdd: true });
+    expect(d.run(s, 'p').log[0].tags).toEqual({ deckAdd: true, marks: 1 << d.deck.markBit.m });
+  });
+});

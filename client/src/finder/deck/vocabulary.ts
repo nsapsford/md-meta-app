@@ -184,9 +184,14 @@ type Match = (s: FinalBoard, r: Run, id: number) => boolean;
 interface WhichArgs { card?: CardId; group?: string; filter?: Word }
 
 const ANY: Match = () => true;
+/** Where a filter's candidate is while a word walks `zone` (the field's cards are not walked by index here). */
+const inZone = (zone: Zone): Place['zone'] => (zone === 'field' ? 'none' : zone);
 
-/** A card test from `which` arguments (any card if none). A filter sees the candidate as `self`. */
-function matcher(a: WhichArgs, ctx: CompileCtx): Match {
+/**
+ * A card test from `which` arguments (any card if none). A filter sees the candidate as `self`,
+ * in `zone` when the caller walks one zone (so a name test there reads, say, the card's GY name).
+ */
+function matcher(a: WhichArgs, ctx: CompileCtx, zone: Place['zone'] = 'none'): Match {
   if (a.card !== undefined) { const c = ctx.ix[a.card]; return (_s, _r, id) => id === c; }
   if (a.group !== undefined) {
     const mask = new Uint8Array(ctx.props.length);
@@ -196,7 +201,7 @@ function matcher(a: WhichArgs, ctx: CompileCtx): Match {
   if (a.filter !== undefined) {
     const f = ctx.cond(a.filter, 'filter') as CondFn;
     // One scratch Run per filter: not re-entrant (a filter that, through its own words, ran this same filter again would see it overwritten).
-    const sub: Run = { self: 0, at: { zone: 'none', at: -1, uid: null }, chosen: [] };
+    const sub: Run = { self: 0, at: { zone, at: -1, uid: null }, chosen: [] };
     return (s, r, id) => { sub.self = id; sub.chosen = r.chosen; return f(s, sub); };
   }
   return ANY;
@@ -262,14 +267,14 @@ const trig = (on: TrigEvent['t'], f: (ev: any, self: number) => boolean): Trigge
 defineCond('has', {
   doc: 'A zone holds at least one card of the given card, group or filter (any card if none is given).',
   args: A.object({ zone: A.zone(), ...WHICH }, { atMostOne: WHICH_ONE }),
-  compile: (a: WhichArgs & { zone: Zone }, ctx): CondFn => { const c = zoneCounter(a.zone, matcher(a, ctx), ctx.props.length); return (s, r) => c(s, r) > 0; },
-  count: (a: WhichArgs & { zone: Zone }, ctx): CountFn => zoneCounter(a.zone, matcher(a, ctx), ctx.props.length),
+  compile: (a: WhichArgs & { zone: Zone }, ctx): CondFn => { const c = zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length); return (s, r) => c(s, r) > 0; },
+  count: (a: WhichArgs & { zone: Zone }, ctx): CountFn => zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length),
 });
 defineCond('count', {
   doc: 'The number of matching cards in a zone is within atLeast..atMost.',
   args: A.object({ zone: A.zone(), ...WHICH, atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }, { atMostOne: WHICH_ONE }),
   compile: (a: WhichArgs & { zone: Zone; atLeast?: number; atMost?: number }, ctx): CondFn => {
-    const c = zoneCounter(a.zone, matcher(a, ctx), ctx.props.length);
+    const c = zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length);
     const lo = a.atLeast ?? 0, hi = a.atMost ?? Infinity;
     return (s, r) => { const k = c(s, r); return k >= lo && k <= hi; };
   },
@@ -384,12 +389,21 @@ defineCond('extraDeckMonster', {
   doc: 'This card is a Fusion, Synchro, Xyz or Link monster.', args: A.none,
   compile: (_a, ctx): CondFn => propCond(ctx, (o) => !!o.ext, (p) => p.ext),
 });
+const KINDS: Record<string, CardProps['kind']> = { monster: 'M', spell: 'S', trap: 'T' };
+defineCond('cardKind', {
+  doc: "This card is a Monster, Spell or Trap card of one of the given kinds (an opponent's Spell/Trap counts as either).", args: A.list(A.enum('monster', 'spell', 'trap'), 1),
+  compile: (a: string[], ctx): CondFn => {
+    const set = new Set(a.map((k) => KINDS[k])), anySt = set.has('S') || set.has('T');
+    return propCond(ctx, (o) => (o.kind === 'mon' ? set.has('M') : anySt), (p) => set.has(p.kind));
+  },
+});
 defineCond('named', {
-  doc: "This card's name is the given card (on your field: its name there).", args: A.card,
+  doc: "This card's name is the given card (on your field: its name there; in the GY: its GY name).", args: A.card,
   compile: (a: CardId, ctx): CondFn => {
-    const c = ctx.ix[a];
+    const c = ctx.ix[a], props = ctx.props;
     return (s, r) => {
       if (r.at.zone === 'opp') return false;
+      if (r.at.zone === 'gy') return props[r.self].gyName === c;
       const m = monOf(s, r);
       return (m ? m.nm : r.self) === c;
     };
@@ -466,15 +480,33 @@ function fieldPick(m: Match, kind: 'mon' | 'st' | undefined, faceUp: boolean | u
 }
 
 definePick('fromZone', {
-  doc: 'Each distinct card of a group or filter in a zone.',
-  args: A.object({ zone: A.zone(), group: A.optional(A.group), filter: A.optional(A.cond) }, { exactlyOne: ['group', 'filter'] }),
-  compile: (a: { zone: Zone; group?: string; filter?: Word }, ctx): PickFn => {
-    const m = matcher(a, ctx);
-    if (a.zone === 'field') return fieldPick(m, undefined, undefined, ctx.rt);
-    const z = a.zone, n = ctx.props.length, rt = ctx.rt;
+  doc: 'Each distinct card (of a group or filter, if given) in a zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first).',
+  args: A.object({ zone: A.zone(), group: A.optional(A.group), filter: A.optional(A.cond), eachCopy: A.optional(A.boolean), plus: A.optional(A.choice) }, { atMostOne: ['group', 'filter'] }),
+  compile: (a: { zone: Zone; group?: string; filter?: Word; eachCopy?: boolean; plus?: string }, ctx): PickFn => {
+    const m = matcher(a, ctx, inZone(a.zone));
+    if (a.zone === 'field') {
+      if (a.plus !== undefined || a.eachCopy) ctx.fail('plus and eachCopy are for a zone other than the field');
+      return fieldPick(m, undefined, undefined, ctx.rt);
+    }
+    if (a.plus === 'self') ctx.fail('names a choice (a choose[].as name), not this card', 'plus');
+    const z = a.zone, rt = ctx.rt, order = rt.order, each = !!a.eachCopy;
+    const plus = a.plus === undefined ? -1 : ctx.choiceSlot(a.plus);
+    const extra = (r: Run, id: number): number => {
+      const c = plus < 0 ? null : r.chosen[plus];
+      if (!c) return 0;
+      let k = 0;
+      for (const x of c.many ?? [c]) if (x.id === id) k++;
+      return k;
+    };
     return (s, r) => {
       const out: Choice[] = [], zz = s[z];
-      for (let i = 0; i < n; i++) if (zz[i] && m(s, r, i) && zz[i] > taken(r.chosen, z, i)) out.push(rt.choiceIn(z, i));
+      for (const i of order) {
+        const have = zz[i] + extra(r, i);
+        if (!have) continue;
+        const left = have - taken(r.chosen, z, i);
+        if (left <= 0 || !m(s, r, i)) continue;
+        for (let k = each ? left : 1; k > 0; k--) out.push(rt.choiceIn(z, i));
+      }
       return out;
     };
   },
@@ -489,10 +521,10 @@ definePick('otherHandCard', {
   args: A.oneOf(A.none, A.object({ group: A.optional(A.group), filter: A.optional(A.cond) }, { atMostOne: ['group', 'filter'] })),
   compile: (a: true | { group?: string; filter?: Word }, ctx): PickFn => {
     const m = a === true ? ANY : matcher(a, ctx);
-    const n = ctx.props.length, rt = ctx.rt;
+    const rt = ctx.rt, order = rt.order;
     return (s, r) => {
       const out: Choice[] = [], h = s.hand;
-      for (let i = 0; i < n; i++) {
+      for (const i of order) {
         if (!h[i]) continue;
         const left = h[i] - (i === r.self && r.at.zone === 'hand' ? 1 : 0) - taken(r.chosen, 'hand', i);
         if (left > 0 && m(s, r, i)) out.push(rt.choiceIn('hand', i));
@@ -515,18 +547,31 @@ definePick('cheapest', {
     };
   },
 });
+definePick('first', {
+  doc: 'Only the first n (default 1) choices of the nested pick (a zone pick lists cards in list order).',
+  args: A.object({ of: A.pick, n: A.optional(A.int(1)) }),
+  compile: (a: { of: Word; n?: number }, ctx): PickFn => {
+    const of = ctx.pick(a.of, 'of') as PickFn, k = a.n ?? 1;
+    return (s, r) => { const opts = of(s, r); return opts.length <= k ? opts : opts.slice(0, k); };
+  },
+});
 definePick('subsets', {
-  doc: 'Each set of min..max choices of the nested pick.',
-  args: A.object({ of: A.pick, min: A.int(0), max: A.int(1) }),
-  compile: (a: { of: Word; min: number; max: number }, ctx): PickFn => {
-    const of = ctx.pick(a.of, 'of') as PickFn;
+  doc: 'Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and ").',
+  args: A.object({ of: A.pick, min: A.int(0), max: A.int(1), join: A.optional(A.string) }),
+  compile: (a: { of: Word; min: number; max: number; join?: string }, ctx): PickFn => {
+    const of = ctx.pick(a.of, 'of') as PickFn, sep = a.join ?? ' and ';
     if (a.min > a.max) ctx.fail(`min ${a.min} is above max ${a.max}`);
+    const where = (c: Choice) => `${c.zone}|${c.at}|${String(c.uid)}|${c.id}`;
     return (s, r) => {
-      const opts = of(s, r), out: Choice[] = [], cur: Choice[] = [];
+      const opts = of(s, r), out: Choice[] = [], cur: Choice[] = [], seen = new Set<string>();
       const walk = (start: number): void => {
         if (cur.length >= a.min) {
-          const many = cur.slice();
-          out.push({ id: -1, zone: many[0]?.zone ?? 'none', at: -1, uid: null, key: many.map((c) => c.key).join('+'), name: many.map((c) => c.name).join(' and '), many });
+          const sig = cur.map(where).sort().join('+');
+          if (!seen.has(sig)) {
+            seen.add(sig);
+            const many = cur.slice();
+            out.push({ id: -1, zone: many[0]?.zone ?? 'none', at: -1, uid: null, key: many.map((c) => c.key).join('+'), name: many.map((c) => c.name).join(sep), many });
+          }
         }
         if (cur.length === a.max) return;
         for (let i = start; i < opts.length; i++) { cur.push(opts[i]); walk(i + 1); cur.pop(); }
@@ -688,6 +733,21 @@ defineAct('oppRemove', {
     if (a.what === 'self') ctx.fail("names one of the opponent's cards (a choice), not this card", 'what');
     const slot = slotOf(a.what, ctx), rt = ctx.rt;
     return (n, r) => rt.each(r, slot, (c) => { if (c.uid !== null) rt.ops.oppRemove(n, c.uid, a.how); });
+  },
+});
+defineAct('oppRemoveAll', {
+  doc: "Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply).",
+  args: A.object({ how: A.enum('destroy', 'banish'), kind: KIND, faceUp: A.optional(A.boolean), destroyable: A.optional(A.boolean) }),
+  compile: (a: { how: 'destroy' | 'banish'; kind?: 'mon' | 'st'; faceUp?: boolean; destroyable?: boolean }, ctx): ActFn => {
+    const rt = ctx.rt, up = a.faceUp, ds = a.destroyable;
+    const t = (x: OppCardState) => (up === undefined || !x.faceDown === up) && (ds === undefined || !x.noDestroy === ds);
+    return (n) => {
+      if (!n.opp) return;
+      const hit: OppCardState[] = [];
+      if (a.kind !== 'st') for (const x of n.opp.mons) if (t(x)) hit.push(x);
+      if (a.kind !== 'mon') for (const x of n.opp.st) if (t(x)) hit.push(x);
+      for (const x of hit) rt.ops.oppRemove(n, x.uid, a.how);
+    };
   },
 });
 defineAct('setFlag', {

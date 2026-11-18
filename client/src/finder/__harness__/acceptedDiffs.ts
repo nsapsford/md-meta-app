@@ -6,7 +6,14 @@ import type { MoveView, StepDiff } from './lockstep';
 
 export interface AcceptedDiff { side: 'missing' | 'extra'; test(m: MoveView): boolean; reason: string }
 
-export const ACCEPTED: AcceptedDiff[] = [];
+export const ACCEPTED: AcceptedDiff[] = [
+  {
+    side: 'missing',
+    // Key shape: souls1:<sorted members, h<id> or f<id><index>>, repeated keys numbered #1, #2...
+    test: (m) => /^souls1:(?=.*\bf)(?=.*[+:]h).*#\d+$/.test(m.key),
+    reason: "Magicians' Souls (field) sending a field Spell/Trap with a card from a hand holding two copies of it: the reference offers the same send once per copy (its de-duplication skips only hand-only sets), and both copies give the same position, draw and text. Which copy of a card in hand is sent is not a choice by the card rules, so the new engine offers it once.",
+  },
+];
 
 /** The differences left once accepted ones are taken out (a step with nothing left is dropped). */
 export function withoutAccepted(diffs: StepDiff[], accepted: readonly AcceptedDiff[] = ACCEPTED): StepDiff[] {

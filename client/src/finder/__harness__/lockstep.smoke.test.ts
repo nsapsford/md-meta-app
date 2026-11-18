@@ -98,7 +98,16 @@ describe('lockstep harness', () => {
     expect(withoutAccepted(d, [])).toEqual(d);
     expect(withoutAccepted(d, [{ side: 'missing', test: (m) => m.key === 'x', reason: 'r' }])[0].missing).toEqual([]);
     expect(withoutAccepted(d, [{ side: 'missing', test: () => true, reason: 'r' }, { side: 'extra', test: () => true, reason: 'r' }])).toEqual([]);
-    expect(ACCEPTED).toEqual([]);
+    // Every accepted difference states its card-rule reason.
+    for (const a of ACCEPTED) expect(a.reason.length).toBeGreaterThan(40);
+  });
+  it("the Magicians' Souls entry takes out only a repeated send with a field card", () => {
+    const view = (key: string) => ({ key, text: '', tags: [], negatable: true, negated: false, obs: '' });
+    const hit = (key: string) => ACCEPTED.some((a) => a.side === 'missing' && a.test(view(key)));
+    expect(hit('souls1:fCIRC0+hCURT#1')).toBe(true);
+    expect(hit('souls1:fCIRC0+hCURT')).toBe(false);
+    expect(hit('souls1:hCIRC+hCURT#1')).toBe(false);
+    expect(hit('souls1:fCIRC0+fCURT1#1')).toBe(false);
   });
 
   it('reports a score difference', () => {

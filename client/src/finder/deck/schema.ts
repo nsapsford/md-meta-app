@@ -23,7 +23,9 @@ export interface DeckFile {
   boardValue: BoardValueDef[];
 }
 export interface CardDef { id: CardId; passcodes: number[]; short: string; discardValue?: number; heldValue?: number; immuneToRemoval?: boolean;
-  hints?: { normalSummon?: boolean }; fieldName?: CardId | { if: Word[]; name: CardId }[]; gyName?: CardId; effects?: EffectDef[] }
+  hints?: { normalSummon?: boolean };
+  /** Where the card comes when a pick lists several cards (lower first; cards without one come after, by id). */
+  listOrder?: number; fieldName?: CardId | { if: Word[]; name: CardId }[]; gyName?: CardId; effects?: EffectDef[] }
 export type Loc = 'hand' | 'field' | 'setNotThisTurn' | 'faceDown' | 'faceUp' | 'gy' | 'ban' | 'extra';
 export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' | 'oppTurn';
   from: Loc | Loc[];                                                  // where the card must be
@@ -32,6 +34,8 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   tags: Record<string, boolean | Word>; marks?: string[]; negatable?: boolean; activates?: 'spell' | 'trap';
   /** Tags the step records on top of `tags` (the opponent's responses read them); the move itself carries only `tags`. */
   stepTags?: Record<string, boolean | Word>;
+  /** Marks the step records on top of `marks` (the move itself carries only `marks`). */
+  stepMarks?: string[];
   /** A trigger: declining it is offered only when it has no move to make (default false: always offered). */
   mandatory?: boolean;
   text: string; negText?: string; ledger?: { effect?: number } }
@@ -63,7 +67,7 @@ const LABEL_VALUE = A.object({ value: A.number, label: A.string });
 const CARD: Fields = {
   id: A.string, passcodes: A.list(A.int(0), 1), short: A.string,
   discardValue: opt(A.number), heldValue: opt(A.number), immuneToRemoval: opt(A.boolean),
-  hints: opt(A.object({ normalSummon: opt(A.boolean) })),
+  hints: opt(A.object({ normalSummon: opt(A.boolean) })), listOrder: opt(A.number),
   fieldName: opt(A.oneOf(A.card, A.list(A.object({ if: A.condList, name: A.card })))),
   gyName: opt(A.card),
 };
@@ -77,7 +81,7 @@ const EFFECT: Fields = {
   choose: opt(A.list(A.object({ as: A.string, pick: A.pick, optional: opt(A.boolean) }))),
   do: A.actList, onNegated: opt(A.actList),
   tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean),
-  marks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
+  marks: opt(A.list(A.mark)), stepMarks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
   text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };
 

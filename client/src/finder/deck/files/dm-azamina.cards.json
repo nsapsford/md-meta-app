@@ -70,5 +70,53 @@
     "atk": null,
     "def": null,
     "text": "Place 1 card on top of the Deck from your hand, Deck, or GY, that is \"Dark Magician\" or specifically lists \"Dark Magician\" or \"Dark Magician Girl\" in its text, except \"Soul Servant\". During your Main Phase: You can banish this card from your GY; draw cards equal to the number of \"Palladium\" monsters, \"Dark Magician\", and/or \"Dark Magician Girl\", with different names, on the field and in the GYs. You can only use this effect of \"Soul Servant\" once per turn."
+  },
+  {
+    "passcode": 97631303,
+    "name": "Magicians' Souls",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 1,
+    "link": null,
+    "atk": 0,
+    "def": 0,
+    "text": "You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;\r\n● Special Summon this card.\r\n● Send this card to the GY, then, you can Special Summon 1 \"Dark Magician\" or 1 \"Dark Magician Girl\" from your GY.\r\nYou can only use each effect of \"Magicians' Souls\" once per turn."
+  },
+  {
+    "passcode": 88570003,
+    "name": "Dark Magician, the Pharaoh's Servant",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 7,
+    "link": null,
+    "atk": 2500,
+    "def": 2100,
+    "text": "This card's name becomes \"Dark Magician\" while on the field or in the GY. You can only use 1 of the following effects of \"Dark Magician, the Pharaoh's Servant\" per turn, and only once that turn. If this card is in your hand: You can reveal 1 Spell in your hand; Special Summon this card, then you can Set 1 Spell/Trap that mentions \"Dark Magician\" from your Deck. (Quick Effect): You can discard 1 Spell; destroy all Spells/Traps your opponent controls."
+  },
+  {
+    "passcode": 12266229,
+    "name": "Illusion of Chaos",
+    "type": "Ritual Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 7,
+    "link": null,
+    "atk": 2100,
+    "def": 2500,
+    "text": "You can Ritual Summon this card with \"Chaos Form\". You can reveal this card in your hand; add 1 \"Dark Magician\", or 1 non-Ritual Monster that mentions it, from your Deck to your hand, then place 1 card from your hand on top of the Deck. When your opponent activates a monster effect (Quick Effect): You can return this card to the hand, and if you do, Special Summon 1 \"Dark Magician\" from your GY, and if you do that, negate that activated effect. You can only use each effect of \"Illusion of Chaos\" once per turn."
+  },
+  {
+    "passcode": 96729612,
+    "name": "Preparation of Rites",
+    "type": "Spell Card",
+    "race": "Normal",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Add 1 Level 7 or lower Ritual Monster from your Deck to your hand, then you can add 1 Ritual Spell from your GY to your hand."
   }
 ]

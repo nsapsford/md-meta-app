@@ -5,9 +5,9 @@
   "uses": ["staples"],
   "marks": ["dm"],
   "cards": [
-    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician" },
+    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician", "listOrder": 0 },
     {
-      "id": "ROD", "passcodes": [7084129], "short": "Rod",
+      "id": "ROD", "passcodes": [7084129], "short": "Rod", "listOrder": 4,
       "effects": [
         {
           "key": "rod", "phase": "main", "from": "field", "trigger": { "normalSummoned": true }, "limit": "oncePerTurn", "mandatory": true,
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "id": "CIRC", "passcodes": [47222536], "short": "Circle", "discardValue": 1.2,
+      "id": "CIRC", "passcodes": [47222536], "short": "Circle", "listOrder": 15, "discardValue": 1.2,
       "effects": [
         {
           "key": "circ1", "phase": "main", "from": ["hand", "faceDown"], "limit": "oncePerTurn", "activates": "spell",
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "id": "CURT", "passcodes": [41350417], "short": "Curtain",
+      "id": "CURT", "passcodes": [41350417], "short": "Curtain", "listOrder": 23,
       "effects": [
         {
           "key": "curt", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": "oncePerTurn", "activates": "spell",
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "id": "TALI", "passcodes": [71440209], "short": "Talisman",
+      "id": "TALI", "passcodes": [71440209], "short": "Talisman", "listOrder": 24,
       "effects": [
         {
           "key": "tali3", "phase": "main", "from": "gy", "trigger": { "summonedNamed": { "name": "DM", "special": true } }, "limit": "oncePerTurn", "negatable": false,
@@ -71,7 +71,7 @@
       ]
     },
     {
-      "id": "SSRV", "passcodes": [23020408], "short": "Soul Servant", "discardValue": 1.3,
+      "id": "SSRV", "passcodes": [23020408], "short": "Soul Servant", "listOrder": 19, "discardValue": 1.3,
       "effects": [
         {
           "key": "ssrv-deck", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
@@ -102,16 +102,104 @@
           "text": "Soul Servant (GY): banish it, draw 1."
         }
       ]
+    },
+    {
+      "id": "SOULS", "passcodes": [97631303], "short": "Magicians' Souls", "listOrder": 2,
+      "effects": [
+        {
+          "key": "souls-a", "phase": "main", "from": "hand", "limit": { "shared": "souls2" }, "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "fromZone": { "zone": "deck", "group": "SOULS_SEND" } } }],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "summon": { "what": "self" } }],
+          "tags": { "deckTouch": true, "handMon": true }, "marks": ["dm"], "ledger": { "effect": 2 },
+          "text": "Magicians' Souls: send {sent} from Deck to GY, Special Summon Souls.", "negText": "Magicians' Souls (hand effect): negated."
+        },
+        {
+          "key": "souls-b", "phase": "main", "from": "hand", "limit": { "shared": "souls2" },
+          "choose": [
+            { "as": "sent", "pick": { "fromZone": { "zone": "deck", "group": "SOULS_SEND" } } },
+            { "as": "mon", "optional": true, "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "named": "DM" }, "plus": "sent" } } } } }
+          ],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "move": { "what": "self", "to": "gy" } }, { "summon": { "what": "mon" } }],
+          "tags": { "deckTouch": true, "handMon": true }, "marks": ["dm"], "stepTags": { "gy": { "chosen": { "as": "mon" } } }, "ledger": { "effect": 2 },
+          "text": "Magicians' Souls: send {sent} from Deck to GY, send Souls to GY{mon?, Special Summon $ from GY}.", "negText": "Magicians' Souls (hand effect): negated."
+        },
+        {
+          "key": "souls1-one", "phase": "main", "from": "field", "limit": { "shared": "souls1" },
+          "choose": [{ "as": "sent", "pick": { "subsets": { "min": 1, "max": 1, "join": " + ", "of": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell", "trap"] }, "eachCopy": true } }, { "fromField": { "kind": "st" } }] } } } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "draw": 1 }],
+          "tags": { "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Magicians' Souls: send {sent} to draw 1.", "negText": "Magicians' Souls: send {sent} to draw 1 (draw negated)."
+        },
+        {
+          "key": "souls1-two", "phase": "main", "from": "field", "limit": { "shared": "souls1" },
+          "choose": [{ "as": "sent", "pick": { "subsets": { "min": 2, "max": 2, "join": " + ", "of": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell", "trap"] }, "eachCopy": true } }, { "fromField": { "kind": "st" } }] } } } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "draw": 2 }],
+          "tags": { "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Magicians' Souls: send {sent} to draw 2.", "negText": "Magicians' Souls: send {sent} to draw 2 (draw negated)."
+        }
+      ]
+    },
+    {
+      "id": "SERV", "passcodes": [88570003], "short": "Pharaoh's Servant", "listOrder": 10, "fieldName": "DM", "gyName": "DM",
+      "effects": [
+        {
+          "key": "serv", "phase": "main", "from": "hand", "limit": { "shared": "serv" }, "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "reveal", "pick": { "first": { "of": { "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell"] } } } } } },
+            { "as": "set", "optional": true, "pick": { "onlyIf": { "if": [{ "stZoneFree": true }], "of": { "fromZone": { "zone": "deck", "group": "DM_ST" } } } } }
+          ],
+          "do": [{ "summon": { "what": "self" } }, { "setFromDeck": { "what": "set" } }],
+          "tags": {}, "stepTags": { "handMon": true }, "stepMarks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Pharaoh's Servant: reveal {reveal}, Special Summon it{set?, Set $ from Deck}.", "negText": "Pharaoh's Servant (reveal {reveal}): negated."
+        },
+        {
+          "key": "servwipe", "phase": "main", "from": "field", "limit": { "shared": "serv" },
+          "cond": [{ "any": [{ "oppHasTarget": { "kind": "st", "destroyable": true } }, { "oppHasTarget": { "kind": "st", "destroyable": true, "targetable": false } }] }],
+          "choose": [{ "as": "card", "pick": { "cheapest": { "of": { "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell"] } } } } } }],
+          "cost": [{ "discard": { "what": "card" } }], "do": [{ "oppRemoveAll": { "how": "destroy", "kind": "st", "destroyable": true } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 2 },
+          "text": "Pharaoh's Servant: discard {card}, destroy all their Spells/Traps.", "negText": "Pharaoh's Servant wipe: negated."
+        }
+      ]
+    },
+    {
+      "id": "IOC", "passcodes": [12266229], "short": "Illusion of Chaos", "listOrder": 12,
+      "effects": [
+        {
+          "key": "ioc", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "choose": [
+            { "as": "add", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "IOC_ADD" } } } } },
+            { "as": "back", "pick": { "fromZone": { "zone": "hand", "plus": "add" } } }
+          ],
+          "do": [{ "move": { "what": "add", "to": "hand" } }, { "placeOnTop": { "what": "back" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "handMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Illusion of Chaos (reveal): add {add}, put {back} on top of the Deck.", "negText": "Illusion of Chaos (reveal): negated."
+        }
+      ]
+    },
+    {
+      "id": "PREP", "passcodes": [96729612], "short": "Preparation of Rites", "listOrder": 13, "discardValue": 1,
+      "effects": [
+        {
+          "key": "prep", "phase": "main", "from": "hand", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "filter": { "named": "IOC" } } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true },
+          "text": "Preparation of Rites: add Illusion of Chaos.", "negText": "Preparation of Rites: negated."
+        }
+      ]
     }
   ],
   "groups": {
     "DM_ST": ["CIRC", "CURT", "TALI", "SSRV"],
     "CIRC_ADD": ["DM", "CURT", "TALI", "SSRV"],
     "CURT_ADD": ["CIRC", "TALI", "SSRV"],
-    "CURT_SS": ["DM", "ROD"],
-    "SSRV_PLACE": ["DM", "ROD", "CIRC", "CURT", "TALI"]
+    "CURT_SS": ["DM", "SERV", "ROD", "SOULS"],
+    "SSRV_PLACE": ["DM", "ROD", "SOULS", "SERV", "IOC", "CIRC", "CURT", "TALI"],
+    "SOULS_SEND": ["DM", "SERV", "IOC"],
+    "IOC_ADD": ["DM", "ROD", "SOULS", "SERV"]
   },
-  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV"] },
+  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV"], "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }] },
   "boardValue": [
     {
       "id": "talisman-set", "when": "oppTurn", "on": { "control": { "card": "TALI", "kind": "st", "faceUp": false } },
@@ -128,6 +216,13 @@
         { "if": [{ "has": { "zone": "gy", "card": "TALI" } }, { "has": { "zone": "deck", "card": "DM" } }], "value": 0.2, "label": "re-Set Talisman" }
       ],
       "extraCopies": { "value": 0.05, "label": "Curtain (second copy: only 1 Curtain per turn)" }
+    },
+    {
+      "id": "servant", "when": "oppTurn", "on": { "control": { "card": "SERV", "kind": "mon" } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand", "filter": { "cardKind": ["spell"] } } }], "value": 0.6, "label": "Pharaoh's Servant: discard a Spell, destroy their Spells/Traps" },
+        { "value": 0.1, "label": "Pharaoh's Servant (no Spell to discard)" }
+      ]
     }
   ]
 }
