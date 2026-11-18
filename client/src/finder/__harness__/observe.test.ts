@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { compileDeck } from '../deck/compile';
+import { validateDeckFile, type CardFacts } from '../deck/schema';
+import dmFile from '../deck/files/dm-azamina.json';
+import dmFacts from '../deck/files/dm-azamina.cards.json';
+import staples from '../deck/files/staples.json';
+import staplesFacts from '../deck/files/staples.cards.json';
 import { createEngine } from '../engine';
 import { TOY_FACTS, TOY_FILE, toyCfg } from '../engine/__toy__/toyDeck';
 import { withoutAccepted } from './acceptedDiffs';
@@ -50,8 +55,17 @@ describe('observe: pending triggers and once-per-turn slots', () => {
     expect(JSON.parse(newObserve(eng, s, SAME_NAMES)).pend).toEqual(['seeker-search']);
   });
 
-  it('the shared tables start empty (Tasks 11–16 fill them)', () => {
-    expect([PEND_MAP, OPT_MAP]).toEqual([{}, {}]);
+  it("every row of the shared tables names a trigger or a once-per-turn limit of the deck file", () => {
+    const v = validateDeckFile(dmFile, { staples });
+    if (!v.ok) throw new Error(JSON.stringify(v.errors));
+    const deck = compileDeck(v.file, [...dmFacts, ...staplesFacts] as CardFacts[]);
+    const triggers = new Set(v.file.cards.flatMap((c) => (c.effects ?? []).filter((e) => e.trigger).map((e) => e.key)));
+    for (const [r, k] of Object.entries(PEND_MAP)) expect(triggers.has(k), `${r} -> ${k}`).toBe(true);
+    const refOpts = refOptNames();
+    for (const [r, k] of Object.entries(OPT_MAP)) {
+      expect(refOpts, r).toContain(r);
+      expect(deck.limitNames, `${r} -> ${k}`).toContain(k);
+    }
   });
 });
 

@@ -76,9 +76,12 @@ export function createMoves(deck: CompiledDeck, so: StateOps = deck.state): Move
     const deckPush = (k: string, tags: Tags, run: Move['run'], neg = true) => push(k, tags, run, neg, anyFlood ? deckClass(k) : 0);
 
     if (s.pend.length) {
-      const p = s.pend[0];
-      push('dec:' + deck.effects[p.e].key, NOTAGS, decline, false, 0);
+      // Declining is offered first, or for a mandatory trigger only when it has no move left
+      // (none to make, or the floodgates dropped them).
+      const info = deck.effects[s.pend[0].e];
+      if (!info.mandatory) push('dec:' + info.key, NOTAGS, decline, false, 0);
       deck.genPending(s, deckPush);
+      if (info.mandatory && !A.length) push('dec:' + info.key, NOTAGS, decline, false, 0);
       return A;
     }
 

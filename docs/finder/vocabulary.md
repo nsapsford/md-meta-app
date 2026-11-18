@@ -28,6 +28,16 @@ Board value (`boardValue`): a monster on the final board with no entry of its ow
 min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `group` inside a
 `control` word in its `on` (at any depth) for its default value to be replaced.
 
+Effect fields beside the words: `tags` are the move's tags (what floodgates and protections
+read); `stepTags` adds tags to the recorded step only (what the opponent's responses read).
+`mandatory: true` on a trigger offers declining it only when it has no move to make (none, or the
+floodgates dropped them); otherwise declining is always offered. An effect with
+`activates: "spell"` sets "a Spell was activated this turn" only when its card is in the hand or
+on the field (a Spell's effect in the GY does not). In `text` and `negText`, `{as}` is a chosen
+card's short name, `{zone}` where the first choice came from, and `{as?text|other}` is `text`
+(with `$` for the chosen card's short name) when the choice `as` was made, else `other` (which may
+be left out with its `|`).
+
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
 | `has` | condition | `{ zone, which? }` | A zone holds at least one matching card. |
@@ -50,12 +60,18 @@ min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `
 | `extraDeckMonster` | condition | none | This card is a Fusion, Synchro, Xyz or Link monster. |
 | `named` | condition | card | This card's name is that card (on your field: its name there). |
 | `uniqueName` | condition | none | No other chosen card (another material) has this card's name. |
+| `chosen` | condition | `{ as: choice, zone?, filter?: condition }` | The named choice was made (an optional one may be skipped), and if given came from the zone and matches the filter (which sees the chosen card as this card). |
+| `knownTop` | condition | `{ atLeast?, atMost? }` | The number of known cards on top of the Deck is within atLeast..atMost. |
+| `namesPresent` | condition | `{ names: card[] (≥ 1), atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name) is within atLeast (default 1)..atMost. |
 | `fromZone` | pick | `{ zone, group \| filter }` | Each distinct card of the group or filter in the zone. |
 | `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp? }` | Each card you control on the field. |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
 | `cheapest` | pick | `{ of: pick, n? }` | Only the n (default 1) choices of the nested pick with the lowest discard value. |
 | `subsets` | pick | `{ of: pick, min, max }` | Each set of min..max choices of the nested pick. |
 | `oppCard` | pick | none, or `opp` | Each of the opponent's matching cards. |
+| `union` | pick | list of picks (≥ 1) | Each choice of each nested pick, in order. |
+| `onlyIf` | pick | `{ if: conditions (≥ 1), of: pick }` | The nested pick's choices while every condition holds (they may read earlier choices), else none. |
+| `fromTop` | pick | `{ n, group? \| filter? }` | Each distinct card (of the group or filter, if given) among the top n known cards of the Deck. |
 | `move` | action | `{ what, to: zone, from?: zone }` | Move a card to a zone. |
 | `summon` | action | `{ what, from?: zone, noEff?, as?: card }` | Special Summon a card, optionally with effects negated or under another name. |
 | `discard` | action | `{ what }` | Discard a card from the hand to the GY. |
@@ -63,6 +79,7 @@ min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `
 | `setFromDeck` | action | `{ what }` | Set a Spell/Trap from the Deck to your field. |
 | `faceUp` | action | `{ what }` | Turn a Set Spell/Trap face-up. |
 | `placeOnTop` | action | `{ what }` | Place a card on top of the Deck. |
+| `setOnField` | action | `{ what }` | Set a Spell/Trap from where it is (hand, Deck, GY or banishment) to your field. |
 | `payLp` | action | number ≥ 1, or `"half"` | Pay that many Life Points, or half. |
 | `burn` | action | number ≥ 1 | Inflict that much damage to the opponent. |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |

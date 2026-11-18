@@ -10,5 +10,65 @@
     "atk": 2500,
     "def": 2100,
     "text": "''The ultimate wizard in terms of attack and defense.''"
+  },
+  {
+    "passcode": 7084129,
+    "name": "Magician's Rod",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 3,
+    "link": null,
+    "atk": 1600,
+    "def": 100,
+    "text": "When this card is Normal Summoned: You can add 1 Spell/Trap from your Deck to your hand, that specifically lists the card \"Dark Magician\" in its text. During your opponent's turn, if you activate a Spell/Trap Card or effect while this card is in your GY (except during the Damage Step): You can Tribute 1 Spellcaster monster; add this card to your hand. You can only use each effect of \"Magician's Rod\" once per turn."
+  },
+  {
+    "passcode": 47222536,
+    "name": "Dark Magical Circle",
+    "type": "Spell Card",
+    "race": "Continuous",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "When this card is activated: Look at the top 3 cards of your Deck, then you can reveal 1 of them that is \"Dark Magician\" or a Spell/Trap that mentions \"Dark Magician\", and add it to your hand, also place the remaining cards on top of your Deck in any order. If \"Dark Magician\" is Normal or Special Summoned to your field (except during the Damage Step): You can target 1 card your opponent controls; banish it. You can only use each effect of \"Dark Magical Circle\" once per turn."
+  },
+  {
+    "passcode": 41350417,
+    "name": "Dark Magical Curtain",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Each player can Special Summon 1 DARK Spellcaster monster from their hand or Deck (but neither player can activate their effects this turn), then if you Special Summoned a monster whose original name is \"Dark Magician\" or \"Dark Magician Girl\", you can add 1 Spell/Trap that mentions \"Dark Magician\" from your Deck to your hand, except \"Dark Magical Curtain\". You can only activate 1 \"Dark Magical Curtain\" per turn."
+  },
+  {
+    "passcode": 71440209,
+    "name": "Dark Magic Talisman",
+    "type": "Trap Card",
+    "race": "Normal",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "You can activate this card the turn it was Set, by revealing 1 Spellcaster monster in your hand. When a monster effect is activated in response to the card or effect activation of a card that mentions \"Dark Magician\": Negate that effect, and if you do, for the rest of this turn, negate the activated effects of monsters with that same original name. If you Special Summon \"Dark Magician\" while this card is in your GY (except during the Damage Step): You can pay 2500 LP; Set this card."
+  },
+  {
+    "passcode": 23020408,
+    "name": "Soul Servant",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Place 1 card on top of the Deck from your hand, Deck, or GY, that is \"Dark Magician\" or specifically lists \"Dark Magician\" or \"Dark Magician Girl\" in its text, except \"Soul Servant\". During your Main Phase: You can banish this card from your GY; draw cards equal to the number of \"Palladium\" monsters, \"Dark Magician\", and/or \"Dark Magician Girl\", with different names, on the field and in the GYs. You can only use this effect of \"Soul Servant\" once per turn."
   }
 ]

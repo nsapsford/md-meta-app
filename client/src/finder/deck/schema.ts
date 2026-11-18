@@ -30,6 +30,10 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   trigger?: Word; limit?: 'oncePerTurn' | { shared: string }; cond?: Word[]; cost?: Word[];
   choose?: { as: string; pick: Word; optional?: boolean }[]; do: Word[]; onNegated?: Word[];
   tags: Record<string, boolean | Word>; marks?: string[]; negatable?: boolean; activates?: 'spell' | 'trap';
+  /** Tags the step records on top of `tags` (the opponent's responses read them); the move itself carries only `tags`. */
+  stepTags?: Record<string, boolean | Word>;
+  /** A trigger: declining it is offered only when it has no move to make (default false: always offered). */
+  mandatory?: boolean;
   text: string; negText?: string; ledger?: { effect?: number } }
 /** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
 export type ExtraRule = { order?: number } & (
@@ -72,7 +76,7 @@ const EFFECT: Fields = {
   cond: opt(A.condList), cost: opt(A.actList),
   choose: opt(A.list(A.object({ as: A.string, pick: A.pick, optional: opt(A.boolean) }))),
   do: A.actList, onNegated: opt(A.actList),
-  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'),
+  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean),
   marks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
   text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };

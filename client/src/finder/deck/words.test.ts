@@ -331,4 +331,106 @@ describe('compile errors', () => {
   it('refuses notUsed on an effect with no limit', () => {
     expect(err({ cond: [{ notUsed: 'seeker-search' }] })![0]).toMatchObject({ field: 'effects[0].cond[0].notUsed', message: 'effect "seeker-search" has no once-per-turn limit' });
   });
+  it('refuses chosen on self', () => {
+    expect(err({ tags: { deckAdd: { chosen: { as: 'self' } } } })![0]).toMatchObject({ field: 'effects[0].tags.deckAdd.chosen.as' });
+  });
+});
+
+const gy = (id: CardId) => (s: State, d: ReturnType<typeof probe>) => { d.deck.state.W(s, 'gy')[d.deck.ix[id]]++; };
+
+describe('choices, the Deck top and names (conditions, picks, actions)', () => {
+  const ON_TOP = (ids: CardId[]) => (s: State, d: ReturnType<typeof probe>) => { for (const id of ids) { d.deck.state.W(s, 'deck')[d.deck.ix[id]]--; s.top.push(d.deck.ix[id]); } };
+  const SPELLS_HAND_OR_DECK: Word = { union: [{ fromZone: { zone: 'hand', group: 'spells' } }, { fromZone: { zone: 'deck', group: 'spells' } }] };
+
+  it('chosen: the choice was made, from a zone, matching a filter', () => {
+    const tagged = (tag: Word, hand: Record<CardId, number>) => {
+      const d = probe([eff({ choose: [{ as: 'c', pick: SPELLS_HAND_OR_DECK }], tags: { deckAdd: tag } })]);
+      return d.moves(d.state(hand)).find((m) => m.k.startsWith('p:'))!.tags.deckAdd === true;
+    };
+    expect(tagged({ chosen: { as: 'c' } }, { PROBE: 1 })).toBe(true);
+    expect(tagged({ chosen: { as: 'c', zone: 'deck' } }, { PROBE: 1 })).toBe(true);
+    expect(tagged({ chosen: { as: 'c', zone: 'hand' } }, { PROBE: 1 })).toBe(false);
+    expect(tagged({ chosen: { as: 'c', zone: 'hand' } }, { PROBE: 1, DRAWTWO: 3 })).toBe(true);
+    expect(tagged({ chosen: { as: 'c', filter: { named: 'DRAWTWO' } } }, { PROBE: 1 })).toBe(true);
+    expect(tagged({ chosen: { as: 'c', filter: { named: 'BIG' } } }, { PROBE: 1 })).toBe(false);
+    const d = probe([eff({ choose: [{ as: 'c', pick: { fromZone: { zone: 'gy', group: 'spells' } }, optional: true }], tags: { deckAdd: { chosen: { as: 'c' } } } })]);
+    expect(d.moves(d.state({ PROBE: 1 }))[0].tags.deckAdd).toBeUndefined();
+  });
+  it('knownTop counts the known cards on top of the Deck', () => {
+    expect(offered([{ knownTop: { atMost: 0 } }])).toBe(true);
+    expect(offered([{ knownTop: { atMost: 0 } }], ON_TOP(['BIG']))).toBe(false);
+    expect(offered([{ knownTop: { atLeast: 2 } }], ON_TOP(['BIG', 'WALL']))).toBe(true);
+  });
+  it('namesPresent counts names on the field (as named there) and in the GY (by GY name)', () => {
+    expect(offered([{ namesPresent: { names: ['BIG'] } }])).toBe(false);
+    expect(offered([{ namesPresent: { names: ['BIG'] } }], gy('BIG'))).toBe(true);
+    expect(offered([{ namesPresent: { names: ['BIG'] } }], (s, d) => { s.mons.push({ id: d.deck.ix.SEEKER, nm: d.deck.ix.BIG, emz: false, noEff: true, uses: 0, lvl: 4, marks: 0, uid: s.uid++ }); })).toBe(true);
+    expect(offered([{ namesPresent: { names: ['BIG', 'WALL'], atLeast: 2 } }], gy('BIG'))).toBe(false);
+    expect(offered([{ namesPresent: { names: ['BIG', 'WALL'], atLeast: 2 } }], (s, d) => { gy('BIG')(s, d); gy('WALL')(s, d); })).toBe(true);
+    expect(offered([{ namesPresent: { names: ['BIG', 'WALL'], atMost: 1 } }], (s, d) => { gy('BIG')(s, d); gy('BIG')(s, d); })).toBe(true);
+    // A card whose GY name is another card counts as that name there.
+    const d = probe([eff({ cond: [{ namesPresent: { names: ['BIG'] } }] })], {}, { gyName: 'BIG' });
+    const s = d.state({ PROBE: 1 });
+    gy('PROBE')(s, d);
+    expect(d.mainKeys(s)).toEqual(['p']);
+  });
+  it('union offers each nested pick in turn', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: SPELLS_HAND_OR_DECK }], text: 'Probe: {c} from {zone}.' })]);
+    const s = d.state({ PROBE: 1, DRAWTWO: 1 });
+    expect(d.moves(s).filter((m) => m.k.startsWith('p:')).map((m) => m.run(s, false).log[0].text)).toEqual(['Probe: Draw Two from hand.', 'Probe: Draw Two from Deck.']);
+  });
+  it('onlyIf offers the nested pick only while its conditions hold (they see earlier choices)', () => {
+    const e = eff({ choose: [{ as: 'a', pick: { otherHandCard: true } }, { as: 'b', optional: true, pick: { onlyIf: { if: [{ addLockOff: true }, { chosen: { as: 'a', filter: { named: 'BIG' } } }], of: { fromZone: { zone: 'deck', group: 'spells' } } } } }] });
+    const d = probe([e]);
+    expect(d.mainKeys(d.state({ PROBE: 1, BIG: 1, WALL: 1 }))).toEqual(['p:BIG:DRAWTWO', 'p:WALL:-']);
+    const s = d.state({ PROBE: 1, BIG: 1 });
+    s.addLock = true;
+    expect(d.mainKeys(s)).toEqual(['p:BIG:-']);
+  });
+  it('fromTop picks among the top n known cards; taking one keeps the rest known', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { fromTop: { n: 2, group: 'spells' } } }], do: [{ move: { what: 'c', to: 'hand' } }] })], { groups: { ...TOY_FILE.groups, spells: ['DRAWTWO', 'WALL'] } });
+    const s = d.state({ PROBE: 1 });
+    ON_TOP(['BIG', 'WALL', 'DRAWTWO'])(s, d);
+    expect(d.mainKeys(s)).toEqual(['p:WALL']);
+    const n = d.run(s, 'p:WALL');
+    expect(n.top.map((i) => d.deck.ids[i])).toEqual(['BIG', 'DRAWTWO']);
+    expect(d.count(n, 'hand', 'WALL')).toBe(1);
+    expect(d.count(n, 'deck', 'WALL')).toBe(2);
+    expect(n.log[0].seq).toContainEqual(['m', d.deck.ix.WALL, 'deck', 'hand']);
+  });
+  it('setOnField Sets a card from where it is (here the GY)', () => {
+    const d = probe([eff({ from: 'gy', do: [{ payLp: 100 }, { setOnField: { what: 'self' } }] })]);
+    const s = d.state({});
+    gy('PROBE')(s, d);
+    const n = d.run(s, 'p');
+    expect(n.st).toEqual([{ id: d.deck.ix.PROBE, up: false, now: true }]);
+    expect(d.count(n, 'gy', 'PROBE')).toBe(0);
+    expect(n.log[0].seq).toEqual([['a', d.deck.ix.PROBE, 0, 'gy'], ['m', d.deck.ix.PROBE, 'gy', 'field']]);
+  });
+});
+
+describe('effect fields: stepTags, text alternatives, the Spell flag', () => {
+  it('stepTags are recorded on the step, not on the move', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { otherHandCard: true } }], tags: { deckAdd: true }, stepTags: { spell: true, dig: { chosen: { as: 'c', filter: { named: 'BIG' } } } } })]);
+    const s = d.state({ PROBE: 1, BIG: 1, WALL: 1 });
+    expect(d.moves(s).map((m) => m.tags)).toEqual([{ deckAdd: true }, { deckAdd: true }]);
+    expect(d.run(s, 'p:BIG').log[0].tags).toEqual({ deckAdd: true, spell: true, dig: true });
+    expect(d.run(s, 'p:WALL').log[0].tags).toEqual({ deckAdd: true, spell: true });
+  });
+  it('{name?text|other} shows text (with $ for the name) when the choice was made, else other', () => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { fromZone: { zone: 'gy', group: 'spells' } }, optional: true }], text: 'Probe: look{c?, add $ from GY|, nothing}.', negText: 'Probe{c? ($)}: negated.' })]);
+    const s = d.state({ PROBE: 1 });
+    expect(d.lastText(d.run(s, 'p:-'))).toBe('Probe: look, nothing.');
+    expect(d.lastText(d.run(s, 'p:-', true))).toBe('Probe: negated.');
+    gy('DRAWTWO')(s, d);
+    expect(d.lastText(d.run(s, 'p:DRAWTWO'))).toBe('Probe: look, add Draw Two from GY.');
+    expect(d.lastText(d.run(s, 'p:DRAWTWO', true))).toBe('Probe (Draw Two): negated.');
+  });
+  it('an effect of a card in the GY does not count as activating a Spell', () => {
+    const d = probe([eff({ key: 'g', from: 'gy', activates: 'spell' }), eff({ key: 'h', from: 'hand', activates: 'spell' })]);
+    const s = d.state({});
+    gy('PROBE')(s, d);
+    expect(d.run(s, 'g').spell).toBe(false);
+    expect(d.run(d.state({ PROBE: 1 }), 'h').spell).toBe(true);
+  });
 });

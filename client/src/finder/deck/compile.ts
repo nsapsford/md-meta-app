@@ -19,6 +19,8 @@ export interface CardProps {
   sub: 'Normal' | 'Effect' | 'Ritual' | 'Fusion' | 'Synchro' | 'Xyz' | 'Link' | '?'; tuner: boolean;
   race: string | null; attr: string | null; lv: number | null; link: number | null; atk: number; def: number;
   discardValue: number; heldValue: number; normalSummon: boolean; immuneToRemoval: boolean;
+  /** The card index whose name this card has in the GY (`CardDef.gyName`; itself by default). */
+  gyName: number;
 }
 
 export type Push = (key: string, tags: Tags, run: Move['run'], negatable?: boolean) => void;
@@ -70,7 +72,7 @@ export interface CompiledDeck {
  * `activates` for the Spell floodgate, `fromExtra` (it Special Summons from the Extra Deck) for the
  * Extra Deck floodgate.
  */
-export interface EffectInfo { key: string; activates: 'spell' | 'trap' | null; fromExtra: boolean }
+export interface EffectInfo { key: string; activates: 'spell' | 'trap' | null; fromExtra: boolean; mandatory: boolean }
 
 export class DeckCompileError extends Error {
   errors: DeckFileError[];
@@ -84,8 +86,8 @@ export class DeckCompileError extends Error {
 // ---------------------------------------------------------------------------------------------
 // What compiled words are called with
 
-/** Where a card is: a zone, or a monster / Spell-Trap on the field at an index (`uid` for monsters). */
-export interface Place { zone: ZoneName | 'mon' | 'st' | 'opp' | 'none'; at: number; uid: OppCard['uid'] | null }
+/** Where a card is: a zone, a known card on top of the Deck (`top`), or a monster / Spell-Trap on the field at an index (`uid` for monsters). */
+export interface Place { zone: ZoneName | 'top' | 'mon' | 'st' | 'opp' | 'none'; at: number; uid: OppCard['uid'] | null }
 /** A card a word acts on: the effect's own card, or one the player chose. */
 export interface CardRef extends Place { id: number }
 /** One choice offered by a pick. `key` goes in the move key, `name` in the step text; `many` holds a subset's members. */
@@ -109,8 +111,8 @@ export interface Runtime {
   state: StateOps; ops: Ops; ids: readonly CardId[]; props: readonly CardProps[]; UNK: number;
   /** Ledger name of a zone. */
   lz(z: ZoneName | 'field'): LedgerZone;
-  /** The cached choice for a card in a zone (hand, deck, extra, gy, ban). */
-  choiceIn(z: ZoneName, id: number): Choice;
+  /** The cached choice for a card in a zone (hand, deck, extra, gy, ban), or on top of the Deck. */
+  choiceIn(z: ZoneName | 'top', id: number): Choice;
   /** A choice for a field card. */
   choiceOnField(zone: 'mon' | 'st', at: number, id: number, uid: OppCard['uid'] | null): Choice;
   /** Call `fn` for each card `slot` names (-1: the effect's own card; a subset: each member). */
@@ -132,7 +134,7 @@ export interface Runtime {
 const SUBS = [[/Normal Monster/, 'Normal'], [/Ritual/, 'Ritual'], [/Fusion/, 'Fusion'], [/Synchro/, 'Synchro'], [/Link/, 'Link'], [/XYZ/i, 'Xyz']] as const;
 
 /** Card properties from the type strings, as the reference's `init` reads them. */
-function propsOf(c: CardDef, f: CardFacts): CardProps {
+function propsOf(c: CardDef, f: CardFacts, gyName: number): CardProps {
   const t = f.type, mon = /Monster/.test(t), link = /Link/.test(t);
   return {
     id: c.id, name: f.name, short: c.short,
@@ -145,41 +147,55 @@ function propsOf(c: CardDef, f: CardFacts): CardProps {
     lv: link ? null : f.level, link: link ? (f.link ?? f.level) : null,
     atk: f.atk || 0, def: f.def || 0,
     discardValue: c.discardValue ?? 3, heldValue: c.heldValue ?? 0,
-    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval,
+    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval, gyName,
   };
 }
 
-const UNK_PROPS = (): CardProps => ({
+const UNK_PROPS = (gyName: number): CardProps => ({
   id: 'UNK', name: '?', short: 'unknown card', kind: '?', st: null, ext: false, sub: '?', tuner: false,
-  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false,
+  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false, gyName,
 });
 
 // ---------------------------------------------------------------------------------------------
-// Text templates: `{as}` is the chosen card's short name, `{zone}` where the first choice came from.
+// Text templates: `{as}` is the chosen card's short name, `{zone}` where the first choice came from,
+// `{as?text|other}` is `text` (with `$` standing for the chosen card's short name) when the choice
+// `as` was made, else `other` (left out with its `|`, it is nothing).
 
-const ZONE_TEXT: Record<Place['zone'], string> = { hand: 'hand', deck: 'Deck', extra: 'Extra Deck', gy: 'GY', ban: 'banishment', mon: 'the field', st: 'the field', opp: "the opponent's field", none: '' };
+const ZONE_TEXT: Record<Place['zone'], string> = { hand: 'hand', deck: 'Deck', top: 'the top of the Deck', extra: 'Extra Deck', gy: 'GY', ban: 'banishment', mon: 'the field', st: 'the field', opp: "the opponent's field", none: '' };
 
 type Template = (r: Run) => string;
+interface Hole { slot: number; yes: string | null; no: string }
 
 function template(text: string, choose: readonly string[], fail: (m: string) => never): Template {
   const parts: string[] = [];
-  const slots: number[] = [];   // choice slot, or -1 for {zone}
+  const holes: Hole[] = [];   // slot: a choice slot, or -1 for {zone}
   let last = 0;
   for (const m of text.matchAll(/\{([^{}]*)\}/g)) {
-    const name = m[1];
-    const slot = name === 'zone' ? -1 : choose.indexOf(name);
-    if (name !== 'zone' && slot < 0) fail(`unknown placeholder {${name}} (use a choose name or {zone})`);
+    const body = m[1], q = body.indexOf('?');
+    const name = q < 0 ? body : body.slice(0, q);
+    const isZone = name === 'zone' && q < 0;
+    const slot = isZone ? -1 : choose.indexOf(name);
+    if (!isZone && slot < 0) fail(`unknown placeholder {${body}} (use a choose name, {name?text|other} or {zone})`);
+    let yes: string | null = null, no = '';
+    if (q >= 0) {
+      const alt = body.slice(q + 1), bar = alt.indexOf('|');
+      yes = bar < 0 ? alt : alt.slice(0, bar);
+      no = bar < 0 ? '' : alt.slice(bar + 1);
+    }
     parts.push(text.slice(last, m.index));
-    slots.push(slot);
+    holes.push({ slot, yes, no });
     last = m.index! + m[0].length;
   }
   parts.push(text.slice(last));
-  if (!slots.length) return () => text;
+  if (!holes.length) return () => text;
   return (r) => {
     let out = parts[0];
-    for (let i = 0; i < slots.length; i++) {
-      const sl = slots[i];
-      if (sl < 0) { const c = r.chosen[0]; out += c ? ZONE_TEXT[c.zone] : ''; } else out += r.chosen[sl]?.name ?? '';
+    for (let i = 0; i < holes.length; i++) {
+      const h = holes[i];
+      if (h.slot < 0) { const c = r.chosen[0]; out += c ? ZONE_TEXT[c.zone] : ''; } else {
+        const c = r.chosen[h.slot];
+        out += h.yes === null ? c?.name ?? '' : c ? h.yes.split('$').join(c.name) : h.no;
+      }
       out += parts[i + 1];
     }
     return out;
@@ -221,7 +237,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const N = ids.length, UNK = N - 1;
   const ix: Record<CardId, number> = {};
   ids.forEach((id, i) => { ix[id] = i; });
-  const props: CardProps[] = ids.map((id) => (id === 'UNK' ? UNK_PROPS() : propsOf(cardById.get(id)!, factOf.get(id)!)));
+  const gyIx = (id: CardId) => { const g = cardById.get(id)?.gyName; return g !== undefined && ix[g] !== undefined ? ix[g] : ix[id]; };
+  const props: CardProps[] = ids.map((id) => (id === 'UNK' ? UNK_PROPS(UNK) : propsOf(cardById.get(id)!, factOf.get(id)!, gyIx(id))));
 
   // Flags and marks: bit indices in name order.
   const flagNames = [...(file.flags ?? [])].sort();
@@ -256,7 +273,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
 
   // Runtime helpers for words.
   const zoneChoices: Record<string, Choice[]> = {};
-  for (const z of ['hand', 'deck', 'extra', 'gy', 'ban'] as const) {
+  for (const z of ['hand', 'deck', 'extra', 'gy', 'ban', 'top'] as const) {
     zoneChoices[z] = ids.map((id, i) => Object.freeze({ id: i, zone: z, at: -1, uid: null, key: id, name: props[i].short, many: null }) as Choice);
   }
   const monIndex = (s: State, c: CardRef): number => {
@@ -299,6 +316,13 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     takeOut(n, c) {
       if (c.zone === 'deck') { ops.fromDeck(n, c.id); return 'deck'; }
       if (c.zone === 'hand' || c.zone === 'extra' || c.zone === 'gy' || c.zone === 'ban') { takeZone(n, c.zone, c.id); return LZ[c.zone]; }
+      if (c.zone === 'top') {
+        // A known card on top of the Deck leaves that list; the rest stay known (no shuffle).
+        const i = n.top.indexOf(c.id);
+        if (i < 0) throw new Error(`card ${ids[c.id]} is not on top of the Deck`);
+        n.top.splice(i, 1);
+        return 'deck';
+      }
       throw new Error(`cannot take ${ids[c.id]} out of ${c.zone}`);
     },
     moved: (n, id, from, to) => moved(n, id, from, to),
@@ -437,6 +461,21 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       for (const [k, f] of dyn) if (f(s, r)) (t as Record<string, boolean>)[k] = true;
       return t;
     };
+    // The step's tags: the move's, plus `stepTags` (fixed ones, then conditional ones per move).
+    const stepFixed: Record<string, boolean> = {};
+    const stepDyn: [string, CondFn][] = [];
+    for (const [k, v] of Object.entries(def.stepTags ?? {})) {
+      if (typeof v === 'boolean') { if (v) stepFixed[k] = true; }
+      else stepDyn.push([k, w('conds', v, `${base}.stepTags.${k}`) as CondFn]);
+    }
+    const hasStepTags = Object.keys(stepFixed).length > 0 || stepDyn.length > 0;
+    const stepTagsFor = (s: State, r: Run): Tags => {
+      const t = tagsFor(s, r);
+      if (!hasStepTags) return t;
+      const o = { ...t, ...stepFixed } as Record<string, boolean>;
+      for (const [k, f] of stepDyn) if (f(s, r)) o[k] = true;
+      return o as Tags;
+    };
 
     const text = template(def.text, scope.choose, failAt('text'));
     const negText = template(def.negText ?? `${card.short}: negated.`, scope.choose, failAt('negText'));
@@ -479,9 +518,10 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       return (s0, neg) => {
         const n = so.clone(s0);
         if (pending) n.pend = n.pend.slice(1);
-        step(n, neg ? negText(r) : text(r), tagsFor(s0, r));
+        step(n, neg ? negText(r) : text(r), stepTagsFor(s0, r));
         if (limit >= 0) so.setOpt(n, limit);
-        if (activates === 'spell') n.spell = true;
+        // A Spell is activated from the hand or the field; a Spell's effect in the GY or banishment is not that.
+        if (activates === 'spell' && (r.at.zone === 'hand' || r.at.zone === 'st')) n.spell = true;
         const rr = activate(n, r);
         for (let k = 0; k < cost.length; k++) cost[k](n, rr);
         const list = neg ? onNeg : doActs;
@@ -539,8 +579,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const compiled = allEffects.map(({ card, def, i }) => compileEffect(card, def, i));
   const byId: (CompiledEffect | null)[] = [null, ...compiled];
   const effects: EffectInfo[] = [
-    Object.freeze({ key: '', activates: null, fromExtra: false }),
-    ...allEffects.map(({ def }) => Object.freeze({ key: def.key, activates: def.activates ?? null, fromExtra: summonsFromExtra(def) })),
+    Object.freeze({ key: '', activates: null, fromExtra: false, mandatory: false }),
+    ...allEffects.map(({ def }) => Object.freeze({ key: def.key, activates: def.activates ?? null, fromExtra: summonsFromExtra(def), mandatory: !!def.mandatory })),
   ];
   const byOrder = (a: CompiledEffect, b: CompiledEffect) => (a.def.order ?? 0) - (b.def.order ?? 0) || (a.def.key < b.def.key ? -1 : a.def.key > b.def.key ? 1 : 0);
   const main = compiled.filter((e) => !e.trigger && e.def.phase === 'main').sort(byOrder);

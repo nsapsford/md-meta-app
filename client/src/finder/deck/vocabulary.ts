@@ -407,6 +407,54 @@ defineCond('uniqueName', {
   },
 });
 
+// Choices made so far, the Deck's known top cards, names on the field and in the GY.
+defineCond('chosen', {
+  doc: 'The named choice was made (an optional one may be skipped), and if given came from the zone and matches the filter (which sees the chosen card as this card).',
+  args: A.object({ as: A.choice, zone: A.optional(A.zone()), filter: A.optional(A.cond) }),
+  compile: (a: { as: string; zone?: Zone; filter?: Word }, ctx): CondFn => {
+    if (a.as === 'self') ctx.fail('names a choice (a choose[].as name), not this card', 'as');
+    const slot = ctx.choiceSlot(a.as), z = a.zone;
+    const f = a.filter === undefined ? null : (ctx.cond(a.filter, 'filter') as CondFn);
+    const inZone = (c: Choice) => z === undefined || (z === 'field' ? c.zone === 'mon' || c.zone === 'st' : z === 'deck' ? c.zone === 'deck' || c.zone === 'top' : c.zone === z);
+    // One scratch Run, as in `matcher`: not re-entrant.
+    const sub: Run = { self: 0, at: { zone: 'none', at: -1, uid: null }, chosen: [] };
+    return (s, r) => {
+      const c = r.chosen[slot];
+      if (!c) return false;
+      for (const x of c.many ?? [c]) {
+        if (!inZone(x)) return false;
+        if (f) { sub.self = x.id; sub.at = x; sub.chosen = r.chosen; if (!f(s, sub)) return false; }
+      }
+      return true;
+    };
+  },
+});
+defineCond('knownTop', {
+  doc: 'The number of known cards on top of the Deck is within atLeast..atMost.',
+  args: A.object({ atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }),
+  compile: (a: { atLeast?: number; atMost?: number }): CondFn => {
+    const lo = a.atLeast ?? 0, hi = a.atMost ?? Infinity;
+    return (s) => s.top.length >= lo && s.top.length <= hi;
+  },
+});
+defineCond('namesPresent', {
+  doc: 'The number of the given names that are on your field (a monster by its name there) or in your GY (a card by its GY name) is within atLeast (default 1)..atMost.',
+  args: A.object({ names: A.list(A.card, 1), atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }),
+  compile: (a: { names: CardId[]; atLeast?: number; atMost?: number }, ctx): CondFn => {
+    const want = [...new Set(a.names.map((id) => ctx.ix[id]))], props = ctx.props, n = props.length;
+    const lo = a.atLeast ?? 1, hi = a.atMost ?? Infinity;
+    return (s) => {
+      let k = 0;
+      for (const w of want) {
+        let here = s.mons.some((m) => m.nm === w);
+        for (let i = 0; !here && i < n; i++) if (s.gy[i] && props[i].gyName === w) here = true;
+        if (here) k++;
+      }
+      return k >= lo && k <= hi;
+    };
+  },
+});
+
 // Picks: what the player chooses from; each choice becomes a separate move.
 function fieldPick(m: Match, kind: 'mon' | 'st' | undefined, faceUp: boolean | undefined, rt: Runtime): PickFn {
   return (s, r) => {
@@ -507,6 +555,41 @@ definePick('oppCard', {
   },
 });
 
+definePick('union', {
+  doc: 'Each choice of each nested pick, in order.', args: A.list(A.pick, 1),
+  compile: (a: Word[], ctx): PickFn => {
+    const ps = a.map((w, i) => ctx.pick(w, `[${i}]`) as PickFn);
+    if (ps.length === 1) return ps[0];
+    return (s, r) => { const out: Choice[] = []; for (const p of ps) for (const c of p(s, r)) out.push(c); return out; };
+  },
+});
+definePick('onlyIf', {
+  doc: "The nested pick's choices while every condition holds (they may read earlier choices), else none.",
+  args: A.object({ if: A.list(A.cond, 1), of: A.pick }),
+  compile: (a: { if: Word[]; of: Word }, ctx): PickFn => {
+    const conds = a.if.map((w, i) => ctx.cond(w, `if[${i}]`) as CondFn), of = ctx.pick(a.of, 'of') as PickFn;
+    return (s, r) => { for (const c of conds) if (!c(s, r)) return []; return of(s, r); };
+  },
+});
+definePick('fromTop', {
+  doc: 'Each distinct card (of a group or filter, if given) among the top n known cards of the Deck.',
+  args: A.object({ n: A.int(1), group: A.optional(A.group), filter: A.optional(A.cond) }, { atMostOne: ['group', 'filter'] }),
+  compile: (a: { n: number; group?: string; filter?: Word }, ctx): PickFn => {
+    const m = matcher(a, ctx), rt = ctx.rt;
+    return (s, r) => {
+      const out: Choice[] = [], k = Math.min(a.n, s.top.length);
+      for (let i = 0; i < k; i++) {
+        const id = s.top[i];
+        if (s.top.indexOf(id) !== i) continue;   // each card once
+        let copies = 0;
+        for (let j = 0; j < k; j++) if (s.top[j] === id) copies++;
+        if (copies > taken(r.chosen, 'top', id) && m(s, r, id)) out.push(rt.choiceIn('top', id));
+      }
+      return out;
+    };
+  },
+});
+
 // Actions: what happens. `what` names 'self' or a chosen card (`choose[].as`).
 /** The card as taken from the zone an action names (the field: wherever it is there). */
 function fromZone(c: CardRef, z: Zone | undefined, s: State): CardRef {
@@ -578,6 +661,17 @@ defineAct('placeOnTop', {
   compile: (a: { what: string }, ctx): ActFn => {
     const slot = slotOf(a.what, ctx), rt = ctx.rt;
     return (n, r) => rt.each(r, slot, (c) => rt.moveCard(n, c, 'top'));
+  },
+});
+defineAct('setOnField', {
+  doc: 'Set a Spell/Trap from where it is (hand, Deck, GY or banishment) to your field.', args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt;
+    return (n, r) => rt.each(r, slot, (c) => {
+      const from = rt.takeOut(n, c);
+      n.st.push({ id: c.id, up: false, now: true });
+      L.mv(n, c.id, from, 'field');
+    });
   },
 });
 defineAct('payLp', {

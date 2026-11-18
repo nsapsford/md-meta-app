@@ -3,10 +3,131 @@
   "id": "dm-azamina",
   "name": "Dark Magician Azamina",
   "uses": ["staples"],
+  "marks": ["dm"],
   "cards": [
-    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician" }
+    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician" },
+    {
+      "id": "ROD", "passcodes": [7084129], "short": "Rod",
+      "effects": [
+        {
+          "key": "rod", "phase": "main", "from": "field", "trigger": { "normalSummoned": true }, "limit": "oncePerTurn", "mandatory": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "DM_ST" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Rod: add {card}.", "negText": "Rod's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "CIRC", "passcodes": [47222536], "short": "Circle", "discardValue": 1.2,
+      "effects": [
+        {
+          "key": "circ1", "phase": "main", "from": ["hand", "faceDown"], "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "add", "optional": true, "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromTop": { "n": 3, "group": "CIRC_ADD" } } } } }],
+          "do": [{ "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "add" } }, "deckAdd": { "chosen": { "as": "add" } } }, "marks": ["dm"],
+          "stepTags": { "spell": true, "dig": { "not": { "chosen": { "as": "add" } } } },
+          "ledger": { "effect": 1 },
+          "text": "{add?Activate Dark Magical Circle: add $ from the top 3.|Activate Dark Magical Circle: look at the top 3 (add Dark Magician or a DM Spell/Trap if one shows).}",
+          "negText": "Dark Magical Circle: activation effect negated (Circle stays)."
+        },
+        {
+          "key": "circ2", "phase": "main", "from": "faceUp", "trigger": { "summonedNamed": { "name": "DM" } }, "limit": "oncePerTurn", "mandatory": true, "activates": "spell",
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "target", "pick": { "oppCard": true } }],
+          "do": [{ "oppRemove": { "what": "target", "how": "banish" } }],
+          "tags": { "removal": true }, "stepTags": { "spell": true }, "ledger": { "effect": 2 },
+          "text": "Circle: banish their {target}.", "negText": "Circle's banish: negated."
+        }
+      ]
+    },
+    {
+      "id": "CURT", "passcodes": [41350417], "short": "Curtain",
+      "effects": [
+        {
+          "key": "curt", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": "oncePerTurn", "activates": "spell",
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "mon", "pick": { "union": [{ "fromZone": { "zone": "hand", "group": "CURT_SS" } }, { "fromZone": { "zone": "deck", "group": "CURT_SS" } }] } },
+            { "as": "add", "optional": true, "pick": { "onlyIf": { "if": [{ "addLockOff": true }, { "chosen": { "as": "mon", "filter": { "named": "DM" } } }], "of": { "fromZone": { "zone": "deck", "group": "CURT_ADD" } } } } }
+          ],
+          "do": [{ "summon": { "what": "mon", "noEff": true } }, { "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": { "any": [{ "chosen": { "as": "mon", "zone": "deck" } }, { "chosen": { "as": "add" } }] }, "deckAdd": { "chosen": { "as": "add" } } }, "marks": ["dm"],
+          "stepTags": { "spell": true },
+          "text": "Dark Magical Curtain: Special Summon {mon} from {zone}{add?, add $}.", "negText": "Dark Magical Curtain: negated."
+        }
+      ]
+    },
+    {
+      "id": "TALI", "passcodes": [71440209], "short": "Talisman",
+      "effects": [
+        {
+          "key": "tali3", "phase": "main", "from": "gy", "trigger": { "summonedNamed": { "name": "DM", "special": true } }, "limit": "oncePerTurn", "negatable": false,
+          "cond": [{ "lpAbove": 2500 }, { "stZoneFree": true }],
+          "do": [{ "payLp": 2500 }, { "setOnField": { "what": "self" } }],
+          "tags": {}, "stepTags": { "trap": true },
+          "text": "Dark Magic Talisman (GY): pay 2500 LP, Set it."
+        }
+      ]
+    },
+    {
+      "id": "SSRV", "passcodes": [23020408], "short": "Soul Servant", "discardValue": 1.3,
+      "effects": [
+        {
+          "key": "ssrv-deck", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "SSRV_PLACE" } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from deck on top of the Deck."
+        },
+        {
+          "key": "ssrv-hand", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "hand", "group": "SSRV_PLACE" } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from hand on top of the Deck."
+        },
+        {
+          "key": "ssrv-gy", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "gy", "group": "SSRV_PLACE" } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from GY on top of the Deck."
+        },
+        {
+          "key": "ssrv2", "phase": "main", "from": "gy", "limit": "oncePerTurn", "activates": "spell", "negatable": false,
+          "cond": [{ "namesPresent": { "names": ["DM"] } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "draw": 1 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "Soul Servant (GY): banish it, draw 1."
+        }
+      ]
+    }
   ],
-  "groups": {},
-  "endOfTurn": { "setOrder": [] },
-  "boardValue": []
+  "groups": {
+    "DM_ST": ["CIRC", "CURT", "TALI", "SSRV"],
+    "CIRC_ADD": ["DM", "CURT", "TALI", "SSRV"],
+    "CURT_ADD": ["CIRC", "TALI", "SSRV"],
+    "CURT_SS": ["DM", "ROD"],
+    "SSRV_PLACE": ["DM", "ROD", "CIRC", "CURT", "TALI"]
+  },
+  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV"] },
+  "boardValue": [
+    {
+      "id": "talisman-set", "when": "oppTurn", "on": { "control": { "card": "TALI", "kind": "st", "faceUp": false } },
+      "base": [{ "value": 0.5, "label": "Talisman (Set): negates a monster effect chained to a DM card" }]
+    },
+    {
+      "id": "curtain-set", "when": "oppTurn", "on": { "control": { "card": "CURT", "kind": "st", "faceUp": false } },
+      "base": [
+        { "if": [{ "has": { "zone": "deck", "card": "DM" } }], "value": 0.4, "label": "Curtain (Set): Dark Magician from Deck + search on their turn" },
+        { "value": 0.1, "label": "Curtain (Set): Dark Magician from Deck + search on their turn" }
+      ],
+      "adds": [
+        { "if": [{ "control": { "card": "CIRC", "kind": "st", "faceUp": true } }, { "has": { "zone": "deck", "card": "DM" } }], "value": 0.6, "label": "Circle banishes 1" },
+        { "if": [{ "has": { "zone": "gy", "card": "TALI" } }, { "has": { "zone": "deck", "card": "DM" } }], "value": 0.2, "label": "re-Set Talisman" }
+      ],
+      "extraCopies": { "value": 0.05, "label": "Curtain (second copy: only 1 Curtain per turn)" }
+    }
+  ]
 }

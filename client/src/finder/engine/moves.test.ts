@@ -89,6 +89,17 @@ describe('move generation', () => {
     expect(t.keys(s)).toEqual(['dec:seeker-search']);
   });
 
+  it('a mandatory trigger offers its decline only when it has no move left', () => {
+    const file: DeckFile = { ...TOY_FILE, cards: TOY_FILE.cards.map((c) => (c.id === 'SEEKER' ? { ...c, effects: c.effects!.map((e) => ({ ...e, mandatory: true })) } : c)) };
+    const t = setup(file);
+    const s = t.run(t.state({ SEEKER: 1, DRAWTWO: 1 }), 'ns:SEEKER');
+    expect(t.keys(s)).toEqual(['seeker-search:DRAWTWO']);
+    const none = t.run(t.state({ SEEKER: 1, DRAWTWO: 3 }), 'ns:SEEKER');   // no Spell left in the Deck
+    expect(t.keys(none)).toEqual(['dec:seeker-search']);
+    const flood = t.run(t.state({ SEEKER: 1, DRAWTWO: 1 }, { opp: opp('floodMon') }), 'ns:SEEKER');   // its moves are dropped
+    expect(t.keys(flood)).toEqual(['dec:seeker-search']);
+  });
+
   it('floodExtra drops moves that summon from the Extra Deck', () => {
     const file: DeckFile = {
       ...TOY_FILE,

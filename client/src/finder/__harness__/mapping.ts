@@ -14,13 +14,17 @@ export const KIND_MAP = { ash: 'negDeckTouch', imperm: 'negFieldMon', veiler: 'n
  * add a row for each trigger their cards bring. The observation names a pending trigger by the
  * new key; a name in neither table's column throws (see observe.ts).
  */
-export const PEND_MAP: Record<string, string> = {};
+export const PEND_MAP: Record<string, string> = {
+  rod: 'rod', circ2: 'circ2', tali3: 'tali3',   // group 2
+};
 
 /**
  * Reference once-per-turn slot (`OPT_NAMES`) → the deck file's limit name (an effect key with
  * `limit: 'oncePerTurn'`, or a `{ shared }` limit name). Tasks 11–16 add rows as above.
  */
-export const OPT_MAP: Record<string, string> = {};
+export const OPT_MAP: Record<string, string> = {
+  rod1: 'rod', circ1: 'circ1', circ2: 'circ2', curt: 'curt', tali3: 'tali3', ssrv2: 'ssrv2',   // group 2
+};
 
 /** Map reference names through `table`, throwing on any it doesn't hold. */
 export function mapRefNames(names: readonly string[], table: Record<string, string>, what: string): string[] {
