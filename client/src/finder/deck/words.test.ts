@@ -520,3 +520,68 @@ describe('group 3 words: cardKind, first, oppRemoveAll, fromZone plus/eachCopy, 
     expect(d.run(s, 'p').log[0].tags).toEqual({ deckAdd: true, marks: 1 << d.deck.markBit.m });
   });
 });
+
+describe('group 4 words: summoned, wipeField, namesPresent inGy, uniqueName in the GY', () => {
+  it('summoned fires when this card is Normal or Special Summoned, not for another card', () => {
+    const d = probe([eff({ do: [{ summon: { what: 'self' } }] }), eff({ key: 't', from: 'field', trigger: { summoned: true }, text: 'T.' })]);
+    expect(d.pendKeys(d.run(d.state({ PROBE: 1 }), 'p'))).toEqual(['t']);
+    expect(d.pendKeys(d.summonForTest(d.state({ PROBE: 1 }), 'PROBE'))).toEqual(['t']);
+    expect(d.summonForTest(d.state({ PROBE: 1, BIG: 1 }), 'BIG').pend).toEqual([]);
+  });
+
+  it('wipeField banishes every other card it can, then summons the choice with its Level raised by the count', () => {
+    const d = probe([eff({
+      from: 'field',
+      choose: [{ as: 'mon', pick: { fromZone: { zone: 'deck', filter: { named: 'BIG' } } } }],
+      do: [{ wipeField: { banish: true, spare: { named: 'SEEKER' }, thenSummon: 'mon' } }],
+    })]);
+    const opp = { lp: 8000, mons: [OPP.mons[0], { uid: 'm3', kind: 'mon' as const, name: 'Rock', noDestroy: true }], st: [{ uid: 's1', kind: 'st' as const, name: 'Lid', faceDown: true, noTarget: true }] };
+    const s = d.deck.state.newState({ ...toyCfg({}), opp }, d.deck.ix);
+    for (const id of ['PROBE', 'WALL', 'SEEKER', 'TUNER'] as CardId[]) onField(d, s, id);
+    s.st.push({ id: d.deck.ix.DRAWTWO, up: false, now: false });
+    const n = d.run(s, 'p:BIG');
+    // Gone: Wall, Tuner, Draw Two (yours) and Foe, Lid (theirs) = 5; kept: Probe itself, Seeker (spared), Rock (cannot be destroyed).
+    expect(n.mons.map((m) => d.deck.ids[m.id]).sort()).toEqual(['BIG', 'PROBE', 'SEEKER']);
+    expect(n.st).toEqual([]);
+    expect(n.opp!.mons.map((x) => x.uid)).toEqual(['m3']);
+    expect(n.opp!.st).toEqual([]);
+    expect(n.removed).toBe(2);
+    expect(['WALL', 'TUNER', 'DRAWTWO'].map((id) => d.count(n, 'ban', id))).toEqual([1, 1, 1]);
+    expect(n.mons.find((m) => m.id === d.deck.ix.BIG)!.lvl).toBe(6 + 5);
+    expect(d.count(n, 'deck', 'BIG')).toBe(d.count(s, 'deck', 'BIG') - 1);
+    // Without banish, your cards go to the GY; without thenSummon, nothing is summoned.
+    const g = probe([eff({ from: 'field', do: [{ wipeField: {} }] })]);
+    const s2 = g.state({});
+    onField(g, s2, 'PROBE'); onField(g, s2, 'BIG');
+    const n2 = g.run(s2, 'p');
+    expect(n2.mons.map((m) => g.deck.ids[m.id])).toEqual(['PROBE']);
+    expect(g.count(n2, 'gy', 'BIG')).toBe(1);
+  });
+
+  it('namesPresent inGy: only the listed names count in the GY', () => {
+    const cond = (k: Record<string, number>) => [{ namesPresent: { names: ['BIG', 'WALL'], inGy: ['BIG'], ...k } }];
+    expect(offered(cond({}), gy('WALL'))).toBe(false);
+    expect(offered(cond({}), gy('BIG'))).toBe(true);
+    expect(offered(cond({ atLeast: 2 }), (s, d) => { gy('BIG')(s, d); gy('WALL')(s, d); })).toBe(false);
+    expect(offered(cond({ atLeast: 2 }), (s, d) => { gy('BIG')(s, d); s.mons.push({ id: d.deck.ix.SEEKER, nm: d.deck.ix.WALL, emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid: s.uid++ }); })).toBe(true);
+    expect(() => probe([eff({ cond: [{ namesPresent: { names: ['BIG'], inGy: ['WALL'] } }] })])).toThrow(DeckCompileError);
+  });
+
+  it("a deck's listOrder map orders a shared file's cards in the compiled picks", () => {
+    const shared = { vocab: 1, cards: [{ id: 'SHARED', passcodes: [9000097], short: 'Shared', listOrder: 1 }] };
+    const raw = { ...fileWith([eff({ choose: [{ as: 'c', pick: { otherHandCard: true } }] })]), uses: ['s'], listOrder: { SHARED: 99, BIG: 50 } };
+    const v = validateDeckFile(raw, { s: shared });
+    if (!v.ok) throw new Error(JSON.stringify(v.errors));
+    const d = driver(v.file, [...FACTS, { ...PROBE_FACT, passcode: 9000097, name: 'Toy Shared' }]);
+    expect(d.mainKeys(d.state({ PROBE: 1, BIG: 1, SHARED: 1 })).filter((k) => k.startsWith('p:'))).toEqual(['p:BIG', 'p:SHARED']);
+  });
+
+  it('uniqueName reads a card in the GY by its GY name', () => {
+    const e = eff({ from: 'gy', choose: [{ as: 'a', pick: { fromZone: { zone: 'gy', filter: { named: 'BIG' } } } }, { as: 'b', pick: { fromZone: { zone: 'gy', filter: { uniqueName: true } } } }] });
+    const d = probe([e], {}, { gyName: 'BIG' });
+    const s = d.state({});
+    gy('BIG')(s, d); gy('PROBE')(s, d); gy('WALL')(s, d);
+    // Probe is named Big in the GY: it is Big's second copy by name, so only Wall can join a Big.
+    expect(d.mainKeys(s).filter((k) => k.startsWith('p:BIG:'))).toEqual(['p:BIG:WALL']);
+  });
+});

@@ -21,6 +21,8 @@ export interface DeckFile {
   protections?: ProtectionDef[];
   endOfTurn: { setOrder: CardId[]; keepOneInHandIf?: Word[]; setOnlyIf?: Record<CardId, Word[]> };
   boardValue: BoardValueDef[];
+  /** List orders by card id that win over the cards' own `listOrder` (a shared file's card fits many decks; each deck orders it here). Merged into the cards. */
+  listOrder?: Record<CardId, number>;
 }
 export interface CardDef { id: CardId; passcodes: number[]; short: string; discardValue?: number; heldValue?: number; immuneToRemoval?: boolean;
   hints?: { normalSummon?: boolean };
@@ -116,6 +118,7 @@ const top = (required: boolean): Fields => {
     groups: r(A.record(A.oneOf(A.cardList, A.object({ filter: A.cond })))),
     extraDeck: opt(A.list(EXTRA_RULE)), protections: opt(A.list(PROTECTION)),
     endOfTurn: r(END_OF_TURN),
+    listOrder: opt(A.record(A.number, 'card')),
   };
 };
 const DECK_TOP = top(true);
@@ -365,7 +368,10 @@ function merge(deck: Record<string, unknown>, sources: Source[]): DeckFile {
   const concat = <K extends 'extraDeck' | 'protections'>(k: K) => { const u = all.flatMap((f) => list<NonNullable<DeckFile[K]>[number]>(f[k])); if (u.length) out[k] = u as DeckFile[K]; };
   union('marks'); union('flags');
   concat('extraDeck'); concat('protections');
-  out.cards = all.flatMap((f) => list<CardDef>(f.cards));
+  // `listOrder` maps: a later file's entries win (the deck file comes last), and win over the cards' own.
+  const order: Record<string, number> = Object.assign({}, ...all.map((f) => (isObj(f.listOrder) ? f.listOrder : {})));
+  out.cards = all.flatMap((f) => list<CardDef>(f.cards)).map((c) => (Object.prototype.hasOwnProperty.call(order, c.id) ? { ...c, listOrder: order[c.id] } : c));
+  delete out.listOrder;
   out.groups = Object.assign({}, ...all.map((f) => (isObj(f.groups) ? f.groups : {})));
   out.boardValue = all.flatMap((f) => list<BoardValueDef>(f.boardValue));
   const ends = all.map((f) => f.endOfTurn).filter(isObj) as DeckFile['endOfTurn'][];

@@ -44,6 +44,9 @@ the name a card has in your GY (what `named`, `summonedNamed` and `namesPresent`
 `listOrder` (a number, lower first; cards without one come after, by id) is the order in which a
 pick that walks a zone (`fromZone`, `otherHandCard`) lists its cards: it decides what `first`
 takes, how `cheapest` breaks ties, and the order of a `subsets` choice's names in a step's text.
+A file may also have a top-level `listOrder` map (card id to number) whose entries win over the
+cards' own `listOrder`, a later file's over an earlier one's (the deck file comes last): a deck orders
+the cards of a shared file it uses there.
 
 | Word | Kind | Arguments | Meaning |
 | --- | --- | --- | --- |
@@ -67,10 +70,10 @@ takes, how `cheapest` breaks ties, and the order of a `subsets` choice's names i
 | `extraDeckMonster` | condition | none | This card is a Fusion, Synchro, Xyz or Link monster. |
 | `named` | condition | card | This card's name is that card (on your field: its name there; in the GY: its GY name). |
 | `cardKind` | condition | `(monster\|spell\|trap)[]` (≥ 1) | This card is a Monster, Spell or Trap card of one of the given kinds (an opponent's Spell/Trap counts as either). |
-| `uniqueName` | condition | none | No other chosen card (another material) has this card's name. |
+| `uniqueName` | condition | none | No other chosen card (another material) has this card's name (its name on the field, its GY name in the GY). |
 | `chosen` | condition | `{ as: choice, zone?, filter?: condition }` | The named choice was made (an optional one may be skipped), and if given came from the zone and matches the filter (which sees the chosen card as this card). |
 | `knownTop` | condition | `{ atLeast?, atMost? }` | The number of known cards on top of the Deck is within atLeast..atMost. |
-| `namesPresent` | condition | `{ names: card[] (≥ 1), atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name) is within atLeast (default 1)..atMost. |
+| `namesPresent` | condition | `{ names: card[] (≥ 1), inGy?: card[], atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name; only the names listed in `inGy`, if given) is within atLeast (default 1)..atMost. |
 | `fromZone` | pick | `{ zone, group? \| filter?, eachCopy?, plus?: what }` | Each distinct card (of the group or filter, if given) in the zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first). |
 | `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp? }` | Each card you control on the field. |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
@@ -93,11 +96,13 @@ takes, how `cheapest` breaks ties, and the order of a `subsets` choice's names i
 | `burn` | action | number ≥ 1 | Inflict that much damage to the opponent. |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |
 | `oppRemoveAll` | action | `{ how: destroy\|banish, kind?: mon\|st, faceUp?, destroyable? }` | Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply). |
+| `wipeField` | action | `{ banish?, spare?: condition, thenSummon?: what }` | Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every opponent card that can be destroyed (`banish`: banish them instead). Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed. |
 | `setFlag` | action | flag name (from `flags`) | Set the deck-defined state flag. |
 | `queue` | action | effect key | Queue that effect as a pending trigger to resolve next. |
 | `noDirectAttacks` | action | none | You cannot attack directly for the rest of the turn. |
 | `normalSummoned` | trigger | none | This card is Normal or Tribute Summoned. |
 | `specialSummoned` | trigger | none, or `{ from?: zone }` | This card is Special Summoned. |
+| `summoned` | trigger | none | This card is Normal, Tribute or Special Summoned. |
 | `summonedNamed` | trigger | `{ name: card, special? }` | A monster whose name on the field is that card is summoned. |
 | `leftField` | trigger | none, or `{ to?: zone }` | This card leaves the field. |
 | `sentToGy` | trigger | none, or `{ from?: zone }` | This card is sent to the GY. |

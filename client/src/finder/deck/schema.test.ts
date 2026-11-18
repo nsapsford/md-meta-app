@@ -81,6 +81,19 @@ describe('validateDeckFile', () => {
     expect(Object.keys(r.file.groups).sort()).toEqual(['both', 'traps']);
   });
 
+  it("a listOrder map wins over the cards' own listOrder, the deck file's over a shared file's", () => {
+    const staples = { vocab: 1, cards: [{ id: 'S', passcodes: [9], short: 'Staple', listOrder: 50 }, { id: 'U', passcodes: [8], short: 'Other', listOrder: 60 }], listOrder: { U: 40 } };
+    const r = validateDeckFile({ ...MINIMAL, uses: ['staples'], listOrder: { S: 2, A: 1 } }, { staples });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.file.cards.map((c) => [c.id, c.listOrder])).toEqual([['S', 2], ['U', 40], ['A', 1]]);
+    expect('listOrder' in r.file).toBe(false);
+    expect(errorsOf({ ...MINIMAL, listOrder: { ZZ: 1, A: 'first' } })).toEqual([
+      { card: null, field: 'listOrder.ZZ', message: 'unknown card "ZZ"' },
+      { card: null, field: 'listOrder.A', message: 'expected a number, got "first"' },
+    ]);
+  });
+
   it('every word has a doc line', () => {
     for (const reg of Object.values(WORDS)) for (const w of reg.values()) expect(w.doc.length).toBeGreaterThan(10);
   });
@@ -163,10 +176,10 @@ describe('validateDeckFile', () => {
   });
 
   it('checks trigger words, tags and the effect enums', () => {
-    expect(errorsOf(withEffect({ trigger: { summoned: {} }, tags: { deckTuch: true }, phase: 'later', from: 'pocket' }))).toEqual([
+    expect(errorsOf(withEffect({ trigger: { summonedTwice: {} }, tags: { deckTuch: true }, phase: 'later', from: 'pocket' }))).toEqual([
       { card: 'A', field: 'effects[0].phase', message: 'expected one of main, end, oppTurn, got "later"' },
       { card: 'A', field: 'effects[0].from', message: 'expected one of hand, field, setNotThisTurn, faceDown, faceUp, gy, ban, extra, got "pocket"' },
-      { card: 'A', field: 'effects[0].trigger', message: 'unknown trigger "summoned"' },
+      { card: 'A', field: 'effects[0].trigger', message: 'unknown trigger "summonedTwice"' },
       { card: 'A', field: 'effects[0].tags.deckTuch', message: 'unknown tag "deckTuch"' },
     ]);
   });

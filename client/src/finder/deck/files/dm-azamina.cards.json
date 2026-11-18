@@ -118,5 +118,65 @@
     "atk": null,
     "def": null,
     "text": "Add 1 Level 7 or lower Ritual Monster from your Deck to your hand, then you can add 1 Ritual Spell from your GY to your hand."
+  },
+  {
+    "passcode": 79791878,
+    "name": "Shining Sarcophagus",
+    "type": "Spell Card",
+    "race": "Continuous",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Cannot be destroyed by monster effects. You can only use each of the following effects of \"Shining Sarcophagus\" once per turn. During your Main Phase: You can add 1 card that mentions \"Shining Sarcophagus\" from your Deck to your hand, except \"Shining Sarcophagus\". If your opponent Special Summons a monster(s) from the GY (except during the Damage Step): You can discard 1 Spell, then target 1 of those monsters; send it to the GY."
+  },
+  {
+    "passcode": 78679226,
+    "name": "Future Silence",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Add 1 monster that mentions \"Shining Sarcophagus\" from your Deck to your hand, then, if you activated this card during the Battle Phase while you controlled \"Shining Sarcophagus\" and a monster that mentions it, each player draws until they have 6 cards in their hand. You can only activate 1 \"Future Silence\" per turn."
+  },
+  {
+    "passcode": 2501624,
+    "name": "Dark Magician Girl the Magician's Apprentice",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 6,
+    "link": null,
+    "atk": 2000,
+    "def": 1700,
+    "text": "You can Special Summon this card (from your hand) by discarding 1 card, and if you do, this card's name becomes \"Dark Magician Girl\". You can only Special Summon \"Dark Magician Girl the Magician's Apprentice\" once per turn this way. If this card is Normal or Special Summoned: You can add 1 \"Shining Sarcophagus\" from your Deck to your hand. You can only use this effect of \"Dark Magician Girl the Magician's Apprentice\" once per turn. Gains 300 ATK for each monster that mentions \"Shining Sarcophagus\" in the GYs."
+  },
+  {
+    "passcode": 342673,
+    "name": "Dark Magician the Magician of Black Magic",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 7,
+    "link": null,
+    "atk": 2500,
+    "def": 2100,
+    "text": "This card's name becomes \"Dark Magician\" while on the field. You can only use each of the following effects of \"Dark Magician the Magician of Black Magic\" once per turn. If \"Shining Sarcophagus\" is on the field: You can Special Summon this card from your hand. If this card is destroyed by card effect and a Level 5 or higher monster is on the field: You can Special Summon this card, then you can Set 1 Spell/Trap from your Deck that mentions \"Dark Magician\"."
+  },
+  {
+    "passcode": 2333466,
+    "name": "Gandora-G the Dragon of Destruction",
+    "type": "Effect Monster",
+    "race": "Dragon",
+    "attr": "DARK",
+    "level": 8,
+    "link": null,
+    "atk": 0,
+    "def": 0,
+    "text": "Gains 300 ATK for each banished card. You can only use each of the following effects of \"Gandora-G the Dragon of Destruction\" once per turn. If you control \"Shining Sarcophagus\": You can Special Summon this card from your hand. You can pay half your LP; destroy as many other cards on the field as possible, and if you do, banish them, then Special Summon 1 Level 7 or lower monster that mentions \"Shining Sarcophagus\" from your Deck, and increase its Level by the number of cards destroyed by this effect."
   }
 ]

@@ -95,11 +95,18 @@
           "text": "Soul Servant: put {card} from GY on top of the Deck."
         },
         {
-          "key": "ssrv2", "phase": "main", "from": "gy", "limit": "oncePerTurn", "activates": "spell", "negatable": false,
-          "cond": [{ "namesPresent": { "names": ["DM"] } }],
+          "key": "ssrv2-one", "phase": "main", "from": "gy", "limit": { "shared": "ssrv2" }, "activates": "spell", "negatable": false,
+          "cond": [{ "namesPresent": { "names": ["DM", "DMG"], "inGy": ["DM"], "atMost": 1 } }],
           "do": [{ "move": { "what": "self", "to": "ban" } }, { "draw": 1 }],
           "tags": {}, "ledger": { "effect": 2 },
           "text": "Soul Servant (GY): banish it, draw 1."
+        },
+        {
+          "key": "ssrv2-two", "phase": "main", "from": "gy", "limit": { "shared": "ssrv2" }, "activates": "spell", "negatable": false,
+          "cond": [{ "namesPresent": { "names": ["DM", "DMG"], "inGy": ["DM"], "atLeast": 2 } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "draw": 2 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "Soul Servant (GY): banish it, draw 2."
         }
       ]
     },
@@ -188,19 +195,119 @@
           "text": "Preparation of Rites: add Illusion of Chaos.", "negText": "Preparation of Rites: negated."
         }
       ]
+    },
+    {
+      "id": "SARC", "passcodes": [79791878], "short": "Sarcophagus", "listOrder": 16,
+      "effects": [
+        {
+          "key": "sarc", "phase": "main", "from": ["faceDown", "hand"], "activates": "spell", "negatable": false,
+          "do": [], "tags": { "spell": true },
+          "text": "Activate Shining Sarcophagus."
+        },
+        {
+          "key": "sarc1", "phase": "main", "from": "faceUp", "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SARC_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Shining Sarcophagus: add {card}.", "negText": "Sarcophagus search: negated."
+        }
+      ]
+    },
+    {
+      "id": "FSIL", "passcodes": [78679226], "short": "Future Silence", "listOrder": 21, "discardValue": 1,
+      "effects": [
+        {
+          "key": "fsil", "phase": "main", "from": "hand", "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SARC_MON" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true },
+          "text": "Future Silence: add {card}.", "negText": "Future Silence: negated."
+        }
+      ]
+    },
+    {
+      "id": "DMG", "passcodes": [2501624], "short": "DMG Apprentice", "listOrder": 7,
+      "effects": [
+        {
+          "key": "dmg", "phase": "main", "from": "hand", "limit": "oncePerTurn", "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "card", "pick": { "otherHandCard": true } }],
+          "cost": [{ "discard": { "what": "card" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "DMG Apprentice: discard {card} to Special Summon it (its name becomes Dark Magician Girl)."
+        },
+        {
+          "key": "dmg1", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true,
+          "cond": [{ "has": { "zone": "deck", "card": "SARC" } }, { "addLockOff": true }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "filter": { "named": "SARC" } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "DMG Apprentice: add Shining Sarcophagus.", "negText": "DMG Apprentice's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "DMBM", "passcodes": [342673], "short": "DM of Black Magic", "listOrder": 9, "fieldName": "DM",
+      "effects": [
+        {
+          "key": "dmbm", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "control": { "card": "SARC", "kind": "st", "faceUp": true } }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "DM the Magician of Black Magic: Special Summon it from hand (Sarcophagus is on the field).", "negText": "DM of Black Magic: negated."
+        }
+      ]
+    },
+    {
+      "id": "GAND", "passcodes": [2333466], "short": "Gandora-G", "listOrder": 11,
+      "effects": [
+        {
+          "key": "gand", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "control": { "card": "SARC", "kind": "st", "faceUp": true } }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Gandora-G: Special Summon it from hand (you control Sarcophagus).", "negText": "Gandora-G: negated."
+        },
+        {
+          "key": "gand2-wipe", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
+          "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" } } }],
+          "tags": { "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
+          "text": "Gandora-G: pay half LP, destroy and banish every other card on the field.", "negText": "Gandora-G wipe: negated (LP already paid)."
+        },
+        {
+          "key": "gand2-summon", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
+          "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
+          "choose": [{ "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "GAND_SS" } } }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" }, "thenSummon": "mon" } }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
+          "text": "Gandora-G: pay half LP, destroy and banish every other card on the field, then Special Summon {mon} from Deck.", "negText": "Gandora-G wipe: negated (LP already paid)."
+        }
+      ]
     }
   ],
   "groups": {
     "DM_ST": ["CIRC", "CURT", "TALI", "SSRV"],
     "CIRC_ADD": ["DM", "CURT", "TALI", "SSRV"],
     "CURT_ADD": ["CIRC", "TALI", "SSRV"],
-    "CURT_SS": ["DM", "SERV", "ROD", "SOULS"],
-    "SSRV_PLACE": ["DM", "ROD", "SOULS", "SERV", "IOC", "CIRC", "CURT", "TALI"],
-    "SOULS_SEND": ["DM", "SERV", "IOC"],
-    "IOC_ADD": ["DM", "ROD", "SOULS", "SERV"]
+    "CURT_SS": ["DM", "SERV", "DMBM", "DMG", "ROD", "SOULS"],
+    "SSRV_PLACE": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "TALI", "DMG"],
+    "SOULS_SEND": ["DM", "DMG", "DMBM", "SERV", "IOC"],
+    "IOC_ADD": ["DM", "ROD", "SOULS", "SERV", "DMBM"],
+    "SARC_ADD": ["DMG", "DMBM", "GAND", "FSIL"],
+    "SARC_MON": ["DMG", "DMBM", "GAND"],
+    "GAND_SS": ["DMG", "DMBM"]
   },
-  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV"], "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }] },
+  "listOrder": { "DROLL": 1, "MAXX": 3, "ASH": 5, "FUWA": 6 },
+  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV", "FSIL"], "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }] },
   "boardValue": [
+    {
+      "id": "sarcophagus", "when": "oppTurn", "on": { "control": { "card": "SARC", "kind": "st", "faceUp": true } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand", "filter": { "cardKind": ["spell"] } } }], "value": 0.3, "label": "Sarcophagus: answers a monster revived from their GY" },
+        { "value": 0.1, "label": "Sarcophagus: answers a monster revived from their GY" }
+      ]
+    },
     {
       "id": "talisman-set", "when": "oppTurn", "on": { "control": { "card": "TALI", "kind": "st", "faceUp": false } },
       "base": [{ "value": 0.5, "label": "Talisman (Set): negates a monster effect chained to a DM card" }]

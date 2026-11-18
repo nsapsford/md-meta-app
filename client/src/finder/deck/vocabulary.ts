@@ -351,9 +351,10 @@ function oppOf(s: FinalBoard, r: { at: Place }): OppCardState | null {
   const u = r.at.uid;
   return s.opp.mons.find((x) => x.uid === u) ?? s.opp.st.find((x) => x.uid === u) ?? null;
 }
-/** A name to compare: your monster's name on the field, an opponent card's name, else the card. */
-function nameKey(s: FinalBoard, id: number, at: Place): number | string {
+/** A name to compare: your monster's name on the field, a card's GY name in the GY, an opponent card's name, else the card. */
+function nameKey(s: FinalBoard, id: number, at: Place, props: readonly CardProps[]): number | string {
   if (at.zone === 'mon') { const m = monOf(s, { self: id, at, chosen: [] }); return m ? m.nm : id; }
+  if (at.zone === 'gy') return props[id]?.gyName ?? id;
   if (at.zone === 'opp') { const o = oppOf(s, { at }); return 'o:' + (o ? o.name || String(o.uid) : String(at.uid)); }
   return id;
 }
@@ -410,14 +411,17 @@ defineCond('named', {
   },
 });
 defineCond('uniqueName', {
-  doc: 'No other chosen card (another material) has the same name as this card.', args: A.none,
-  compile: (): CondFn => (s, r) => {
-    const k = nameKey(s, r.self, r.at);
-    for (const c of r.chosen) {
-      if (!c) continue;
-      for (const x of c.many ?? [c]) if (nameKey(s, x.id, x) === k) return false;
-    }
-    return true;
+  doc: 'No other chosen card (another material) has the same name as this card (names as `named` reads them: on the field, in the GY).', args: A.none,
+  compile: (_a, ctx): CondFn => {
+    const props = ctx.props;
+    return (s, r) => {
+      const k = nameKey(s, r.self, r.at, props);
+      for (const c of r.chosen) {
+        if (!c) continue;
+        for (const x of c.many ?? [c]) if (nameKey(s, x.id, x, props) === k) return false;
+      }
+      return true;
+    };
   },
 });
 
@@ -452,16 +456,18 @@ defineCond('knownTop', {
   },
 });
 defineCond('namesPresent', {
-  doc: 'The number of the given names that are on your field (a monster by its name there) or in your GY (a card by its GY name) is within atLeast (default 1)..atMost.',
-  args: A.object({ names: A.list(A.card, 1), atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }),
-  compile: (a: { names: CardId[]; atLeast?: number; atMost?: number }, ctx): CondFn => {
+  doc: 'The number of the given names that are on your field (a monster by its name there) or in your GY (a card by its GY name; only the names in `inGy`, if given) is within atLeast (default 1)..atMost.',
+  args: A.object({ names: A.list(A.card, 1), inGy: A.optional(A.cardList), atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }),
+  compile: (a: { names: CardId[]; inGy?: CardId[]; atLeast?: number; atMost?: number }, ctx): CondFn => {
     const want = [...new Set(a.names.map((id) => ctx.ix[id]))], props = ctx.props, n = props.length;
+    const gyOk = new Set((a.inGy ?? a.names).map((id) => ctx.ix[id]));
+    for (const id of a.inGy ?? []) if (!a.names.includes(id)) ctx.fail(`"${id}" is in inGy but not in names`, 'inGy');
     const lo = a.atLeast ?? 1, hi = a.atMost ?? Infinity;
     return (s) => {
       let k = 0;
       for (const w of want) {
         let here = s.mons.some((m) => m.nm === w);
-        for (let i = 0; !here && i < n; i++) if (s.gy[i] && props[i].gyName === w) here = true;
+        if (gyOk.has(w)) for (let i = 0; !here && i < n; i++) if (s.gy[i] && props[i].gyName === w) here = true;
         if (here) k++;
       }
       return k >= lo && k <= hi;
@@ -750,6 +756,51 @@ defineAct('oppRemoveAll', {
     };
   },
 });
+defineAct('wipeField', {
+  doc: "Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every one of the opponent's that can be destroyed; `banish`: banish them instead of sending them to the GY. Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed.",
+  args: A.object({ banish: A.optional(A.boolean), spare: A.optional(A.cond), thenSummon: A.optional(A.choice) }),
+  compile: (a: { banish?: boolean; spare?: Word; thenSummon?: string }, ctx): ActFn => {
+    if (a.thenSummon === 'self') ctx.fail('names a choice (a choose[].as name), not this card', 'thenSummon');
+    const rt = ctx.rt, props = ctx.props, to = a.banish ? 'ban' : 'gy', how = a.banish ? 'banish' : 'destroy';
+    const spare = a.spare === undefined ? null : (ctx.cond(a.spare, 'spare') as CondFn);
+    const slot = a.thenSummon === undefined ? -2 : ctx.choiceSlot(a.thenSummon);
+    // One scratch Run, as in `matcher`: not re-entrant.
+    const sub: Run = { self: 0, at: { zone: 'none', at: -1, uid: null }, chosen: [] };
+    const spared = (n: State, r: Run, id: number, at: Place) => {
+      if (!spare) return false;
+      sub.self = id; sub.at = at; sub.chosen = r.chosen;
+      return spare(n, sub);
+    };
+    return (n, r) => {
+      let count = 0;
+      // Last to first, as the cards' indices shift while they leave.
+      for (let i = n.mons.length - 1; i >= 0; i--) {
+        const m = n.mons[i];
+        const at: Place = { zone: 'mon', at: i, uid: m.uid };
+        if (r.at.zone === 'mon' ? m.uid === r.at.uid : m.id === r.self) continue;
+        if (spared(n, r, m.id, at)) continue;
+        rt.moveCard(n, { id: m.id, ...at }, to); count++;
+      }
+      for (let i = n.st.length - 1; i >= 0; i--) {
+        const x = n.st[i];
+        const at: Place = { zone: 'st', at: i, uid: null };
+        if (r.at.zone === 'st' && i === r.at.at && x.id === r.self) continue;
+        if (spared(n, r, x.id, at)) continue;
+        rt.moveCard(n, { id: x.id, ...at }, to); count++;
+      }
+      if (n.opp) {
+        for (const x of n.opp.mons.slice()) if (!x.noDestroy) { rt.ops.oppRemove(n, x.uid, how); count++; }
+        for (const x of n.opp.st.slice()) if (!x.noDestroy) { rt.ops.oppRemove(n, x.uid, how); count++; }
+      }
+      if (slot === -2) return;
+      rt.each(r, slot, (c) => {
+        const lz = rt.takeOut(n, c);
+        L.sum(n, c.id, 'special', lz);
+        rt.ops.place(n, c.id, { special: true, from: lz, lvl: (props[c.id].lv ?? 0) + count });
+      });
+    };
+  },
+});
 defineAct('setFlag', {
   doc: 'Set the named deck-defined state flag.', args: A.flag,
   compile: (a: string, ctx): ActFn => { const bit = 1 << ctx.flagBit(a); return (n) => { n.flags |= bit; }; },
@@ -777,6 +828,10 @@ defineTrigger('specialSummoned', {
     const f = a === true || a.from === undefined ? null : ctx.rt.lz(a.from);
     return trig('place', (ev: PlaceEv, self) => ev.id === self && ev.special && (f === null || ev.from === f));
   },
+});
+defineTrigger('summoned', {
+  doc: 'This card is Normal, Tribute or Special Summoned.', args: A.none,
+  compile: (): TriggerFn => trig('place', (ev: PlaceEv, self) => ev.id === self),
 });
 defineTrigger('summonedNamed', {
   doc: 'A monster whose name on the field is the given card is summoned (Normal or Special, or only Special).', args: A.object({ name: A.card, special: A.optional(A.boolean) }),
