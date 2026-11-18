@@ -13,5 +13,5 @@ export function withoutAccepted(diffs: StepDiff[], accepted: readonly AcceptedDi
   const keep = (side: AcceptedDiff['side']) => (m: MoveView) => !accepted.some((a) => a.side === side && a.test(m));
   return diffs
     .map((d) => ({ ...d, missing: d.missing.filter(keep('missing')), extra: d.extra.filter(keep('extra')) }))
-    .filter((d) => d.missing.length || d.extra.length || d.evalDiff);
+    .filter((d) => d.missing.length || d.extra.length || d.evalDiff || d.obsDiff);
 }

@@ -3,6 +3,7 @@ import { loadReference } from './loadReference';
 import { buildSituations, FIELDS, oppField } from './situations';
 import { newTags, refTags, toCfg, toIntr } from './mapping';
 import { ACCEPTED, withoutAccepted } from './acceptedDiffs';
+import { SAME_NAMES } from './observe';
 import { formatDiffs, lockstepSides, reducedDeck, refSide, translateSides, type Side } from './lockstep';
 import { G1, G7, groupSituations } from './groupParity';
 
@@ -17,7 +18,7 @@ describe('lockstep harness', () => {
 
   for (const sit of sits) {
     it(`finds no differences between the reference and itself: ${sit.id}`, () => {
-      const diffs = lockstepSides(refSide(engine), refSide(engine), sit.cfg, { id: sit.id, width: 20, depth: 26 });
+      const diffs = lockstepSides(refSide(engine, SAME_NAMES), refSide(engine, SAME_NAMES), sit.cfg, { id: sit.id, width: 20, depth: 26 });
       expect(formatDiffs(diffs)).toBe('');
     });
   }
@@ -25,20 +26,20 @@ describe('lockstep harness', () => {
   it('translatePath maps a reference line to the same line', () => {
     const path: string[] = engine.solveBeam(engine.newState(first.cfg), { width: 20, rounds: 1, timeMs: 3_600_000 }).lines[0].state.path;
     expect(path.length).toBeGreaterThan(1);
-    expect(translateSides(refSide(engine), refSide(engine), first.cfg, path)).toEqual(path);
+    expect(translateSides(refSide(engine, SAME_NAMES), refSide(engine, SAME_NAMES), first.cfg, path)).toEqual(path);
   });
 
   it('translatePath keeps a negated step', () => {
     const root = engine.newState(first.cfg);
     const a = engine.gen(root).find((x) => x.neg);
     expect(a).toBeDefined();
-    expect(translateSides(refSide(engine), refSide(engine), first.cfg, ['~' + a!.k])).toEqual(['~' + a!.k]);
+    expect(translateSides(refSide(engine, SAME_NAMES), refSide(engine, SAME_NAMES), first.cfg, ['~' + a!.k])).toEqual(['~' + a!.k]);
   });
 
   it('translatePath names the first step with no match', () => {
     const root = engine.newState(first.cfg);
     const k = engine.gen(root)[0].k;
-    const ref = refSide(engine);
+    const ref = refSide(engine, SAME_NAMES);
     const dropped: Side = { ...ref, gen: (s) => ref.gen(s).filter((x) => x.k !== k) };
     expect(() => translateSides(ref, dropped, first.cfg, [k])).toThrow(`step 1 (${k})`);
   });
@@ -46,7 +47,7 @@ describe('lockstep harness', () => {
   it('reports a move the other side does not offer', () => {
     const root = engine.newState(first.cfg);
     const k = engine.gen(root)[0].k;
-    const ref = refSide(engine);
+    const ref = refSide(engine, SAME_NAMES);
     const dropped: Side = { ...ref, gen: (s) => (s.path.length ? ref.gen(s) : ref.gen(s).filter((x) => x.k !== k)) };
     const diffs = lockstepSides(ref, dropped, first.cfg, { id: first.id, width: 5, depth: 2 });
     expect(diffs).toHaveLength(1);
@@ -101,7 +102,7 @@ describe('lockstep harness', () => {
   });
 
   it('reports a score difference', () => {
-    const ref = refSide(engine);
+    const ref = refSide(engine, SAME_NAMES);
     const off: Side = { ...ref, evaluate: (s, full) => { const e = ref.evaluate(s, full); return { ...e, score: e.score + 0.5 }; } };
     const diffs = lockstepSides(ref, off, first.cfg, { id: first.id, width: 2, depth: 1 });
     expect(diffs).toHaveLength(1);

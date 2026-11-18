@@ -9,6 +9,34 @@ import type { RefCfg, RefIntr } from './loadReference';
 export const TAG_MAP = { ash: 'deckTouch', droll: 'deckAdd', field: 'fieldMon', handEff: 'handMon', gy: 'gy', spell: 'spell', trap: 'trap', noResp: 'noResp', inherent: 'inherent', removal: 'removal', dig: 'dig' } as const;   // reference tag `dm` → deck mark 'dm'
 export const KIND_MAP = { ash: 'negDeckTouch', imperm: 'negFieldMon', veiler: 'negFieldMon', belle: 'negGy', droll: 'lockDeckAdds', nibiru: 'wipeAtSummons', negMon: 'negMon', negST: 'negST', negAny: 'negAny', negSummon: 'negSummon', pop: 'pop', force: 'force', fuwalos: 'drawDeckExtraSummon', purulia: 'drawHandSummon', maxxc: 'drawSpecialSummon' } as const;
 
+/**
+ * Reference pending-trigger name (`pend[].t`) → the DM Azamina deck file's effect key. Tasks 11–16
+ * add a row for each trigger their cards bring. The observation names a pending trigger by the
+ * new key; a name in neither table's column throws (see observe.ts).
+ */
+export const PEND_MAP: Record<string, string> = {};
+
+/**
+ * Reference once-per-turn slot (`OPT_NAMES`) → the deck file's limit name (an effect key with
+ * `limit: 'oncePerTurn'`, or a `{ shared }` limit name). Tasks 11–16 add rows as above.
+ */
+export const OPT_MAP: Record<string, string> = {};
+
+/** Map reference names through `table`, throwing on any it doesn't hold. */
+export function mapRefNames(names: readonly string[], table: Record<string, string>, what: string): string[] {
+  return names.map((n) => {
+    if (!Object.prototype.hasOwnProperty.call(table, n)) throw new Error(`mapping: unmapped reference ${what} "${n}" (add it to ${what === 'trigger' ? 'PEND_MAP' : 'OPT_MAP'} in mapping.ts)`);
+    return table[n];
+  });
+}
+
+/** Check new-engine names against `table`'s values, throwing on any no reference name maps to. */
+export function checkNewNames(names: readonly string[], table: Record<string, string>, what: string): string[] {
+  const known = new Set(Object.values(table));
+  for (const n of names) if (!known.has(n)) throw new Error(`mapping: unmapped new-engine ${what} "${n}" (add it to ${what === 'trigger' ? 'PEND_MAP' : 'OPT_MAP'} in mapping.ts)`);
+  return names.slice();
+}
+
 /** Reference marks that are deck marks in the new engine (tag name = mark name). */
 const REF_MARKS = new Set(['dm']);
 

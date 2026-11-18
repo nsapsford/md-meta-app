@@ -14,10 +14,11 @@ import { topK } from '../engine/search';
 import type { Move, State } from '../engine/types';
 import { refExec, type RefAction, type RefCard, type RefCfg, type RefEngine } from './loadReference';
 import { newTags, refTags, toCfg } from './mapping';
-import { newObserve, refObserve } from './observe';
+import { newObserve, refObserve, type NameMaps } from './observe';
 
 export interface MoveView { key: string; text: string; tags: string[]; negatable: boolean; negated: boolean; obs: string }
-export interface StepDiff { situation: string; depth: number; path: string[]; missing: MoveView[]; extra: MoveView[]; evalDiff: string | null }
+/** `obsDiff` is set only at the root, when the two starting positions look different. */
+export interface StepDiff { situation: string; depth: number; path: string[]; missing: MoveView[]; extra: MoveView[]; evalDiff: string | null; obsDiff?: string | null }
 
 /** A line's value as both sides can state it: card ids for Sets. */
 export interface EvalView { score: number; items: [string, number][] | null; sets: string[] }
@@ -42,13 +43,13 @@ export interface Side<S = any, M extends SideMove = any> {
   reportThrows: boolean;
 }
 
-/** The reference as a Side. */
-export function refSide(ref: RefEngine): Side<any, RefAction> {
+/** The reference as a Side. `maps` names its pending triggers and once-per-turn slots (observe.ts). */
+export function refSide(ref: RefEngine, maps?: NameMaps): Side<any, RefAction> {
   return {
     root: (cfg) => ref.newState(cfg),
     gen: (s) => ref.gen(s),
     exec: (s, a, neg) => refExec(s, a, neg),
-    observe: (s) => refObserve(ref, s),
+    observe: (s) => refObserve(ref, s, maps),
     tags: (a) => refTags(a.tags),
     evaluate: (s, full) => { const e = ref.evaluate(s, full); return { score: e.score, items: e.items, sets: [...e.sets] }; },
     rank: (s) => ref.evaluate(s, false).score + ref.potential(s),
@@ -187,6 +188,8 @@ export function translatePath(ref: RefEngine, neu: Engine, cfg: RefCfg, refPath:
 export function lockstepSides(a: Side, b: Side, cfg: RefCfg, o: { id: string; width: number; depth: number }): StepDiff[] {
   const diffs: StepDiff[] = [];
   const { sa, sb } = walk(a, b, { ...cfg, base: undefined }, cfg.base ?? []);
+  const oa = a.observe(sa), ob = b.observe(sb);
+  if (oa !== ob) diffs.push({ situation: o.id, depth: 0, path: sa.path.slice(), missing: [], extra: [], evalDiff: null, obsDiff: `${oa}\n      vs ${ob}` });
   let layer: [any, any][] = [[sa, sb]];
   const seen = new Set<number>([a.stateKey(sa)]);
   for (let depth = 0; depth < o.depth && layer.length; depth++) {
@@ -239,6 +242,7 @@ export function formatDiffs(diffs: StepDiff[]): string {
     const lines = [`${d.situation} depth ${d.depth} path [${d.path.join(' ')}]`];
     for (const m of d.missing) lines.push(`  missing ${showMove(m)}`);
     for (const m of d.extra) lines.push(`  extra ${showMove(m)}`);
+    if (d.obsDiff) lines.push(`  root obs ${d.obsDiff}`);
     if (d.evalDiff) lines.push(`  eval ${d.evalDiff}`);
     return lines.join('\n');
   }).join('\n');

@@ -39,6 +39,8 @@ export interface CompiledProtection {
 
 export interface CompiledDeck {
   file: DeckFile; ids: CardId[]; ix: Record<CardId, number>; UNK: number; props: CardProps[]; nOpt: number; nFlags: number; markBit: Record<string, number>;
+  /** Once-per-turn slot index -> its limit name (an effect key, or a `shared` limit name). */
+  limitNames: string[];
   genMain(s: State, push: Push): void; genPending(s: State, push: Push): void;
   onPlace(s: State, m: Mon, special: boolean, from?: LedgerZone): void;
   onLeaveField(s: State, id: number, kind: 'mon' | 'st', wasFaceUp: boolean, to?: LedgerZone): void;
@@ -710,7 +712,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   function total(z: Uint8Array): number { let t = 0; for (let i = 0; i < z.length; i++) t += z[i]; return t; }
 
   return {
-    file, ids, ix, UNK, props, nOpt, nFlags, markBit,
+    file, ids, ix, UNK, props, nOpt, nFlags, markBit, limitNames: [...slots.keys()],
     genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy,
     extra, protections, queueAfterSummon, finalize, boardValue, hasBoardValue, effects,
     state: so, ops,

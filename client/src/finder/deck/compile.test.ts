@@ -102,6 +102,10 @@ describe('compiled deck tables', () => {
     expect(deck.nFlags).toBe(0);
   });
 
+  it('names each once-per-turn slot by its limit (sorted)', () => {
+    expect(deck.limitNames).toEqual(['drawtwo', 'tuner-ss']);
+  });
+
   it('compiles the Extra Deck rule to data', () => {
     expect(deck.extra).toEqual([{ card: deck.ix.SYNC, method: 'synchro', level: 8, min: 2, max: 2, tuners: 'exactlyOne', mats: null, then: 0 }]);
   });
