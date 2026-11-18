@@ -32,7 +32,11 @@ Effect fields beside the words: `tags` are the move's tags (what floodgates and 
 read); `stepTags` adds tags to the recorded step only (what the opponent's responses read), and
 `stepMarks` adds marks to it the same way.
 `mandatory: true` on a trigger offers declining it only when it has no move to make (none, or the
-floodgates dropped them); otherwise declining is always offered. An effect with
+floodgates dropped them); otherwise declining is always offered. `immediate: true` on a trigger
+means it is not queued: when its event happens (its limit free, its card where `from` says, its
+conditions true) its `do` runs at once inside the step that set it off, with no move of its own,
+and its `text` (if not empty) is added to that step's text after a space. It takes no `choose`,
+`cost` or `onNegated`. An effect with
 `activates: "spell"` sets "a Spell was activated this turn" only when its card is in the hand or
 on the field (a Spell's effect in the GY does not). In `text` and `negText`, `{as}` is a chosen
 card's short name, `{zone}` where the first choice came from, and `{as?text|other}` is `text`
@@ -75,7 +79,7 @@ the cards of a shared file it uses there.
 | `knownTop` | condition | `{ atLeast?, atMost? }` | The number of known cards on top of the Deck is within atLeast..atMost. |
 | `namesPresent` | condition | `{ names: card[] (≥ 1), inGy?: card[], atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name; only the names listed in `inGy`, if given) is within atLeast (default 1)..atMost. |
 | `fromZone` | pick | `{ zone, group? \| filter?, eachCopy?, plus?: what }` | Each distinct card (of the group or filter, if given) in the zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first). |
-| `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp? }` | Each card you control on the field. |
+| `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp?, distinct? }` | Each card you control on the field; `distinct`: each card id once (the first on the field). |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
 | `cheapest` | pick | `{ of: pick, n? }` | Only the n (default 1) choices of the nested pick with the lowest discard value. |
 | `first` | pick | `{ of: pick, n? }` | Only the first n (default 1) choices of the nested pick (a zone pick lists cards in list order). |
@@ -93,10 +97,11 @@ the cards of a shared file it uses there.
 | `placeOnTop` | action | `{ what }` | Place a card on top of the Deck. |
 | `setOnField` | action | `{ what }` | Set a Spell/Trap from where it is (hand, Deck, GY or banishment) to your field. |
 | `payLp` | action | number ≥ 1, or `"half"` | Pay that many Life Points, or half. |
+| `gainLp` | action | number ≥ 1 | Gain that many Life Points. |
 | `burn` | action | number ≥ 1 | Inflict that much damage to the opponent. |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |
 | `oppRemoveAll` | action | `{ how: destroy\|banish, kind?: mon\|st, faceUp?, destroyable? }` | Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply). |
-| `wipeField` | action | `{ banish?, spare?: condition, thenSummon?: what }` | Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every opponent card that can be destroyed (`banish`: banish them instead). Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed. |
+| `wipeField` | action | `{ banish?, spare?: condition, thenSummon?: what, noTriggers? }` | Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every opponent card that can be destroyed (`banish`: banish them instead; `noTriggers`: your cards leave without setting off any trigger). Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed. |
 | `setFlag` | action | flag name (from `flags`) | Set the deck-defined state flag. |
 | `queue` | action | effect key | Queue that effect as a pending trigger to resolve next. |
 | `noDirectAttacks` | action | none | You cannot attack directly for the rest of the turn. |
@@ -104,6 +109,6 @@ the cards of a shared file it uses there.
 | `specialSummoned` | trigger | none, or `{ from?: zone }` | This card is Special Summoned. |
 | `summoned` | trigger | none | This card is Normal, Tribute or Special Summoned. |
 | `summonedNamed` | trigger | `{ name: card, special? }` | A monster whose name on the field is that card is summoned. |
-| `leftField` | trigger | none, or `{ to?: zone }` | This card leaves the field. |
+| `leftField` | trigger | none, or `{ to?: zone, faceUp? }` | This card leaves the field (`faceUp`: only while face-up, or only while face-down). |
 | `sentToGy` | trigger | none, or `{ from?: zone }` | This card is sent to the GY. |
 | `oppMonsterToGy` | trigger | none | A monster the opponent controls is sent to the GY. |

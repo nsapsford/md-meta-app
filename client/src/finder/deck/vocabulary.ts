@@ -476,11 +476,13 @@ defineCond('namesPresent', {
 });
 
 // Picks: what the player chooses from; each choice becomes a separate move.
-function fieldPick(m: Match, kind: 'mon' | 'st' | undefined, faceUp: boolean | undefined, rt: Runtime): PickFn {
+function fieldPick(m: Match, kind: 'mon' | 'st' | undefined, faceUp: boolean | undefined, rt: Runtime, distinct = false): PickFn {
   return (s, r) => {
     const out: Choice[] = [];
-    if (kind !== 'st' && faceUp !== false) s.mons.forEach((x, i) => { if (m(s, r, x.id) && !takenAt(r.chosen, 'mon', i)) out.push(rt.choiceOnField('mon', i, x.id, x.uid)); });
-    if (kind !== 'mon') s.st.forEach((x, i) => { if ((faceUp === undefined || x.up === faceUp) && m(s, r, x.id) && !takenAt(r.chosen, 'st', i)) out.push(rt.choiceOnField('st', i, x.id, null)); });
+    // distinct: a card whose id an earlier choice of this pick already has is left out.
+    const dup = (id: number) => distinct && out.some((c) => c.id === id);
+    if (kind !== 'st' && faceUp !== false) s.mons.forEach((x, i) => { if (m(s, r, x.id) && !takenAt(r.chosen, 'mon', i) && !dup(x.id)) out.push(rt.choiceOnField('mon', i, x.id, x.uid)); });
+    if (kind !== 'mon') s.st.forEach((x, i) => { if ((faceUp === undefined || x.up === faceUp) && m(s, r, x.id) && !takenAt(r.chosen, 'st', i) && !dup(x.id)) out.push(rt.choiceOnField('st', i, x.id, null)); });
     return out;
   };
 }
@@ -518,9 +520,9 @@ definePick('fromZone', {
   },
 });
 definePick('fromField', {
-  doc: 'Each card you control on the field, optionally of a group or filter, kind, or face-up only.',
-  args: A.object({ group: A.optional(A.group), filter: A.optional(A.cond), kind: KIND, faceUp: A.optional(A.boolean) }, { atMostOne: ['group', 'filter'] }),
-  compile: (a: { group?: string; filter?: Word; kind?: 'mon' | 'st'; faceUp?: boolean }, ctx): PickFn => fieldPick(matcher(a, ctx), a.kind, a.faceUp, ctx.rt),
+  doc: 'Each card you control on the field, optionally of a group or filter, kind, or face-up only; `distinct`: each card id once (the first on the field).',
+  args: A.object({ group: A.optional(A.group), filter: A.optional(A.cond), kind: KIND, faceUp: A.optional(A.boolean), distinct: A.optional(A.boolean) }, { atMostOne: ['group', 'filter'] }),
+  compile: (a: { group?: string; filter?: Word; kind?: 'mon' | 'st'; faceUp?: boolean; distinct?: boolean }, ctx): PickFn => fieldPick(matcher(a, ctx), a.kind, a.faceUp, ctx.rt, !!a.distinct),
 });
 definePick('otherHandCard', {
   doc: 'Each distinct card in hand other than this one (another copy of it counts), optionally of a group or filter.',
@@ -729,6 +731,10 @@ defineAct('payLp', {
   doc: 'Pay the given Life Points, or half of them.', args: A.oneOf(A.int(1), A.enum('half')),
   compile: (a: number | 'half'): ActFn => (a === 'half' ? (n) => { n.lp = Math.floor(n.lp / 2); } : (n) => { n.lp -= a; }),
 });
+defineAct('gainLp', {
+  doc: 'Gain the given Life Points.', args: A.int(1),
+  compile: (a: number): ActFn => (n) => { n.lp += a; },
+});
 defineAct('burn', {
   doc: 'Inflict the given damage to the opponent.', args: A.int(1),
   compile: (a: number, ctx): ActFn => { const OW = ctx.rt.state.OW; return (n) => { n.burn += a; if (n.opp) OW(n).lp -= a; }; },
@@ -757,11 +763,13 @@ defineAct('oppRemoveAll', {
   },
 });
 defineAct('wipeField', {
-  doc: "Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every one of the opponent's that can be destroyed; `banish`: banish them instead of sending them to the GY. Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed.",
-  args: A.object({ banish: A.optional(A.boolean), spare: A.optional(A.cond), thenSummon: A.optional(A.choice) }),
-  compile: (a: { banish?: boolean; spare?: Word; thenSummon?: string }, ctx): ActFn => {
+  doc: "Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every one of the opponent's that can be destroyed; `banish`: banish them instead of sending them to the GY; `noTriggers`: your cards leave without setting off any trigger. Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed.",
+  args: A.object({ banish: A.optional(A.boolean), spare: A.optional(A.cond), thenSummon: A.optional(A.choice), noTriggers: A.optional(A.boolean) }),
+  compile: (a: { banish?: boolean; spare?: Word; thenSummon?: string; noTriggers?: boolean }, ctx): ActFn => {
     if (a.thenSummon === 'self') ctx.fail('names a choice (a choose[].as name), not this card', 'thenSummon');
     const rt = ctx.rt, props = ctx.props, to = a.banish ? 'ban' : 'gy', how = a.banish ? 'banish' : 'destroy';
+    const quiet = !!a.noTriggers;
+    const leave = (n: State, c: CardRef) => { if (quiet) rt.removeQuietly(n, c.zone as 'mon' | 'st', c.at, to); else rt.moveCard(n, c, to); };
     const spare = a.spare === undefined ? null : (ctx.cond(a.spare, 'spare') as CondFn);
     const slot = a.thenSummon === undefined ? -2 : ctx.choiceSlot(a.thenSummon);
     // One scratch Run, as in `matcher`: not re-entrant.
@@ -779,14 +787,14 @@ defineAct('wipeField', {
         const at: Place = { zone: 'mon', at: i, uid: m.uid };
         if (r.at.zone === 'mon' ? m.uid === r.at.uid : m.id === r.self) continue;
         if (spared(n, r, m.id, at)) continue;
-        rt.moveCard(n, { id: m.id, ...at }, to); count++;
+        leave(n, { id: m.id, ...at }); count++;
       }
       for (let i = n.st.length - 1; i >= 0; i--) {
         const x = n.st[i];
         const at: Place = { zone: 'st', at: i, uid: null };
         if (r.at.zone === 'st' && i === r.at.at && x.id === r.self) continue;
         if (spared(n, r, x.id, at)) continue;
-        rt.moveCard(n, { id: x.id, ...at }, to); count++;
+        leave(n, { id: x.id, ...at }); count++;
       }
       if (n.opp) {
         for (const x of n.opp.mons.slice()) if (!x.noDestroy) { rt.ops.oppRemove(n, x.uid, how); count++; }
@@ -816,7 +824,7 @@ defineAct('noDirectAttacks', {
 
 // Triggers: when an effect with `trigger` is queued.
 interface PlaceEv { id: number; nm: number; special: boolean; from: string | null }
-interface MoveEv { id: number; from: string; to: string }
+interface MoveEv { id: number; from: string; to: string; up: boolean }
 
 defineTrigger('normalSummoned', {
   doc: 'This card is Normal or Tribute Summoned.', args: A.none,
@@ -841,10 +849,11 @@ defineTrigger('summonedNamed', {
   },
 });
 defineTrigger('leftField', {
-  doc: 'This card leaves the field (optionally only to the given zone).', args: A.oneOf(A.none, A.object({ to: A.optional(A.zone()) })),
-  compile: (a: true | { to?: Zone }, ctx): TriggerFn => {
+  doc: 'This card leaves the field (optionally only to the given zone, or only while face-up / face-down).', args: A.oneOf(A.none, A.object({ to: A.optional(A.zone()), faceUp: A.optional(A.boolean) })),
+  compile: (a: true | { to?: Zone; faceUp?: boolean }, ctx): TriggerFn => {
     const t = a === true || a.to === undefined ? null : ctx.rt.lz(a.to);
-    return trig('move', (ev: MoveEv, self) => ev.id === self && ev.from === 'field' && (t === null || ev.to === t));
+    const up = a === true ? undefined : a.faceUp;
+    return trig('move', (ev: MoveEv, self) => ev.id === self && ev.from === 'field' && (t === null || ev.to === t) && (up === undefined || ev.up === up));
   },
 });
 defineTrigger('sentToGy', {

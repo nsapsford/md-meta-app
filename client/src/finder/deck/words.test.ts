@@ -585,3 +585,81 @@ describe('group 4 words: summoned, wipeField, namesPresent inGy, uniqueName in t
     expect(d.mainKeys(s).filter((k) => k.startsWith('p:BIG:'))).toEqual(['p:BIG:WALL']);
   });
 });
+
+describe('group 5 words: immediate triggers, leftField faceUp, gainLp, fromField distinct, wipeField noTriggers', () => {
+  const sendSt = eff({ from: 'hand', choose: [{ as: 'c', pick: { fromField: { kind: 'st' } } }], do: [{ move: { what: 'c', to: 'gy' } }], text: 'Send {c}.' });
+  const withWall = (d: ReturnType<typeof probe>, up: boolean, hand: Record<CardId, number> = { PROBE: 1 }) => { const s = d.state(hand); s.st.push({ id: d.deck.ix.WALL, up, now: false }); return s; };
+  /** The probe file with Wall given `effects`. */
+  const wallWith = (effects: EffectDef[], probeEffects: EffectDef[], extra: Partial<DeckFile> = {}) => {
+    const f = fileWith(probeEffects, extra);
+    f.cards = f.cards.map((c) => (c.id === 'WALL' ? { ...c, effects } : c));
+    return driver(f, FACTS);
+  };
+
+  it('an immediate trigger runs inside the step that set it off, adds its text and queues nothing', () => {
+    const o = probe([
+      eff({ choose: [{ as: 't', pick: { oppCard: { kind: 'mon' } } }], do: [{ oppRemove: { what: 't', how: 'destroy' } }], text: 'Destroy {t}.' }),
+      eff({ key: 'i', from: 'hand', trigger: { oppMonsterToGy: true }, immediate: true, limit: 'oncePerTurn', cond: [{ lpAbove: 100 }], do: [{ burn: 300 }, { gainLp: 300 }], text: 'Probe drains 300.' }),
+    ]);
+    const n = o.run(withOpp(o, { PROBE: 1 }), 'p:om1');
+    expect(n.pend).toEqual([]);
+    expect(o.lastText(n)).toBe('Destroy Foe. Probe drains 300.');
+    expect([n.lp, n.burn, n.opp!.lp]).toEqual([8300, 300, 7700]);
+    // Once per turn: the second destruction does not drain.
+    n.opp!.mons.push({ uid: 'm9', kind: 'mon', name: 'Again', ui: 9 });
+    const n2 = o.run(n, 'p:om9');
+    expect(o.lastText(n2)).toBe('Destroy Again.');
+    expect(n2.lp).toBe(8300);
+    // Its conditions are checked when the event happens.
+    const s3 = withOpp(o, { PROBE: 1 });
+    s3.lp = 100;
+    expect(o.lastText(o.run(s3, 'p:om1'))).toBe('Destroy Foe.');
+  });
+
+  it('leftField faceUp fires only for a card that was face-up (an immediate trigger with no text adds none)', () => {
+    const w = eff({ key: 'w', from: 'gy', trigger: { leftField: { to: 'gy', faceUp: true } }, immediate: true, do: [{ setFlag: 'f' }], text: '' });
+    const d = wallWith([w], [sendSt], { flags: ['f'] });
+    const up = d.run(withWall(d, true), 'p:WALL');
+    expect(up.flags).toBe(1);
+    expect(up.pend).toEqual([]);
+    expect(d.lastText(up)).toBe('Send Wall.');
+    expect(d.run(withWall(d, false), 'p:WALL').flags).toBe(0);
+  });
+
+  it('immediate needs a trigger and takes no choices', () => {
+    const err = (e: Partial<EffectDef>) => { try { compileDeck(fileWith([eff(e)]), FACTS); } catch (x) { return (x as DeckCompileError).errors[0].field; } return null; };
+    expect(err({ immediate: true })).toBe('effects[0].immediate');
+    expect(err({ immediate: true, trigger: { oppMonsterToGy: true }, choose: [{ as: 'c', pick: { otherHandCard: true } }] })).toBe('effects[0].immediate');
+  });
+
+  it('gainLp gains Life Points', () => {
+    const d = probe([eff({ do: [{ gainLp: 1500 }] })]);
+    expect(d.run(d.state({ PROBE: 1 }), 'p').lp).toBe(9500);
+  });
+
+  it('fromField distinct offers each card id once (the first)', () => {
+    const keys = (distinct: boolean) => {
+      const d = probe([eff({ choose: [{ as: 'c', pick: { fromField: { kind: 'mon', distinct } } }] })]);
+      const s = d.state({ PROBE: 1 });
+      onField(d, s, 'BIG'); onField(d, s, 'WALL'); onField(d, s, 'BIG');
+      return d.mainKeys(s).filter((k) => k.startsWith('p:'));
+    };
+    expect(keys(false)).toEqual(['p:BIG', 'p:WALL', 'p:BIG']);
+    expect(keys(true)).toEqual(['p:BIG', 'p:WALL']);
+  });
+
+  it('wipeField noTriggers: your cards leave without setting off triggers', () => {
+    const wipe = (noTriggers: boolean) => {
+      const d = wallWith([eff({ key: 'l', from: 'ban', trigger: { leftField: true }, text: 'L.' })], [eff({ from: 'field', do: [{ wipeField: { banish: true, noTriggers } }] })]);
+      const s = withWall(d, true, {});
+      onField(d, s, 'PROBE');
+      return { d, n: d.run(s, 'p') };
+    };
+    const loud = wipe(false), quiet = wipe(true);
+    expect(loud.d.pendKeys(loud.n)).toEqual(['l']);
+    expect(quiet.n.pend).toEqual([]);
+    expect(quiet.n.st).toEqual([]);
+    expect(quiet.d.count(quiet.n, 'ban', 'WALL')).toBe(1);
+    expect(quiet.n.log[0].seq).toContainEqual(['m', quiet.d.deck.ix.WALL, 'field', 'banished']);
+  });
+});

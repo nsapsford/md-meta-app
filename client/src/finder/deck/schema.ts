@@ -40,6 +40,8 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   stepMarks?: string[];
   /** A trigger: declining it is offered only when it has no move to make (default false: always offered). */
   mandatory?: boolean;
+  /** A trigger that is not queued: when its event happens it runs at once inside the step that set it off (no move of its own); its `text`, if any, is added to that step's text. */
+  immediate?: boolean;
   text: string; negText?: string; ledger?: { effect?: number } }
 /** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
 export type ExtraRule = { order?: number } & (
@@ -82,7 +84,7 @@ const EFFECT: Fields = {
   cond: opt(A.condList), cost: opt(A.actList),
   choose: opt(A.list(A.object({ as: A.string, pick: A.pick, optional: opt(A.boolean) }))),
   do: A.actList, onNegated: opt(A.actList),
-  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean),
+  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean),
   marks: opt(A.list(A.mark)), stepMarks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
   text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };

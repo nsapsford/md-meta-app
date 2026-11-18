@@ -4,6 +4,7 @@
   "name": "Dark Magician Azamina",
   "uses": ["staples"],
   "marks": ["dm"],
+  "flags": ["deceReset"],
   "cards": [
     { "id": "DM", "passcodes": [36996508], "short": "Dark Magician", "listOrder": 0 },
     {
@@ -271,7 +272,7 @@
         {
           "key": "gand2-wipe", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
           "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
-          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" } } }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" }, "noTriggers": true } }],
           "tags": { "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
           "text": "Gandora-G: pay half LP, destroy and banish every other card on the field.", "negText": "Gandora-G wipe: negated (LP already paid)."
         },
@@ -279,9 +280,132 @@
           "key": "gand2-summon", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
           "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
           "choose": [{ "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "GAND_SS" } } }],
-          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" }, "thenSummon": "mon" } }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "named": "SARC" }, "thenSummon": "mon", "noTriggers": true } }],
           "tags": { "deckTouch": true, "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
           "text": "Gandora-G: pay half LP, destroy and banish every other card on the field, then Special Summon {mon} from Deck.", "negText": "Gandora-G wipe: negated (LP already paid)."
+        }
+      ]
+    },
+    {
+      "id": "DIA", "passcodes": [72270339], "short": "Diabellstar", "listOrder": 8,
+      "effects": [
+        {
+          "key": "dia-hand", "phase": "main", "from": "hand", "limit": { "shared": "dia" }, "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "otherHandCard": true } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "Diabellstar: send {sent} from hand to Special Summon it."
+        },
+        {
+          "key": "dia-field", "phase": "main", "from": "hand", "limit": { "shared": "dia" }, "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "fromField": {} } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "Diabellstar: send {sent} from the field to Special Summon it."
+        },
+        {
+          "key": "dia1", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "stZoneFree": true }], "of": { "fromZone": { "zone": "deck", "group": "SINFUL" } } } } }],
+          "do": [{ "setFromDeck": { "what": "card" } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Diabellstar: Set {card} from Deck.", "negText": "Diabellstar's Set: negated."
+        }
+      ]
+    },
+    {
+      "id": "WANT", "passcodes": [80845034], "short": "WANTED", "listOrder": 20, "discardValue": 1.4,
+      "effects": [
+        {
+          "key": "want", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "union": [
+            { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "filter": { "named": "DIA" } } } } },
+            { "fromZone": { "zone": "gy", "filter": { "named": "DIA" } } }
+          ] } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "card", "zone": "deck" } }, "deckAdd": { "chosen": { "as": "card", "zone": "deck" } }, "spell": true },
+          "stepTags": { "gy": { "chosen": { "as": "card", "zone": "gy" } } }, "ledger": { "effect": 1 },
+          "text": "WANTED: add Diabellstar from {zone}.", "negText": "WANTED: negated."
+        },
+        {
+          "key": "want2", "phase": "main", "from": "gy", "limit": "oncePerTurn", "activates": "spell", "negatable": false,
+          "choose": [{ "as": "back", "pick": { "first": { "of": { "union": [
+            { "fromZone": { "zone": "gy", "filter": { "named": "DECE" } } },
+            { "fromZone": { "zone": "ban", "filter": { "named": "DECE" } } }
+          ] } } } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "move": { "what": "back", "to": "deck" } }, { "draw": 1 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "WANTED (GY): banish it, put Deception on the bottom of the Deck, draw 1."
+        }
+      ]
+    },
+    {
+      "id": "DECE", "passcodes": [66328392], "short": "Deception", "listOrder": 17, "discardValue": 2,
+      "effects": [
+        {
+          "key": "dece", "phase": "main", "from": ["faceDown", "hand"], "activates": "spell", "negatable": false,
+          "do": [], "tags": { "spell": true },
+          "text": "Activate Deception of the Sinful Spoils."
+        },
+        {
+          "key": "dece1", "phase": "main", "from": "faceUp", "limit": "oncePerTurn", "activates": "spell",
+          "cond": [{ "addLockOff": true }, { "has": { "zone": "deck", "card": "HALL" } }],
+          "choose": [
+            { "as": "tribute", "pick": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["monster"] } } }, { "fromField": { "kind": "mon", "distinct": true } }] } },
+            { "as": "add", "pick": { "fromZone": { "zone": "deck", "filter": { "named": "HALL" } } } }
+          ],
+          "cost": [{ "move": { "what": "tribute", "to": "gy" } }], "do": [{ "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Deception: Tribute {tribute} from {zone}, add The Hallowed Azamina.", "negText": "Deception: Tribute {tribute}; search negated."
+        },
+        {
+          "key": "dece2", "phase": "main", "from": "faceUp", "trigger": { "oppMonsterToGy": true }, "immediate": true, "limit": "oncePerTurn",
+          "cond": [{ "control": { "group": "AZAMINA", "kind": "mon" } }],
+          "do": [{ "burn": 1500 }, { "gainLp": 1500 }],
+          "tags": {}, "text": "Deception drains 1500."
+        },
+        {
+          "key": "dece-reset", "phase": "main", "from": "gy", "trigger": { "leftField": { "to": "gy", "faceUp": true } }, "immediate": true,
+          "do": [{ "setFlag": "deceReset" }],
+          "tags": {}, "text": ""
+        }
+      ]
+    },
+    {
+      "id": "HALL", "passcodes": [94845588], "short": "Hallowed Azamina", "listOrder": 14, "discardValue": 2.5,
+      "effects": [
+        {
+          "key": "hall", "phase": "main", "from": "hand", "activates": "spell",
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "sent", "pick": { "union": [{ "fromZone": { "zone": "hand", "group": "SINFUL" } }, { "fromField": { "kind": "st", "group": "SINFUL" } }] } },
+            { "as": "az", "pick": { "fromZone": { "zone": "extra", "group": "AZAMINA" } } }
+          ],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "summon": { "what": "az" } }],
+          "tags": { "spell": true },
+          "text": "The Hallowed Azamina: send {sent} from {zone}, Special Summon {az}.", "negText": "The Hallowed Azamina: negated."
+        },
+        {
+          "key": "hallG", "phase": "main", "from": "gy", "limit": "oncePerTurn", "negatable": false,
+          "choose": [{ "as": "az", "pick": { "union": [{ "fromField": { "kind": "mon", "group": "AZAMINA" } }, { "fromZone": { "zone": "gy", "group": "AZAMINA" } }] } }],
+          "do": [{ "move": { "what": "az", "to": "deck" } }, { "move": { "what": "self", "to": "hand" } }],
+          "tags": { "gy": true, "spell": true }, "ledger": { "effect": 2 },
+          "text": "The Hallowed Azamina (GY): shuffle {az} into the Extra Deck, add Hallowed Azamina to hand."
+        }
+      ]
+    },
+    { "id": "ILIA", "passcodes": [46396218], "short": "Ilia Silvia", "listOrder": 28 },
+    {
+      "id": "RCIE", "passcodes": [73391962], "short": "Rcielago", "listOrder": 29,
+      "effects": [
+        {
+          "key": "rcie", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": "oncePerTurn", "mandatory": true,
+          "cond": [{ "addLockOff": true }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "RCIE_ADD" } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Rcielago: add {card}.", "negText": "Rcielago's search: negated."
         }
       ]
     }
@@ -290,17 +414,40 @@
     "DM_ST": ["CIRC", "CURT", "TALI", "SSRV"],
     "CIRC_ADD": ["DM", "CURT", "TALI", "SSRV"],
     "CURT_ADD": ["CIRC", "TALI", "SSRV"],
-    "CURT_SS": ["DM", "SERV", "DMBM", "DMG", "ROD", "SOULS"],
+    "CURT_SS": ["DM", "SERV", "DMBM", "DIA", "DMG", "ROD", "SOULS"],
     "SSRV_PLACE": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "TALI", "DMG"],
-    "SOULS_SEND": ["DM", "DMG", "DMBM", "SERV", "IOC"],
+    "SOULS_SEND": ["DM", "DMG", "DIA", "DMBM", "SERV", "IOC"],
     "IOC_ADD": ["DM", "ROD", "SOULS", "SERV", "DMBM"],
     "SARC_ADD": ["DMG", "DMBM", "GAND", "FSIL"],
     "SARC_MON": ["DMG", "DMBM", "GAND"],
-    "GAND_SS": ["DMG", "DMBM"]
+    "GAND_SS": ["DMG", "DMBM"],
+    "SINFUL": ["DECE", "WANT"],
+    "AZAMINA": ["ILIA", "RCIE"],
+    "RCIE_ADD": ["HALL", "DECE", "WANT"]
   },
   "listOrder": { "DROLL": 1, "MAXX": 3, "ASH": 5, "FUWA": 6 },
-  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV", "FSIL"], "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }] },
+  "endOfTurn": { "setOrder": ["TALI", "CURT", "SSRV", "WANT", "FSIL"], "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }] },
   "boardValue": [
+    {
+      "id": "ilia", "when": "oppTurn", "on": { "control": { "card": "ILIA", "kind": "mon" } },
+      "base": [{ "value": 1.0, "label": "Ilia Silvia: Tribute to negate" }]
+    },
+    {
+      "id": "diabellstar", "when": "oppTurn", "on": { "control": { "card": "DIA", "kind": "mon" } },
+      "base": [{ "value": 0.2, "label": "Diabellstar: comes back if sent to GY on their turn" }]
+    },
+    {
+      "id": "deception", "when": "oppTurn", "on": { "control": { "card": "DECE", "kind": "st" } },
+      "base": [{ "value": 0.1, "label": "Deception" }]
+    },
+    {
+      "id": "wanted-set", "when": "oppTurn", "on": { "control": { "card": "WANT", "kind": "st", "faceUp": false } },
+      "base": [{ "value": 0.1, "label": "WANTED (Set)" }]
+    },
+    {
+      "id": "deception-reset", "when": "oppTurn", "on": { "flag": "deceReset" },
+      "base": [{ "value": 0.1, "label": "Deception re-Sets in the End Phase" }]
+    },
     {
       "id": "sarcophagus", "when": "oppTurn", "on": { "control": { "card": "SARC", "kind": "st", "faceUp": true } },
       "base": [

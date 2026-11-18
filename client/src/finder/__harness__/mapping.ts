@@ -17,6 +17,7 @@ export const KIND_MAP = { ash: 'negDeckTouch', imperm: 'negFieldMon', veiler: 'n
 export const PEND_MAP: Record<string, string> = {
   rod: 'rod', circ2: 'circ2', tali3: 'tali3',   // group 2
   dmg: 'dmg1',   // group 4
+  dia: 'dia1', rcie: 'rcie',   // group 5
 };
 
 /**
@@ -27,6 +28,7 @@ export const OPT_MAP: Record<string, string> = {
   rod1: 'rod', circ1: 'circ1', circ2: 'circ2', curt: 'curt', tali3: 'tali3', ssrv2: 'ssrv2',   // group 2
   souls1: 'souls1', souls2: 'souls2', serv: 'serv', ioc1: 'ioc',   // group 3
   sarc1: 'sarc1', fsil: 'fsil', dmgP: 'dmg', dmg1: 'dmg1', dmbm1: 'dmbm', gand1: 'gand', gand2: 'gand2',   // group 4
+  diaP: 'dia', dia1: 'dia1', want1: 'want', want2: 'want2', dec1: 'dece1', dec2: 'dece2', hallG: 'hallG', rcie1: 'rcie',   // group 5
 };
 
 /** Map reference names through `table`, throwing on any it doesn't hold. */

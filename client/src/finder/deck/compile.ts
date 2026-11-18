@@ -102,7 +102,7 @@ export type PickFn = (s: State, r: Run) => Choice[];
 export type ActFn = (n: State, r: Run) => void;
 export type TrigEvent =
   | { t: 'place'; id: number; nm: number; special: boolean; from: LedgerZone | null }
-  | { t: 'move'; id: number; from: LedgerZone; to: LedgerZone }
+  | { t: 'move'; id: number; from: LedgerZone; to: LedgerZone; up: boolean }
   | { t: 'oppMonGy' };
 export type TriggerFn = ((ev: TrigEvent, self: number) => boolean) & { on: TrigEvent['t'] };
 
@@ -128,6 +128,8 @@ export interface Runtime {
   takeOut(n: State, c: CardRef): LedgerZone;
   /** A card moved between zones (not leaving the field): queue the triggers it sets off. */
   moved(n: State, id: number, from: LedgerZone, to: LedgerZone): void;
+  /** Take a card off the field (a monster or Spell/Trap at an index) into a zone, with a ledger entry and no trigger. */
+  removeQuietly(n: State, zone: 'mon' | 'st', at: number, to: ZoneName): void;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -217,6 +219,9 @@ interface CompiledEffect {
   gen(s: State, push: Push, pending: boolean, a: number | undefined): void;
   /** Queue check for a trigger: the limit is free, the card is where it must be and the conditions hold. */
   canQueue(s: State, at: Place | null): boolean;
+  /** An `immediate` trigger: run it now, inside the step that set it off, if it could be queued. */
+  fire(s: State, at: Place | null): void;
+  immediate: boolean;
   trigger: TriggerFn | null;
 }
 
@@ -315,7 +320,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       if (to === 'top') n.top.unshift(id);
       else so.W(n, to === 'deck' && props[id].ext ? 'extra' : to)[id]++;
       if (!(from === 'deck' && to === 'top')) L.mv(n, id, from, lzTo);
-      if (kind) onLeaveField(n, id, kind, up, lzTo); else moved(n, id, from, lzTo);
+      if (kind) onLeaveField(n, id, kind, up, lzTo); else moved(n, id, from, lzTo, true);
     },
     takeOut(n, c) {
       if (c.zone === 'deck') { ops.fromDeck(n, c.id); return 'deck'; }
@@ -329,7 +334,12 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       }
       throw new Error(`cannot take ${ids[c.id]} out of ${c.zone}`);
     },
-    moved: (n, id, from, to) => moved(n, id, from, to),
+    moved: (n, id, from, to) => moved(n, id, from, to, true),
+    removeQuietly(n, zone, at, to) {
+      const id = zone === 'mon' ? n.mons.splice(at, 1)[0].id : n.st.splice(at, 1)[0].id;
+      so.W(n, to === 'deck' && props[id].ext ? 'extra' : to)[id]++;
+      L.mv(n, id, 'field', LZ[to]);
+    },
   };
   function takeZone(n: State, z: ZoneName, id: number): void {
     const a = so.W(n, z);
@@ -449,6 +459,9 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const acts = (list: Word[] | undefined, field: string) => (list ?? []).map((a, j) => w('acts', a, `${base}.${field}[${j}]`) as ActFn);
     const cost = acts(def.cost, 'cost'), doActs = acts(def.do, 'do'), onNeg = acts(def.onNegated, 'onNegated');
     const trigger = def.trigger ? (w('triggers', def.trigger, `${base}.trigger`) as TriggerFn) : null;
+    const immediate = !!def.immediate;
+    if (immediate && !trigger) failAt('immediate')('an immediate effect needs a trigger');
+    if (immediate && (choose.length || cost.length || onNeg.length)) failAt('immediate')('an immediate effect has no choices, cost or onNegated (it is not a move)');
 
     // Tags: fixed ones in one frozen object; conditional ones evaluated per move.
     const fixed: Tags = {};
@@ -580,7 +593,16 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       return true;
     }
 
-    return { def, card, self, id, gen, canQueue, trigger };
+    function fire(s: State, at: Place | null): void {
+      if (!canQueue(s, at)) return;
+      const r: Run = { self, at: at ?? whereNow(s, undefined)!, chosen: EMPTY_CHOSEN };
+      if (limit >= 0) so.setOpt(s, limit);
+      for (let k = 0; k < doActs.length; k++) doActs[k](s, r);
+      const t = text(r);
+      if (t && s.cur) s.cur.text += ' ' + t;
+    }
+
+    return { def, card, self, id, gen, canQueue, fire, immediate, trigger };
   }
 
   const compiled = allEffects.map(({ card, def, i }) => compileEffect(card, def, i));
@@ -613,18 +635,24 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       if (!e.trigger!(ev, e.self)) continue;
       const mine = m.id === e.self;
       if (mine && m.noEff) continue;   // its effects are negated: its own trigger does not start
-      if (!e.canQueue(s, mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null)) continue;
+      const at: Place | null = mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null;
+      if (e.immediate) { e.fire(s, at); continue; }
+      if (!e.canQueue(s, at)) continue;
       s.pend.push(mine ? { e: e.id, a: m.uid } : { e: e.id });
     }
   }
-  function moved(s: State, id: number, from: LedgerZone, to: LedgerZone): void {
+  /** `up`: the card was face-up (a card leaving the field; true for any other move). */
+  function moved(s: State, id: number, from: LedgerZone, to: LedgerZone, up: boolean): void {
     if (!moveTrig.length) return;
-    const ev: TrigEvent = { t: 'move', id, from, to };
-    for (const e of moveTrig) if (e.trigger!(ev, e.self) && e.canQueue(s, null)) s.pend.push({ e: e.id });
+    const ev: TrigEvent = { t: 'move', id, from, to, up };
+    for (const e of moveTrig) {
+      if (!e.trigger!(ev, e.self)) continue;
+      if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) s.pend.push({ e: e.id });
+    }
   }
-  function onLeaveField(s: State, id: number, _kind: 'mon' | 'st', _up: boolean, to: LedgerZone = 'gy'): void { moved(s, id, 'field', to); }
+  function onLeaveField(s: State, id: number, _kind: 'mon' | 'st', up: boolean, to: LedgerZone = 'gy'): void { moved(s, id, 'field', to, up); }
   function onOppMonsterToGy(s: State): void {
-    for (const e of oppTrig) if (e.canQueue(s, null)) s.pend.push({ e: e.id });
+    for (const e of oppTrig) { if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) s.pend.push({ e: e.id }); }
   }
 
   function queueAfterSummon(s: State, e: number, m: Mon): void {
@@ -632,7 +660,9 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     if (!c) return;
     const mine = m.id === c.self;
     if (mine && m.noEff) return;
-    if (!c.canQueue(s, mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null)) return;
+    const at: Place | null = mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null;
+    if (c.immediate) { c.fire(s, at); return; }
+    if (!c.canQueue(s, at)) return;
     s.pend.unshift(mine ? { e, a: m.uid } : { e });
   }
 

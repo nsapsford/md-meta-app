@@ -178,5 +178,77 @@
     "atk": 0,
     "def": 0,
     "text": "Gains 300 ATK for each banished card. You can only use each of the following effects of \"Gandora-G the Dragon of Destruction\" once per turn. If you control \"Shining Sarcophagus\": You can Special Summon this card from your hand. You can pay half your LP; destroy as many other cards on the field as possible, and if you do, banish them, then Special Summon 1 Level 7 or lower monster that mentions \"Shining Sarcophagus\" from your Deck, and increase its Level by the number of cards destroyed by this effect."
+  },
+  {
+    "passcode": 72270339,
+    "name": "Diabellstar the Black Witch",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 7,
+    "link": null,
+    "atk": 2500,
+    "def": 2000,
+    "text": "You can Special Summon this card (from your hand) by sending 1 card from your hand or field to the GY. You can only Special Summon \"Diabellstar the Black Witch\" once per turn this way. You can only use each of the following effects of \"Diabellstar the Black Witch\" once per turn. If this card is Normal or Special Summoned: You can Set 1 \"Sinful Spoils\" Spell/Trap directly from your Deck. During your opponent's turn, if this card is sent from its owner's hand or field to the GY: You can send 1 card from your hand or field to the GY, and if you do, Special Summon this card."
+  },
+  {
+    "passcode": 80845034,
+    "name": "WANTED: Seeker of Sinful Spoils",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Add 1 \"Diabellstar\" monster from your Deck or GY to your hand. During your Main Phase: You can banish this card from your GY, then target 1 of your \"Sinful Spoils\" Spells/Traps that is banished or in your GY, except \"WANTED: Seeker of Sinful Spoils\"; place it on the bottom of the Deck, then draw 1 card. You can only use each effect of \"WANTED: Seeker of Sinful Spoils\" once per turn."
+  },
+  {
+    "passcode": 66328392,
+    "name": "Deception of the Sinful Spoils",
+    "type": "Spell Card",
+    "race": "Continuous",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "You can Tribute 1 monster from your hand or field; add 1 \"Azamina\" card from your Deck to your hand. If a monster(s) is sent to your opponent's GY, and you control an \"Azamina\" monster (except during the Damage Step): You can make your opponent lose 1500 LP, and if you do, gain 1500 LP. During the End Phase, if this card is in the GY because it was sent there from the Spell & Trap Zone this turn while face-up: You can Set it. You can only use each effect of \"Deception of the Sinful Spoils\" once per turn."
+  },
+  {
+    "passcode": 94845588,
+    "name": "The Hallowed Azamina",
+    "type": "Spell Card",
+    "race": "Normal",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Reveal 1 \"Azamina\" Fusion Monster in your Extra Deck, and for every 4 Levels it has (round down), send 1 \"Sinful Spoils\" card from your hand and/or field to the GY (if face-down, reveal it), then Special Summon that revealed monster. (This is treated as a Fusion Summon.) If this card is in the GY: You can target 1 \"Azamina\" monster you control or in your GY; shuffle it into the Deck, and if you do, add this card to your hand. You can only use this effect of \"The Hallowed Azamina\" once per turn."
+  },
+  {
+    "passcode": 46396218,
+    "name": "Azamina Ilia Silvia",
+    "type": "Fusion Monster",
+    "race": "Illusion",
+    "attr": "DARK",
+    "level": 6,
+    "link": null,
+    "atk": 1900,
+    "def": 1500,
+    "text": "1 Illusion monster + 1 LIGHT Spellcaster monster\r\nAny battle damage your \"Azamina\" monsters, except \"Azamina Ilia Silvia\", inflicts to your opponent is doubled. You can only use each of the following effects of \"Azamina Ilia Silvia\" once per turn. When your opponent activates a card or effect (Quick Effect): You can Tribute this card; negate that effect. If this card is destroyed by battle or card effect: You can add 1 \"Sinful Spoils\" Trap from your Deck to your hand."
+  },
+  {
+    "passcode": 73391962,
+    "name": "Azamina Mu Rcielago",
+    "type": "Fusion Monster",
+    "race": "Illusion",
+    "attr": "DARK",
+    "level": 6,
+    "link": null,
+    "atk": 2000,
+    "def": 2400,
+    "text": "1 Illusion monster + 1 LIGHT Spellcaster monster\r\nMonsters your opponent controls lose 500 ATK/DEF for each \"Azamina\" monster you control. You can only use each of the following effects of \"Azamina Mu Rcielago\" once per turn. If this card is Fusion Summoned: You can add 1 \"Azamina\" or \"Sinful Spoils\" card from your Deck to your hand. If this card is destroyed by battle or card effect: You can add 1 \"Sinful Spoils\" Spell from your Deck to your hand."
   }
 ]
