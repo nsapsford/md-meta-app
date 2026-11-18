@@ -306,7 +306,6 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     },
     monIndex, stIndex,
     moveCard(n, c, to) {
-      const lzTo: LedgerZone = to === 'top' ? 'deck' : LZ[to];
       let id = c.id, from: LedgerZone, kind: 'mon' | 'st' | null = null, up = true;
       if (c.zone === 'mon') {
         const i = monIndex(n, c); if (i < 0) throw new Error(`card ${ids[c.id]} is not on the field`);
@@ -317,8 +316,11 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       } else if (c.zone === 'deck' && to === 'top') {
         ops.shuffle(n); takeZone(n, 'deck', id); from = 'deck';
       } else from = rt.takeOut(n, c);
-      if (to === 'top') n.top.unshift(id);
-      else so.W(n, to === 'deck' && props[id].ext ? 'extra' : to)[id]++;
+      // An Extra Deck card sent to the Deck goes to the Extra Deck (and the ledger says so).
+      const zTo: ZoneName | 'top' = to === 'deck' && props[id].ext ? 'extra' : to;
+      const lzTo: LedgerZone = zTo === 'top' ? 'deck' : LZ[zTo];
+      if (zTo === 'top') n.top.unshift(id);
+      else so.W(n, zTo)[id]++;
       if (!(from === 'deck' && to === 'top')) L.mv(n, id, from, lzTo);
       if (kind) onLeaveField(n, id, kind, up, lzTo); else moved(n, id, from, lzTo, true);
     },
@@ -337,8 +339,9 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     moved: (n, id, from, to) => moved(n, id, from, to, true),
     removeQuietly(n, zone, at, to) {
       const id = zone === 'mon' ? n.mons.splice(at, 1)[0].id : n.st.splice(at, 1)[0].id;
-      so.W(n, to === 'deck' && props[id].ext ? 'extra' : to)[id]++;
-      L.mv(n, id, 'field', LZ[to]);
+      const z: ZoneName = to === 'deck' && props[id].ext ? 'extra' : to;
+      so.W(n, z)[id]++;
+      L.mv(n, id, 'field', LZ[z]);
     },
   };
   function takeZone(n: State, z: ZoneName, id: number): void {
@@ -461,7 +464,12 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const trigger = def.trigger ? (w('triggers', def.trigger, `${base}.trigger`) as TriggerFn) : null;
     const immediate = !!def.immediate;
     if (immediate && !trigger) failAt('immediate')('an immediate effect needs a trigger');
-    if (immediate && (choose.length || cost.length || onNeg.length)) failAt('immediate')('an immediate effect has no choices, cost or onNegated (it is not a move)');
+    if (immediate) {
+      // Fields a move reads; an immediate effect makes no move, so any of them would be ignored.
+      const moveOnly = ['choose', 'cost', 'onNegated', 'activates', 'ledger', 'negText', 'negatable', 'mandatory', 'stepTags', 'stepMarks', 'marks'] as const;
+      for (const f of moveOnly) if (def[f] !== undefined) failAt(f)('an immediate effect makes no move: it takes no ' + f);
+      if (Object.keys(def.tags).length) failAt('tags')('an immediate effect makes no move: its tags must be {}');
+    }
 
     // Tags: fixed ones in one frozen object; conditional ones evaluated per move.
     const fixed: Tags = {};

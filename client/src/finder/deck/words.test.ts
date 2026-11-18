@@ -629,7 +629,39 @@ describe('group 5 words: immediate triggers, leftField faceUp, gainLp, fromField
   it('immediate needs a trigger and takes no choices', () => {
     const err = (e: Partial<EffectDef>) => { try { compileDeck(fileWith([eff(e)]), FACTS); } catch (x) { return (x as DeckCompileError).errors[0].field; } return null; };
     expect(err({ immediate: true })).toBe('effects[0].immediate');
-    expect(err({ immediate: true, trigger: { oppMonsterToGy: true }, choose: [{ as: 'c', pick: { otherHandCard: true } }] })).toBe('effects[0].immediate');
+    const imm = { immediate: true, trigger: { oppMonsterToGy: true } };
+    expect(err({ ...imm, choose: [{ as: 'c', pick: { otherHandCard: true } }] })).toBe('effects[0].choose');
+    // Fields only a move reads are refused, not silently ignored.
+    expect(err({ ...imm, activates: 'spell' })).toBe('effects[0].activates');
+    expect(err({ ...imm, ledger: { effect: 1 } })).toBe('effects[0].ledger');
+    expect(err({ ...imm, tags: { spell: true } })).toBe('effects[0].tags');
+    expect(err(imm)).toBeNull();
+  });
+
+  it('moving an Extra Deck card to the Deck puts it in the Extra Deck, and the ledger says extra', () => {
+    const d = probe([eff({ from: 'hand', choose: [{ as: 'c', pick: { union: [{ fromField: { kind: 'mon' } }, { fromZone: { zone: 'gy', group: 'sync' } }] } }], do: [{ move: { what: 'c', to: 'deck' } }] })], { groups: { ...TOY_FILE.groups, sync: ['SYNC'] } });
+    const s = d.state({ PROBE: 1 });
+    onField(d, s, 'SYNC');
+    gy('SYNC')(s, d);
+    const extra0 = d.count(s, 'extra', 'SYNC');
+    // Two moves keyed p:SYNC: the one on the field (first), the one in the GY.
+    const ms = d.moves(s).filter((x) => x.k === 'p:SYNC');
+    expect(ms).toHaveLength(2);
+    for (const [m, from] of [[ms[0], 'field'], [ms[1], 'gy']] as const) {
+      const n = m.run(s, false);
+      expect(d.count(n, 'extra', 'SYNC')).toBe(extra0 + 1);
+      expect(d.count(n, 'deck', 'SYNC')).toBe(d.count(s, 'deck', 'SYNC'));
+      expect(n.log[0].seq).toContainEqual(['m', d.deck.ix.SYNC, from, 'extra']);
+    }
+  });
+
+  it('wipeField noTriggers writes the zone it really puts the card in to the ledger', () => {
+    const d = probe([eff({ from: 'field', do: [{ wipeField: { noTriggers: true } }] })]);
+    const s = d.state({});
+    onField(d, s, 'PROBE'); onField(d, s, 'SYNC');
+    const n = d.run(s, 'p');
+    expect(d.count(n, 'gy', 'SYNC')).toBe(1);
+    expect(n.log[0].seq).toContainEqual(['m', d.deck.ix.SYNC, 'field', 'gy']);
   });
 
   it('gainLp gains Life Points', () => {

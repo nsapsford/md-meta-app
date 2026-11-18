@@ -76,6 +76,9 @@ describe('group 5 extra lockstep checks', () => {
     expect(g.diffs).toBe('');
   });
 
+  // This check cannot fail on Gandora's `noTriggers`: a banished Deception never matches its
+  // `leftField { to: gy }` re-Set trigger anyway. The word itself is covered by the unit test
+  // "wipeField noTriggers" in deck/words.test.ts.
   it('Gandora-G wipes the field with a face-up Deception on it (no re-Set is earned)', () => {
     const r = walk(cfgOf({ SARC: 1, GAND: 1, ASH: 1, MAXX: 1, FUWA: 1, DROLL: 1 }, { mode: 'second', without: ['DECE'], opp: OPP }), { up: ['DECE'] });
     expect(r.keys.has('gand2:null')).toBe(true);
