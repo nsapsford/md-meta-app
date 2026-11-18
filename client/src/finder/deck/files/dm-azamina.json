@@ -1,0 +1,12 @@
+{
+  "vocab": 1,
+  "id": "dm-azamina",
+  "name": "Dark Magician Azamina",
+  "uses": ["staples"],
+  "cards": [
+    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician" }
+  ],
+  "groups": {},
+  "endOfTurn": { "setOrder": [] },
+  "boardValue": []
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "passcode": 36996508,
+    "name": "Dark Magician",
+    "type": "Normal Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 7,
+    "link": null,
+    "atk": 2500,
+    "def": 2100,
+    "text": "''The ultimate wizard in terms of attack and defense.''"
+  }
+]
