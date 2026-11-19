@@ -4,7 +4,26 @@
 
 import type { MoveView, StepDiff } from './lockstep';
 
-export interface AcceptedDiff { side: 'missing' | 'extra'; test(m: MoveView): boolean; reason: string }
+/**
+ * `pairedWith`: the entry applies only when the same step's other side (extra for a missing
+ * entry, missing for an extra one) has a move it pairs with.
+ */
+export interface AcceptedDiff { side: 'missing' | 'extra'; test(m: MoveView): boolean; pairedWith?(m: MoveView, other: MoveView): boolean; reason: string }
+
+/** The card a Master of Chaos revive move brings back (DMG or DIA), or null. */
+function mocRevive(m: MoveView): 'DMG' | 'DIA' | null {
+  const x = /^moc1:(DMG|DIA)(#\d+)?$/.exec(m.key);
+  return x && !m.negated ? (x[1] as 'DMG' | 'DIA') : null;
+}
+/** The revived card's own trigger (dmg1 for DMG, dia1 for DIA) is first in the result's pending list. */
+const firstPending = (m: MoveView, c: 'DMG' | 'DIA') => (c === 'DMG' ? /"pend":\["dmg1"/ : /"pend":\["dia1"/).test(m.obs);
+const baseKey = (k: string) => k.replace(/#\d+$/, '');
+/** An extra (new engine) revive with its trigger pending first, matching a missing (reference) one by key and text. */
+function mocPair(extra: MoveView, missing: MoveView): boolean {
+  const c = mocRevive(extra);
+  return c !== null && baseKey(extra.key) === baseKey(missing.key) && extra.text === missing.text
+    && firstPending(extra, c) && !/"pend":\["(dmg1|dia1)"/.test(missing.obs);
+}
 
 export const ACCEPTED: AcceptedDiff[] = [
   {
@@ -18,20 +37,23 @@ export const ACCEPTED: AcceptedDiff[] = [
   // reference queues them only after their own summon procedures, so its result lacks the trigger.
   {
     side: 'missing',
-    test: (m) => !m.negated && /^moc1:(DMG|DIA)(#\d+)?$/.test(m.key) && !/"pend":\["(dmg|dia)\b/.test(m.obs),
-    reason: 'Master of Chaos reviving DMG Apprentice or Diabellstar: by the card text ("If this card is Normal or Special Summoned") its trigger starts; the reference queues it only after the card\'s own summon procedures. The new engine queues it, so the reference result (with no trigger pending) has no match.',
+    test: (m) => mocRevive(m) !== null && !/"pend":\["(dmg1|dia1)"/.test(m.obs),
+    pairedWith: (m, o) => mocPair(o, m),
+    reason: "Master of Chaos reviving DMG Apprentice or Diabellstar: by the card text ('If this card is Normal or Special Summoned') its trigger starts; the reference queues it only after the card's own summon procedures. Accepted only with its new-engine counterpart at the same step (the same revive, with that trigger pending first).",
   },
   {
     side: 'extra',
-    test: (m) => !m.negated && (/^moc1:DMG(#\d+)?$/.test(m.key) && /"pend":\["dmg1"/.test(m.obs) || /^moc1:DIA(#\d+)?$/.test(m.key) && /"pend":\["dia1"/.test(m.obs)),
-    reason: 'The other half of the Master of Chaos revive entry above: the new engine\'s result has DMG Apprentice\'s search (dmg1) or Diabellstar\'s Set (dia1) pending first, as the card text says.',
+    test: (m) => { const c = mocRevive(m); return c !== null && firstPending(m, c); },
+    pairedWith: (m, o) => mocPair(m, o),
+    reason: "The other half of the Master of Chaos revive entry above: the new engine's result has DMG Apprentice's search (dmg1) or Diabellstar's Set (dia1) pending first, as the card text says; accepted only with the reference's matching revive at the same step.",
   },
 ];
 
 /** The differences left once accepted ones are taken out (a step with nothing left is dropped). */
 export function withoutAccepted(diffs: StepDiff[], accepted: readonly AcceptedDiff[] = ACCEPTED): StepDiff[] {
-  const keep = (side: AcceptedDiff['side']) => (m: MoveView) => !accepted.some((a) => a.side === side && a.test(m));
+  const keep = (side: AcceptedDiff['side'], other: MoveView[]) => (m: MoveView) =>
+    !accepted.some((a) => a.side === side && a.test(m) && (!a.pairedWith || other.some((o) => a.pairedWith!(m, o))));
   return diffs
-    .map((d) => ({ ...d, missing: d.missing.filter(keep('missing')), extra: d.extra.filter(keep('extra')) }))
+    .map((d) => ({ ...d, missing: d.missing.filter(keep('missing', d.extra)), extra: d.extra.filter(keep('extra', d.missing)) }))
     .filter((d) => d.missing.length || d.extra.length || d.evalDiff || d.obsDiff);
 }
