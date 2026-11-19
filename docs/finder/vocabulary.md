@@ -24,6 +24,12 @@ Extra Deck rules (`extraDeck`) are tried in (`order`, card id, method) order, wh
 in the file; `order` is an optional number (default 0), as on effects. That order is the order of
 the Synchro and Link moves and of the Fusion options.
 
+Effect fields: `queueFirst` (a trigger) queues it at the front of the pending list instead of the back. Card fields: `materialAttribute: "any"` (see the condition). Fusion rules take `uses`, a filter: the Fusion Monster gets one use of its counted effect per material matching it. A field filter (`fromField`, `control`, `has` in `field`) reads each monster where it is (its name and Level there).
+
+Text: `{as}` the chosen card's name; `{as?text|other}` text (`$` for the name) when the choice was made; `{as@zone?text|other}` text when the choice came from that zone (hand, deck, extra, gy, ban, field, opp); `{as.atk}` the chosen card's ATK; `{zone}` where the first choice came from.
+
+The deck file's own `endOfTurn.setOrder` is kept as written and may place shared cards; a shared file's entries it does not list follow.
+
 Board value (`boardValue`): a monster on the final board with no entry of its own is worth
 min(0.2, ATK / 15000). A monster's board-value entry must name it by `card` or `group` inside a
 `control` word in its `on` (at any depth) for its default value to be replaced.
@@ -67,6 +73,10 @@ the cards of a shared file it uses there.
 | `spellActivatedThisTurn` | condition | none | You have activated a Spell this turn. |
 | `not` | condition | condition | The nested condition is false. |
 | `any` | condition | list of conditions (≥ 1) | At least one nested condition is true. |
+| `all` | condition | list of conditions (≥ 1) | Every nested condition is true. |
+| `materialAttribute` | condition | list of Attributes (≥ 1) | As material (or a cost by Attribute): this card's Attribute is one of them; one of your monsters whose card has `materialAttribute: "any"` counts as each. |
+| `level` | condition | `{ atLeast?, atMost? }` | This card's Level (one of your monsters: its current Level) is within atLeast..atMost. |
+| `usesLeft` | condition | none | This monster has a use of its counted effect left (uses come from its Fusion rule's `uses`). |
 | `tuner` | condition | none | This card is a Tuner monster. |
 | `attribute` | condition | list of Attributes (≥ 1) | This card's Attribute is one of them. |
 | `race` | condition | list of monster Types (≥ 1) | This card's monster Type is one of them. |
@@ -79,6 +89,8 @@ the cards of a shared file it uses there.
 | `knownTop` | condition | `{ atLeast?, atMost? }` | The number of known cards on top of the Deck is within atLeast..atMost. |
 | `namesPresent` | condition | `{ names: card[] (≥ 1), inGy?: card[], atLeast?, atMost? }` | The number of the given names on your field (a monster by its name there) or in your GY (a card by its GY name; only the names listed in `inGy`, if given) is within atLeast (default 1)..atMost. |
 | `fromZone` | pick | `{ zone, group? \| filter?, eachCopy?, plus?: what }` | Each distinct card (of the group or filter, if given) in the zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first). |
+| `fusionMaterials` | pick | `{ either?, join?, oppPrefix? }` | Each set of your monsters (`either`: also the opponent's face-up monsters) that can make a Fusion Monster in your Extra Deck by the deck's Fusion rules; its name joins the members with `join` (default " + "), an opponent's monster as `oppPrefix` + its name. |
+| `fusionMonster` | pick | `{ of: what }` | Each Fusion Monster the chosen `fusionMaterials` set can make. |
 | `fromField` | pick | `{ group? \| filter?, kind?: mon\|st, faceUp?, distinct? }` | Each card you control on the field; `distinct`: each card id once (the first on the field). |
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
 | `cheapest` | pick | `{ of: pick, n? }` | Only the n (default 1) choices of the nested pick with the lowest discard value. |
@@ -98,7 +110,9 @@ the cards of a shared file it uses there.
 | `setOnField` | action | `{ what }` | Set a Spell/Trap from where it is (hand, Deck, GY or banishment) to your field. |
 | `payLp` | action | number ≥ 1, or `"half"` | Pay that many Life Points, or half. |
 | `gainLp` | action | number ≥ 1 | Gain that many Life Points. |
-| `burn` | action | number ≥ 1 | Inflict that much damage to the opponent. |
+| `burn` | action | number ≥ 1, or `{ atkOf: what }` | Inflict that much damage to the opponent, or damage equal to a chosen card's ATK (an opponent's card: its own; list it before the card leaves). |
+| `spendUse` | action | `{ what }` | One of your monsters spends a use of its counted effect. |
+| `fusionSummon` | action | `{ what, mats: what, to?: gy\|deck }` | Fusion Summon the chosen Fusion Monster from the Extra Deck with the chosen materials: yours go to `to` (default the GY; the Deck is then shuffled), highest field index first, then the opponent's go to their GY as material. It gets one use per material matching its Fusion rule's `uses`. |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |
 | `oppRemoveAll` | action | `{ how: destroy\|banish, kind?: mon\|st, faceUp?, destroyable? }` | Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply). |
 | `wipeField` | action | `{ banish?, spare?: condition, thenSummon?: what, noTriggers? }` | Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every opponent card that can be destroyed (`banish`: banish them instead; `noTriggers`: your cards leave without setting off any trigger). Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed. |

@@ -154,12 +154,13 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
 /**
  * The materials an effect performing a Fusion can use from the field: your monsters, then the
  * opponent's face-up monsters (an opponent's monster has no card index: `id` is `UNK`, and `nm`
- * is negative, the same for monsters of the same name).
+ * is negative, the same for monsters of the same name). One of your monsters that counts as any
+ * Attribute as material (`CardProps.materialAnyAttr`) has `attr` '*'.
  */
 export function fieldPool(s: State, props: readonly CardProps[], UNK: number): MatView[] {
   const pool: MatView[] = s.mons.map((m, i) => {
     const p = props[m.id];
-    return { side: 'me', idx: i, id: m.id, nm: m.nm, race: p.race ?? '?', attr: p.attr ?? '?', sub: p.sub, ext: p.ext };
+    return { side: 'me', idx: i, id: m.id, nm: m.nm, race: p.race ?? '?', attr: p.materialAnyAttr ? '*' : p.attr ?? '?', sub: p.sub, ext: p.ext };
   });
   if (s.opp) {
     const names = s.opp.mons.map((x) => x.name || String(x.uid));
@@ -173,12 +174,20 @@ export function fieldPool(s: State, props: readonly CardProps[], UNK: number): M
 
 const known = (v: string) => v !== '?';
 
-/** Do the materials meet every relation of the rule? An unknown Type or Attribute ('?') meets none. */
+/**
+ * Do the materials meet every relation of the rule? An unknown Type or Attribute ('?') meets none;
+ * an Attribute '*' (any) is the same as every other.
+ */
 function related(rel: FusionRule['relations'], mats: MatView[]): boolean {
   for (const r of rel) {
     switch (r) {
       case 'sameRace': if (!mats.every((m) => known(m.race) && m.race === mats[0].race)) return false; break;
-      case 'sameAttr': if (!mats.every((m) => known(m.attr) && m.attr === mats[0].attr)) return false; break;
+      case 'sameAttr': {
+        if (!mats.every((m) => known(m.attr))) return false;
+        const set = mats.find((m) => m.attr !== '*')?.attr;
+        if (set !== undefined && !mats.every((m) => m.attr === '*' || m.attr === set)) return false;
+        break;
+      }
       case 'differentRace': if (!mats.every((m) => known(m.race)) || new Set(mats.map((m) => m.race)).size !== mats.length) return false; break;
       case 'differentNames': if (new Set(mats.map((m) => m.nm)).size !== mats.length) return false; break;
     }
@@ -211,7 +220,7 @@ function fillsSlots(s: State, slots: CondFn[], mats: MatView[]): boolean {
  * each Fusion rule whose monster is in the Extra Deck, in the compiled rules' (order, card id) order, when the materials fill the
  * rule's slots and meet its relations.
  */
-export function fusionOptions(s: State, pool: MatView[], rules: CompiledExtraRule[]): { card: number; mats: MatView[] }[] {
+export function fusionOptions(s: State, pool: MatView[], rules: readonly CompiledExtraRule[]): { card: number; mats: MatView[] }[] {
   const out: { card: number; mats: MatView[] }[] = [];
   const fus = rules.filter((r): r is FusionRule => r.method === 'fusion' && s.extra[r.card] > 0);
   const sizes = [...new Set(fus.map((r) => r.slots.length))].sort((a, b) => a - b);

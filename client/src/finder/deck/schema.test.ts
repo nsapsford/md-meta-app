@@ -94,6 +94,14 @@ describe('validateDeckFile', () => {
     ]);
   });
 
+  it("the deck file's own setOrder is kept as written; a shared file's entries it does not list follow", () => {
+    const staples = { vocab: 1, cards: [{ id: 'S', passcodes: [9], short: 'Staple' }, { id: 'U', passcodes: [8], short: 'Other' }], endOfTurn: { setOrder: ['S', 'U'] } };
+    const r = validateDeckFile({ ...MINIMAL, uses: ['staples'], endOfTurn: { setOrder: ['A', 'S'] } }, { staples });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.file.endOfTurn.setOrder).toEqual(['A', 'S', 'U']);
+  });
+
   it('every word has a doc line', () => {
     for (const reg of Object.values(WORDS)) for (const w of reg.values()) expect(w.doc.length).toBeGreaterThan(10);
   });

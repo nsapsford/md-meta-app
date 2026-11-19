@@ -26,6 +26,8 @@ export interface DeckFile {
 }
 export interface CardDef { id: CardId; passcodes: number[]; short: string; discardValue?: number; heldValue?: number; immuneToRemoval?: boolean;
   hints?: { normalSummon?: boolean };
+  /** `'any'`: one of your monsters that counts as any Attribute when it is used as material (`materialAttribute` condition, Fusion `sameAttr`). */
+  materialAttribute?: 'any';
   /** Where the card comes when a pick lists several cards (lower first; cards without one come after, by id). */
   listOrder?: number; fieldName?: CardId | { if: Word[]; name: CardId }[]; gyName?: CardId; effects?: EffectDef[] }
 export type Loc = 'hand' | 'field' | 'setNotThisTurn' | 'faceDown' | 'faceUp' | 'gy' | 'ban' | 'extra';
@@ -42,12 +44,16 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   mandatory?: boolean;
   /** A trigger that is not queued: when its event happens it runs at once inside the step that set it off (no move of its own); its `text`, if any, is added to that step's text. */
   immediate?: boolean;
+  /** A trigger queued at the front of the pending list (to resolve before triggers already waiting), instead of at the back. */
+  queueFirst?: boolean;
   text: string; negText?: string; ledger?: { effect?: number } }
 /** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
 export type ExtraRule = { order?: number } & (
   | { card: CardId; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats?: Word; then?: string }
   | { card: CardId; method: 'link'; rating: number; min: number; max: number; mats?: Word; bottomArrows?: boolean; then?: string }
-  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string });
+  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string;
+      /** A filter: the Fusion Monster gets one use of its counted effect per material matching it (`usesLeft`, `spendUse`). */
+      uses?: Word });
 export interface ProtectionDef { id: string; label: string; order: number; where: Word[]; covers?: { marks?: string[]; monsterOnly?: boolean; inResponseOnly?: boolean }; limit?: string; consume: Word[]; stepNote?: string }
 export interface BoardValueDef { id: string; when: 'oppTurn' | 'endPhase'; on: Word; base: { if?: Word[]; value: number; label: string }[]; adds?: { if: Word[]; value: number; label: string }[]; extraCopies?: { value: number; label: string }; effect?: EffectDef }
 export interface DeckFileError { card: string | null; field: string; message: string }
@@ -73,7 +79,7 @@ const CARD: Fields = {
   discardValue: opt(A.number), heldValue: opt(A.number), immuneToRemoval: opt(A.boolean),
   hints: opt(A.object({ normalSummon: opt(A.boolean) })), listOrder: opt(A.number),
   fieldName: opt(A.oneOf(A.card, A.list(A.object({ if: A.condList, name: A.card })))),
-  gyName: opt(A.card),
+  gyName: opt(A.card), materialAttribute: opt(A.enum('any')),
 };
 
 const EFFECT: Fields = {
@@ -84,7 +90,7 @@ const EFFECT: Fields = {
   cond: opt(A.condList), cost: opt(A.actList),
   choose: opt(A.list(A.object({ as: A.string, pick: A.pick, optional: opt(A.boolean) }))),
   do: A.actList, onNegated: opt(A.actList),
-  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean),
+  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean), queueFirst: opt(A.boolean),
   marks: opt(A.list(A.mark)), stepMarks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
   text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };
@@ -93,7 +99,7 @@ const EXTRA_RULE: ArgSpec = {
   k: 'variant', tag: 'method', cases: {
     synchro: { order: opt(A.number), card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect) },
     link: { order: opt(A.number), card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect) },
-    fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect) },
+    fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect), uses: opt(A.cond) },
   },
 };
 
@@ -377,10 +383,12 @@ function merge(deck: Record<string, unknown>, sources: Source[]): DeckFile {
   out.groups = Object.assign({}, ...all.map((f) => (isObj(f.groups) ? f.groups : {})));
   out.boardValue = all.flatMap((f) => list<BoardValueDef>(f.boardValue));
   const ends = all.map((f) => f.endOfTurn).filter(isObj) as DeckFile['endOfTurn'][];
-  out.endOfTurn = {
-    ...out.endOfTurn,
-    setOrder: ends.flatMap((e) => e.setOrder ?? []),
-  };
+  // The deck file's own Set order comes first and is kept as written (it may place shared cards);
+  // a shared file's entries it does not list follow, in file order.
+  const own = isObj(deck.endOfTurn) ? (deck.endOfTurn as DeckFile['endOfTurn']).setOrder ?? [] : [];
+  const setOrder = [...own];
+  for (const e of ends) for (const id of e.setOrder ?? []) if (!setOrder.includes(id)) setOrder.push(id);
+  out.endOfTurn = { ...out.endOfTurn, setOrder };
   const keep = ends.flatMap((e) => e.keepOneInHandIf ?? []);
   if (keep.length) out.endOfTurn.keepOneInHandIf = keep;
   const only = Object.assign({}, ...ends.map((e) => e.setOnlyIf ?? {}));

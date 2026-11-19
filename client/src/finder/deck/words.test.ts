@@ -695,3 +695,114 @@ describe('group 5 words: immediate triggers, leftField faceUp, gainLp, fromField
     expect(quiet.n.log[0].seq).toContainEqual(['m', quiet.d.deck.ix.WALL, 'field', 'banished']);
   });
 });
+
+describe('group 6 words: all, level, materialAttribute, uses, burn atkOf, text holes, Fusion words, queueFirst', () => {
+  const pickKeys = (filter: Word, card: Partial<CardDef> = {}, setup: (s: State, d: ReturnType<typeof probe>) => void = () => {}) => {
+    const d = probe([eff({ choose: [{ as: 'c', pick: { fromField: { kind: 'mon', filter } } }] })], {}, card);
+    const s = d.state({ PROBE: 1 });
+    setup(s, d);
+    return d.mainKeys(s);
+  };
+
+  it('all is true when every nested condition is', () => {
+    expect(offered([{ all: [{ lpAbove: 0 }, { has: { zone: 'hand' } }] }])).toBe(true);
+    expect(offered([{ all: [{ lpAbove: 8000 }, { has: { zone: 'hand' } }] }])).toBe(false);
+  });
+
+  it('level reads a monster on the field by its current Level, and a field filter reads it there', () => {
+    const put = (s: State, d: ReturnType<typeof probe>) => { onField(d, s, 'BIG'); s.mons[0].lvl = 4; };
+    expect(pickKeys({ level: { atLeast: 5 } }, {}, put)).toEqual([]);
+    expect(pickKeys({ level: { atLeast: 4, atMost: 4 } }, {}, put)).toEqual(['p:BIG']);
+  });
+
+  it('materialAttribute: a monster whose card counts as any Attribute as material matches each; attribute does not', () => {
+    const put = (s: State, d: ReturnType<typeof probe>) => { onField(d, s, 'PROBE'); };
+    expect(pickKeys({ materialAttribute: ['LIGHT'] }, { materialAttribute: 'any' }, put)).toEqual(['p:PROBE']);
+    expect(pickKeys({ attribute: ['LIGHT'] }, { materialAttribute: 'any' }, put)).toEqual([]);
+    expect(pickKeys({ materialAttribute: ['LIGHT'] }, {}, put)).toEqual([]);
+    expect(pickKeys({ materialAttribute: ['DARK'] }, {}, put)).toEqual(['p:PROBE']);
+  });
+
+  it('usesLeft / spendUse: a counted effect is offered while uses are left, and spends one even when negated', () => {
+    const d = probe([eff({ from: 'field', cond: [{ usesLeft: true }], cost: [{ spendUse: { what: 'self' } }] })]);
+    const s = d.state({});
+    onField(d, s, 'PROBE');
+    expect(d.mainKeys(s)).toEqual([]);
+    s.mons[0].uses = 1;
+    const n = d.run(s, 'p', true);
+    expect(n.mons[0].uses).toBe(0);
+    expect(d.mainKeys(n)).toEqual([]);
+  });
+
+  it("burn atkOf burns the chosen opponent card's ATK; {as.atk} prints it and {as@zone?text} tests where a choice came from", () => {
+    const o = probe([eff({ choose: [{ as: 't', pick: { oppCard: { kind: 'mon' } } }], do: [{ burn: { atkOf: 't' } }, { oppRemove: { what: 't', how: 'destroy' } }], text: 'Destroy {t}, burn {t.atk}.' })]);
+    const n = o.run(withOpp(o, { PROBE: 1 }), 'p:om1');
+    expect(o.lastText(n)).toBe('Destroy Foe, burn 2000.');
+    expect([n.burn, n.opp!.lp]).toEqual([2000, 6000]);
+    const z = probe([eff({ choose: [{ as: 'c', pick: { union: [{ fromZone: { zone: 'hand', filter: { named: 'BIG' } } }, { fromZone: { zone: 'gy', filter: { named: 'BIG' } } }] } }], text: 'On {c}{c@gy? in GY|!}.' })]);
+    const s = z.state({ PROBE: 1, BIG: 1 });
+    gy('BIG')(s, z);
+    expect(z.moves(s).map((m) => z.lastText(m.run(s, false)))).toEqual(['On Big!.', 'On Big in GY.']);
+    expect(() => probe([eff({ choose: [{ as: 'c', pick: { otherHandCard: true } }], text: '{c@moon?x}' })])).toThrow(/unknown zone/);
+  });
+
+  const FUSE: Partial<DeckFile> = { extraDeck: [{ card: 'SYNC', method: 'fusion', slots: [{ named: 'BIG' }, { race: ['Spellcaster'] }], uses: { frame: ['Normal'] } }] };
+  const fuser = (to?: 'gy' | 'deck', either = false) => probe([eff({
+    choose: [{ as: 'mats', pick: { fusionMaterials: { either, oppPrefix: 'their ' } } }, { as: 'fus', pick: { fusionMonster: { of: 'mats' } } }],
+    do: [{ fusionSummon: { what: 'fus', mats: 'mats', ...(to ? { to } : {}) } }], text: '{mats} into {fus}.',
+  })], FUSE);
+
+  it('fusionMaterials / fusionMonster offer each material set and what it makes; fusionSummon sends them and gives uses', () => {
+    const d = fuser();
+    const s = d.state({ PROBE: 1 });
+    onField(d, s, 'BIG'); onField(d, s, 'SEEKER'); onField(d, s, 'WALL');
+    expect(d.mainKeys(s)).toEqual(['p:BIG+SEEKER:SYNC']);
+    const n = d.run(s, 'p:BIG+SEEKER:SYNC');
+    expect(d.lastText(n)).toBe('Big + Seeker into Sync.');
+    expect(n.mons.map((m) => [d.deck.ids[m.id], m.uses])).toEqual([['WALL', 0], ['SYNC', 1]]);
+    expect([d.count(n, 'gy', 'BIG'), d.count(n, 'gy', 'SEEKER'), d.count(n, 'extra', 'SYNC')]).toEqual([1, 1, 0]);
+    // to: deck puts your materials back in the Deck.
+    const k = fuser('deck');
+    const s2 = k.state({ PROBE: 1 });
+    onField(k, s2, 'BIG'); onField(k, s2, 'SEEKER');
+    const n2 = k.run(s2, 'p:BIG+SEEKER:SYNC');
+    expect([k.count(n2, 'deck', 'BIG') - k.count(s2, 'deck', 'BIG'), k.count(n2, 'gy', 'BIG')]).toEqual([1, 0]);
+    // No rule met: nothing.
+    const s3 = d.state({ PROBE: 1 });
+    onField(d, s3, 'BIG'); onField(d, s3, 'WALL');
+    expect(d.mainKeys(s3)).toEqual([]);
+  });
+
+  it("fusionMaterials with either takes the opponent's face-up monsters, named with oppPrefix; the opponent's goes to their GY", () => {
+    const d = fuser('gy', true);
+    const s = d.deck.state.newState({ ...toyCfg({ PROBE: 1 }), opp: { lp: 8000, mons: [{ uid: 'm1', kind: 'mon', name: 'Mage', race: 'Spellcaster', attr: 'DARK' }], st: [] } }, d.deck.ix);
+    onField(d, s, 'BIG');
+    expect(d.mainKeys(s)).toEqual(['p:BIG+om1:SYNC']);
+    const n = d.run(s, 'p:BIG+om1:SYNC');
+    expect(d.lastText(n)).toBe('Big + their Mage into Sync.');
+    expect([n.opp!.mons.length, n.removed]).toEqual([0, 1]);
+    expect(fuser('gy', false).mainKeys(s)).toEqual([]);
+  });
+
+  it("a Fusion rule's sameAttr treats a material counting as any Attribute as the same as the other", () => {
+    const f = fileWith([], { extraDeck: [{ card: 'SYNC', method: 'fusion', slots: [{ cardKind: ['monster'] }, { cardKind: ['monster'] }], relations: ['sameAttr'] }] }, { materialAttribute: 'any' });
+    const d = driver(f, FACTS);
+    const s = d.state({});
+    onField(d, s, 'TUNER'); onField(d, s, 'SEEKER');
+    expect(fusionOptions(s, fieldPool(s, d.deck.props, d.deck.UNK), d.deck.extra)).toEqual([]);
+    onField(d, s, 'PROBE');
+    expect(fusionOptions(s, fieldPool(s, d.deck.props, d.deck.UNK), d.deck.extra).map((o) => o.mats.map((m) => d.deck.ids[m.id]))).toEqual([['TUNER', 'PROBE'], ['SEEKER', 'PROBE']]);
+  });
+
+  it('queueFirst puts a trigger at the front of the pending list; it needs a trigger', () => {
+    const d = probe([
+      eff({ key: 'back', from: 'field', trigger: { summoned: true } }),
+      eff({ key: 'front', from: 'field', trigger: { summoned: true }, queueFirst: true }),
+    ]);
+    const s = d.state({ PROBE: 1 });
+    s.pend = [{ e: d.deck.effects.findIndex((e) => e.key === 'back') }];
+    const n = d.summonForTest(s, 'PROBE');
+    expect(n.pend.map((p) => d.deck.effects[p.e].key)).toEqual(['front', 'back', 'back']);
+    expect(() => compileDeck(fileWith([eff({ queueFirst: true })]), FACTS)).toThrow(/queueFirst/);
+  });
+});

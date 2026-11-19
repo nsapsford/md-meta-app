@@ -18,6 +18,7 @@ export const PEND_MAP: Record<string, string> = {
   rod: 'rod', circ2: 'circ2', tali3: 'tali3',   // group 2
   dmg: 'dmg1',   // group 4
   dia: 'dia1', rcie: 'rcie',   // group 5
+  dmod: 'dmodS', moc1: 'moc1', gar: 'gar',   // group 6
 };
 
 /**
@@ -29,6 +30,7 @@ export const OPT_MAP: Record<string, string> = {
   souls1: 'souls1', souls2: 'souls2', serv: 'serv', ioc1: 'ioc',   // group 3
   sarc1: 'sarc1', fsil: 'fsil', dmgP: 'dmg', dmg1: 'dmg1', dmbm1: 'dmbm', gand1: 'gand', gand2: 'gand2',   // group 4
   diaP: 'dia', dia1: 'dia1', want1: 'want', want2: 'want2', dec1: 'dece1', dec2: 'dece2', hallG: 'hallG', rcie1: 'rcie',   // group 5
+  gaze: 'gaze', dmodS: 'dmodS', dmodSS: 'dmodSS', moc1: 'moc1', moc2: 'moc2', gar: 'gar',   // group 6
 };
 
 /** Map reference names through `table`, throwing on any it doesn't hold. */

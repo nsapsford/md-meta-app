@@ -250,5 +250,89 @@
     "atk": 2000,
     "def": 2400,
     "text": "1 Illusion monster + 1 LIGHT Spellcaster monster\r\nMonsters your opponent controls lose 500 ATK/DEF for each \"Azamina\" monster you control. You can only use each of the following effects of \"Azamina Mu Rcielago\" once per turn. If this card is Fusion Summoned: You can add 1 \"Azamina\" or \"Sinful Spoils\" card from your Deck to your hand. If this card is destroyed by battle or card effect: You can add 1 \"Sinful Spoils\" Spell from your Deck to your hand."
+  },
+  {
+    "passcode": 22283204,
+    "name": "The Gaze of Timaeus",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Target 1 \"Dark Magician\" or \"Dark Magician Girl\" in your field or GY; Fusion Summon 1 Fusion Monster from your Extra Deck that mentions that monster as material, by shuffling it into the Deck as material (this is treated as a Fusion Summon with \"The Eye of Timaeus\"), but banish it during the End Phase of the next turn. You can only activate 1 \"The Gaze of Timaeus\" per turn."
+  },
+  {
+    "passcode": 37818794,
+    "name": "Red-Eyes Dark Dragoon",
+    "type": "Fusion Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 8,
+    "link": null,
+    "atk": 3000,
+    "def": 2500,
+    "text": "\"Dark Magician\" + \"Red-Eyes Black Dragon\" or 1 Dragon Effect Monster\r\nCannot be destroyed by card effects. Neither player can target this card with card effects. During your Main Phase: You can destroy 1 monster your opponent controls, and if you do, inflict damage to your opponent equal to that monster's original ATK. You can use this effect a number of times per turn up to the number of Normal Monsters used as Fusion Material for this card. Once per turn, when a card or effect is activated (Quick Effect): You can discard 1 card; negate the activation, and if you do, destroy that card, and if you do that, this card gains 1000 ATK."
+  },
+  {
+    "passcode": 85059922,
+    "name": "Master of Chaos",
+    "type": "Fusion Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 8,
+    "link": null,
+    "atk": 3000,
+    "def": 2500,
+    "text": "\"Dark Magician\" + 1 \"Chaos\" or \"Black Luster Soldier\" Ritual Monster\r\nIf this card is Fusion Summoned: You can target 1 LIGHT or DARK monster in your GY; Special Summon it. You can Tribute 1 LIGHT and 1 DARK monster; banish all monsters your opponent controls. If this Fusion Summoned card is destroyed by battle or card effect: You can target 1 Spell in your GY; add it to your hand. You can only use each effect of \"Master of Chaos\" once per turn."
+  },
+  {
+    "passcode": 59400890,
+    "name": "Dark Magician of Destruction",
+    "type": "Fusion Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 8,
+    "link": null,
+    "atk": 2800,
+    "def": 2600,
+    "text": "\"Dark Magician\" + 1 LIGHT or DARK monster\r\nMust be either Fusion Summoned, or Special Summoned (from your Extra Deck) during the turn a Spell Card or effect is activated, by banishing 1 Level 6 or higher DARK Spellcaster monster you control as material. You can only Special Summon \"Dark Magician of Destruction\" once per turn this way, no matter which method you use. This card's name becomes \"Dark Magician\" while on the field or in the GY. If this card is Special Summoned: You can add 1 \"Dark Magician\" or 1 card that mentions it from your Deck to your hand."
+  },
+  {
+    "passcode": 54757758,
+    "name": "Mudragon of the Swamp",
+    "type": "Fusion Monster",
+    "race": "Wyrm",
+    "attr": "WATER",
+    "level": 4,
+    "link": null,
+    "atk": 1900,
+    "def": 1600,
+    "text": "2 monsters with the same Attribute but different Types\r\nYour opponent cannot target this card, or monsters on the field with the same Attribute as this card, with card effects. Once per turn (Quick Effect): You can declare 1 Attribute; this card becomes that Attribute until the end of this turn."
+  },
+  {
+    "passcode": 66532962,
+    "name": "Magistus Chorozo",
+    "type": "Fusion Monster",
+    "race": "Spellcaster",
+    "attr": "DARK",
+    "level": 4,
+    "link": null,
+    "atk": 1000,
+    "def": 2800,
+    "text": "1 Fusion, Synchro, Xyz, or Link Monster + 1 Spellcaster monster\r\nMust first be either Fusion Summoned, or Special Summoned (from your Extra Deck) by sending the correct Fusion Material Monster Cards you control to the GY. Once per turn, when a monster declares an attack: You can target it; negate the attack, and if you do, this card gains ATK equal to that monster's ATK (until the end of this turn), then you can return that monster to the hand."
+  },
+  {
+    "passcode": 11765832,
+    "name": "Garura, Wings of Resonant Life",
+    "type": "Fusion Monster",
+    "race": "Winged Beast",
+    "attr": "DARK",
+    "level": 6,
+    "link": null,
+    "atk": 1500,
+    "def": 2400,
+    "text": "2 monsters with the same Type and Attribute, but different names\r\nAny battle damage your opponent takes from battles involving this card is doubled. If this card is sent to the GY: You can draw 1 card. You can only use this effect of \"Garura, Wings of Resonant Life\" once per turn."
   }
 ]

@@ -4,7 +4,7 @@
 // move generator once, and routes summons and zone moves to the effects they trigger. Nothing
 // is interpreted at search time.
 
-import type { CardId, FinalBoard, Mon, Move, OppCard, State, Tags, ZoneName } from '../engine/types';
+import type { CardId, FinalBoard, Mon, Move, OppCard, Pend, State, Tags, ZoneName } from '../engine/types';
 import { createStateOps, type StateOps } from '../engine/state';
 import { createOps, type Ops } from '../engine/ops';
 import { step, done, L, type LedgerZone } from '../engine/record';
@@ -19,6 +19,8 @@ export interface CardProps {
   sub: 'Normal' | 'Effect' | 'Ritual' | 'Fusion' | 'Synchro' | 'Xyz' | 'Link' | '?'; tuner: boolean;
   race: string | null; attr: string | null; lv: number | null; link: number | null; atk: number; def: number;
   discardValue: number; heldValue: number; normalSummon: boolean; immuneToRemoval: boolean;
+  /** As material, one of your monsters with this counts as any Attribute (`CardDef.materialAttribute: 'any'`). */
+  materialAnyAttr: boolean;
   /** The card index whose name this card has in the GY (`CardDef.gyName`; itself by default). */
   gyName: number;
 }
@@ -29,7 +31,7 @@ export type Push = (key: string, tags: Tags, run: Move['run'], negatable?: boole
 export type CompiledExtraRule =
   | { card: number; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats: CondFn | null; then: number }
   | { card: number; method: 'link'; rating: number; min: number; max: number; mats: CondFn | null; bottomArrows: boolean; then: number }
-  | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then: number };
+  | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then: number; uses: CondFn | null };
 
 export interface CompiledProtection {
   id: string; label: string; order: number; where: CondFn[];
@@ -91,7 +93,11 @@ export interface Place { zone: ZoneName | 'top' | 'mon' | 'st' | 'opp' | 'none';
 /** A card a word acts on: the effect's own card, or one the player chose. */
 export interface CardRef extends Place { id: number }
 /** One choice offered by a pick. `key` goes in the move key, `name` in the step text; `many` holds a subset's members. */
-export interface Choice extends CardRef { key: string; name: string; many: Choice[] | null }
+export interface Choice extends CardRef {
+  key: string; name: string; many: Choice[] | null;
+  /** A set of Fusion materials (`fusionMaterials`): the Fusion Monsters it can make, by card index. */
+  fusions?: readonly number[];
+}
 /** What an effect's words see: its own card, where it is, and the choices made so far (by `choose` slot). */
 export interface Run { self: number; at: Place; chosen: (Choice | null)[] }
 
@@ -130,6 +136,8 @@ export interface Runtime {
   moved(n: State, id: number, from: LedgerZone, to: LedgerZone): void;
   /** Take a card off the field (a monster or Spell/Trap at an index) into a zone, with a ledger entry and no trigger. */
   removeQuietly(n: State, zone: 'mon' | 'st', at: number, to: ZoneName): void;
+  /** The compiled Extra Deck rules (filled once the deck's effects are compiled: read them at run time). */
+  extraRules: readonly CompiledExtraRule[];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -151,35 +159,49 @@ function propsOf(c: CardDef, f: CardFacts, gyName: number): CardProps {
     lv: link ? null : f.level, link: link ? (f.link ?? f.level) : null,
     atk: f.atk || 0, def: f.def || 0,
     discardValue: c.discardValue ?? 3, heldValue: c.heldValue ?? 0,
-    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval, gyName,
+    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval, materialAnyAttr: c.materialAttribute === 'any', gyName,
   };
 }
 
 const UNK_PROPS = (gyName: number): CardProps => ({
   id: 'UNK', name: '?', short: 'unknown card', kind: '?', st: null, ext: false, sub: '?', tuner: false,
-  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false, gyName,
+  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false, materialAnyAttr: false, gyName,
 });
 
 // ---------------------------------------------------------------------------------------------
 // Text templates: `{as}` is the chosen card's short name, `{zone}` where the first choice came from,
 // `{as?text|other}` is `text` (with `$` standing for the chosen card's short name) when the choice
-// `as` was made, else `other` (left out with its `|`, it is nothing).
+// `as` was made, else `other` (left out with its `|`, it is nothing). `{as@zone?text|other}` is the
+// same, but `text` only when the choice came from that zone (hand, deck, extra, gy, ban, field, opp).
+// `{as.atk}` is the chosen card's ATK (an opponent's card: its own, as the opponent's field states it).
 
 const ZONE_TEXT: Record<Place['zone'], string> = { hand: 'hand', deck: 'Deck', top: 'the top of the Deck', extra: 'Extra Deck', gy: 'GY', ban: 'banishment', mon: 'the field', st: 'the field', opp: "the opponent's field", none: '' };
 
-type Template = (r: Run) => string;
-interface Hole { slot: number; yes: string | null; no: string }
+type Template = (r: Run, s: FinalBoard) => string;
+interface Hole { slot: number; yes: string | null; no: string; zone: string | null; atk: boolean }
+const HOLE_ZONES = ['hand', 'deck', 'extra', 'gy', 'ban', 'field', 'opp'];
+const inPlace = (c: Choice, z: string) => (z === 'field' ? c.zone === 'mon' || c.zone === 'st' : z === 'deck' ? c.zone === 'deck' || c.zone === 'top' : c.zone === z);
 
-function template(text: string, choose: readonly string[], fail: (m: string) => never): Template {
+function template(text: string, choose: readonly string[], fail: (m: string) => never, props: readonly CardProps[]): Template {
   const parts: string[] = [];
   const holes: Hole[] = [];   // slot: a choice slot, or -1 for {zone}
   let last = 0;
   for (const m of text.matchAll(/\{([^{}]*)\}/g)) {
     const body = m[1], q = body.indexOf('?');
-    const name = q < 0 ? body : body.slice(0, q);
-    const isZone = name === 'zone' && q < 0;
+    let name = q < 0 ? body : body.slice(0, q);
+    let zone: string | null = null, atk = false;
+    const atAt = name.indexOf('@');
+    if (atAt >= 0) {
+      zone = name.slice(atAt + 1); name = name.slice(0, atAt);
+      if (!HOLE_ZONES.includes(zone)) fail(`unknown zone "${zone}" in {${body}} (use one of ${HOLE_ZONES.join(', ')})`);
+      if (q < 0) fail(`{${body}} needs ?text: a zone test shows text when the choice came from that zone`);
+    } else if (name.endsWith('.atk')) {
+      name = name.slice(0, -4); atk = true;
+      if (q >= 0) fail(`{${body}}: .atk takes no ?text`);
+    }
+    const isZone = name === 'zone' && q < 0 && !atk;
     const slot = isZone ? -1 : choose.indexOf(name);
-    if (!isZone && slot < 0) fail(`unknown placeholder {${body}} (use a choose name, {name?text|other} or {zone})`);
+    if (!isZone && slot < 0) fail(`unknown placeholder {${body}} (use a choose name, {name?text|other}, {name@zone?text|other}, {name.atk} or {zone})`);
     let yes: string | null = null, no = '';
     if (q >= 0) {
       const alt = body.slice(q + 1), bar = alt.indexOf('|');
@@ -187,18 +209,26 @@ function template(text: string, choose: readonly string[], fail: (m: string) => 
       no = bar < 0 ? '' : alt.slice(bar + 1);
     }
     parts.push(text.slice(last, m.index));
-    holes.push({ slot, yes, no });
+    holes.push({ slot, yes, no, zone, atk });
     last = m.index! + m[0].length;
   }
   parts.push(text.slice(last));
   if (!holes.length) return () => text;
-  return (r) => {
+  // As the reference prints it: an opponent's card with no ATK given shows "undefined".
+  const atkOf = (c: Choice, s: FinalBoard): string => {
+    if (c.zone !== 'opp') return String(props[c.id]?.atk ?? 0);
+    const o = s.opp ? s.opp.mons.find((x) => x.uid === c.uid) ?? s.opp.st.find((x) => x.uid === c.uid) : undefined;
+    return String(o?.atk);
+  };
+  return (r, s) => {
     let out = parts[0];
     for (let i = 0; i < holes.length; i++) {
       const h = holes[i];
       if (h.slot < 0) { const c = r.chosen[0]; out += c ? ZONE_TEXT[c.zone] : ''; } else {
         const c = r.chosen[h.slot];
-        out += h.yes === null ? c?.name ?? '' : c ? h.yes.split('$').join(c.name) : h.no;
+        if (h.atk) out += c ? atkOf(c, s) : '';
+        else if (h.zone !== null) out += c && inPlace(c, h.zone) ? h.yes!.split('$').join(c.name) : h.no;
+        else out += h.yes === null ? c?.name ?? '' : c ? h.yes.split('$').join(c.name) : h.no;
       }
       out += parts[i + 1];
     }
@@ -222,6 +252,8 @@ interface CompiledEffect {
   /** An `immediate` trigger: run it now, inside the step that set it off, if it could be queued. */
   fire(s: State, at: Place | null): void;
   immediate: boolean;
+  /** Queued at the front of the pending list (`EffectDef.queueFirst`), not at the back. */
+  queueFirst: boolean;
   trigger: TriggerFn | null;
 }
 
@@ -279,6 +311,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   });
 
   // Runtime helpers for words.
+  const extraRules: CompiledExtraRule[] = [];
   const zoneChoices: Record<string, Choice[]> = {};
   for (const z of ['hand', 'deck', 'extra', 'gy', 'ban', 'top'] as const) {
     zoneChoices[z] = ids.map((id, i) => Object.freeze({ id: i, zone: z, at: -1, uid: null, key: id, name: props[i].short, many: null }) as Choice);
@@ -337,6 +370,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       throw new Error(`cannot take ${ids[c.id]} out of ${c.zone}`);
     },
     moved: (n, id, from, to) => moved(n, id, from, to, true),
+    extraRules,
     removeQuietly(n, zone, at, to) {
       const id = zone === 'mon' ? n.mons.splice(at, 1)[0].id : n.st.splice(at, 1)[0].id;
       const z: ZoneName = to === 'deck' && props[id].ext ? 'extra' : to;
@@ -464,6 +498,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const trigger = def.trigger ? (w('triggers', def.trigger, `${base}.trigger`) as TriggerFn) : null;
     const immediate = !!def.immediate;
     if (immediate && !trigger) failAt('immediate')('an immediate effect needs a trigger');
+    if (def.queueFirst && !trigger) failAt('queueFirst')('queueFirst is for a trigger (an effect with a trigger)');
+    if (def.queueFirst && immediate) failAt('queueFirst')('an immediate effect is not queued');
     if (immediate) {
       // Fields a move reads; an immediate effect makes no move, so any of them would be ignored.
       const moveOnly = ['choose', 'cost', 'onNegated', 'activates', 'ledger', 'negText', 'negatable', 'mandatory', 'stepTags', 'stepMarks', 'marks'] as const;
@@ -505,8 +541,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       return out;
     };
 
-    const text = template(def.text, scope.choose, failAt('text'));
-    const negText = template(def.negText ?? `${card.short}: negated.`, scope.choose, failAt('negText'));
+    const text = template(def.text, scope.choose, failAt('text'), props);
+    const negText = template(def.negText ?? `${card.short}: negated.`, scope.choose, failAt('negText'), props);
     const limit = def.limit ? slots.get(limitOf.get(def.key)!)! : -1;
     const froms: Loc[] = Array.isArray(def.from) ? def.from : [def.from];
     const negatable = def.negatable !== false;
@@ -546,7 +582,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       return (s0, neg) => {
         const n = so.clone(s0);
         if (pending) n.pend = n.pend.slice(1);
-        step(n, neg ? negText(r) : text(r), stepTagsFor(s0, r));
+        step(n, neg ? negText(r, s0) : text(r, s0), stepTagsFor(s0, r));
         if (limit >= 0) so.setOpt(n, limit);
         // A Spell is activated from the hand or the field; a Spell's effect in the GY or banishment is not that.
         if (activates === 'spell' && (r.at.zone === 'hand' || r.at.zone === 'st')) n.spell = true;
@@ -606,11 +642,11 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       const r: Run = { self, at: at ?? whereNow(s, undefined)!, chosen: EMPTY_CHOSEN };
       if (limit >= 0) so.setOpt(s, limit);
       for (let k = 0; k < doActs.length; k++) doActs[k](s, r);
-      const t = text(r);
+      const t = text(r, s);
       if (t && s.cur) s.cur.text += ' ' + t;
     }
 
-    return { def, card, self, id, gen, canQueue, fire, immediate, trigger };
+    return { def, card, self, id, gen, canQueue, fire, immediate, queueFirst: !!def.queueFirst, trigger };
   }
 
   const compiled = allEffects.map(({ card, def, i }) => compileEffect(card, def, i));
@@ -646,7 +682,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       const at: Place | null = mine ? { zone: 'mon', at: s.mons.indexOf(m), uid: m.uid } : null;
       if (e.immediate) { e.fire(s, at); continue; }
       if (!e.canQueue(s, at)) continue;
-      s.pend.push(mine ? { e: e.id, a: m.uid } : { e: e.id });
+      enqueue(s, e, mine ? { e: e.id, a: m.uid } : { e: e.id });
     }
   }
   /** `up`: the card was face-up (a card leaving the field; true for any other move). */
@@ -655,12 +691,16 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const ev: TrigEvent = { t: 'move', id, from, to, up };
     for (const e of moveTrig) {
       if (!e.trigger!(ev, e.self)) continue;
-      if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) s.pend.push({ e: e.id });
+      if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id });
     }
   }
   function onLeaveField(s: State, id: number, _kind: 'mon' | 'st', up: boolean, to: LedgerZone = 'gy'): void { moved(s, id, 'field', to, up); }
   function onOppMonsterToGy(s: State): void {
-    for (const e of oppTrig) { if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) s.pend.push({ e: e.id }); }
+    for (const e of oppTrig) { if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id }); }
+  }
+  /** Queue a trigger: at the back, or at the front for `queueFirst`. */
+  function enqueue(s: State, e: CompiledEffect, p: Pend): void {
+    if (e.queueFirst) s.pend.unshift(p); else s.pend.push(p);
   }
 
   function queueAfterSummon(s: State, e: number, m: Mon): void {
@@ -691,11 +731,12 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const extra: CompiledExtraRule[] = ruleOrder.map(({ x, j }) => {
     const f = `extraDeck[${j}]`;
     const then = x.then ? effectIds.get(x.then) ?? 0 : 0;
-    if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then };
+    if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then, uses: x.uses ? condAt(x.uses, null, `${f}.uses`) : null };
     const mats = x.mats ? condAt(x.mats, null, `${f}.mats`) : null;
     if (x.method === 'synchro') return { card: ix[x.card], method: 'synchro', level: x.level, min: x.min, max: x.max, tuners: x.tuners, mats, then };
     return { card: ix[x.card], method: 'link', rating: x.rating, min: x.min, max: x.max, mats, bottomArrows: !!x.bottomArrows, then };
   });
+  extraRules.push(...extra);
   const protections: CompiledProtection[] = (file.protections ?? []).map((p, j) => {
     const f = `protections[${j}]`;
     return {
@@ -807,7 +848,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
 /**
  * Does the effect Special Summon from the Extra Deck? True when a `summon` in its cost or `do`
  * (at any depth) names `from: 'extra'`, or summons a choice whose pick reads the Extra Deck
- * (`zone: 'extra'` anywhere in the pick).
+ * (`zone: 'extra'` anywhere in the pick), or it has a `fusionSummon`.
  */
 function summonsFromExtra(def: EffectDef): boolean {
   const picks = new Map((def.choose ?? []).map((c) => [c.as, c.pick as unknown]));
@@ -823,6 +864,7 @@ function summonsFromExtra(def: EffectDef): boolean {
     const o = v as Record<string, unknown>;
     const sm = o.summon as { what?: string; from?: string } | undefined;
     if (sm && typeof sm === 'object' && (sm.from === 'extra' || (sm.from === undefined && sm.what !== undefined && readsExtra(picks.get(sm.what))))) return true;
+    if (o.fusionSummon !== undefined) return true;   // a Fusion Summon is from the Extra Deck
     return Object.values(o).some(walk);
   };
   return walk(def.cost ?? []) || walk(def.do ?? []);
