@@ -116,7 +116,7 @@ the cards of a shared file it uses there.
 | `onlyIf` | pick | `{ if: conditions (≥ 1), of: pick }` | The nested pick's choices while every condition holds (they may read earlier choices), else none. |
 | `fromTop` | pick | `{ n, group? \| filter? }` | Each distinct card (of the group or filter, if given) among the top n known cards of the Deck. |
 | `move` | action | `{ what, to: zone, from?: zone }` | Move a card to a zone. |
-| `summon` | action | `{ what, from?: zone, noEff?, as?: card }` | Special Summon a card, optionally with effects negated or under another name. |
+| `summon` | action | `{ what, from?: zone, noEff?, as?: card, mats?: what, matsTo?: gy\|ban\|deck }` | Special Summon a card, optionally with effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as the summon's materials: the ledger lists them on the summon (with `materialsTo`, and `materialsFrom: gy` for GY materials), not as moves. |
 | `discard` | action | `{ what }` | Discard a card from the hand to the GY. |
 | `discardCheapest` | action | `true` or a number | Discard the given number (default 1) of different cards from the hand with the lowest discard value (ties in list order). |
 | `draw` | action | number ≥ 1 | Draw that many cards. |
@@ -128,7 +128,7 @@ the cards of a shared file it uses there.
 | `gainLp` | action | number ≥ 1 | Gain that many Life Points. |
 | `burn` | action | number ≥ 1, or `{ atkOf: what }` | Inflict that much damage to the opponent, or damage equal to a chosen card's ATK (an opponent's card: its own; list it before the card leaves). |
 | `spendUse` | action | `{ what }` | One of your monsters spends a use of its counted effect. |
-| `fusionSummon` | action | `{ what, mats: what, to?: gy\|deck }` | Fusion Summon the chosen Fusion Monster from the Extra Deck with the chosen materials: yours go to `to` (default the GY; the Deck is then shuffled), highest field index first, then the opponent's go to their GY as material. It gets one use per material matching its Fusion rule's `uses`. |
+| `fusionSummon` | action | `{ what, mats: what, to?: gy\|deck }` | Fusion Summon the chosen Fusion Monster from the Extra Deck with the chosen materials: yours go to `to` (default the GY; the Deck is then shuffled), highest field index first, then the opponent's go to their GY as material. It gets one use per material matching its Fusion rule's `uses`. The ledger lists the materials on the summon (no moves for them). |
 | `oppRemove` | action | `{ what, how: destroy\|banish }` | Destroy or banish one of the opponent's cards. |
 | `oppRemoveAll` | action | `{ how: destroy\|banish, kind?: mon\|st, faceUp?, destroyable? }` | Destroy or banish every one of the opponent's cards matching the description (it does not target: targetable does not apply). |
 | `wipeField` | action | `{ banish?, spare?: condition, thenSummon?: what, noTriggers? }` | Destroy as many other cards on the field as possible: yours except this card and those matching `spare` (a filter), and every opponent card that can be destroyed (`banish`: banish them instead; `noTriggers`: your cards leave without setting off any trigger). Then Special Summon the `thenSummon` choice from where it is, its Level raised by the number destroyed. |

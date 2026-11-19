@@ -114,6 +114,17 @@ describe('search', () => {
     expect(e.score).toBeCloseTo(0.1 * 100 - 1 * 1.5, 9);
   });
 
+  it('lists items in board order: monsters (entries and default values by index), Spells/Traps, then held cards', () => {
+    const f: DeckFile = { ...TOY_FILE, cards: TOY_FILE.cards.map((c) => (c.id === 'BIG' ? { ...c, heldValue: 0.3 } : c)) };
+    const deck = compileDeck(f, TOY_FACTS);
+    const sc = createScore(deck);
+    const s = deck.state.newState(toyCfg({ WALL: 1, BIG: 1 }), deck.ix);
+    const mon = (id: number, uid: number) => ({ id, nm: id, emz: false, noEff: false, uses: 0, lvl: 8, marks: 0, uid });
+    s.mons.push(mon(deck.ix.SYNC, 1), mon(deck.ix.SEEKER, 2));
+    const e = sc.evaluate(s, true);
+    expect(e.items!.map((x) => x[0])).toEqual(['Sync on the field', 'Seeker', 'Wall: negate', 'Big in hand']);
+  });
+
   it('policy without hooks is refused', () => {
     expect(() => solve({ SEEKER: 1 }, { rounds: 1, policy: [{ kind: 'x', src: 'hand', label: 'x' }] })).toThrow(/hooks/);
   });

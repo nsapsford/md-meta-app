@@ -735,16 +735,25 @@ defineAct('move', {
   },
 });
 defineAct('summon', {
-  doc: 'Special Summon a card (from where it is or the given zone), optionally with its effects negated or under another name.',
-  args: A.object({ what: A.choice, from: A.optional(A.zone()), noEff: A.optional(A.boolean), as: A.optional(A.card) }),
-  compile: (a: { what: string; from?: Zone; noEff?: boolean; as?: CardId }, ctx): ActFn => {
+  doc: 'Special Summon a card (from where it is or the given zone), optionally with its effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as its materials (the ledger lists them on the summon).',
+  args: A.object({ what: A.choice, from: A.optional(A.zone()), noEff: A.optional(A.boolean), as: A.optional(A.card), mats: A.optional(A.choice), matsTo: A.optional(A.enum('gy', 'ban', 'deck')) }),
+  compile: (a: { what: string; from?: Zone; noEff?: boolean; as?: CardId; mats?: string; matsTo?: 'gy' | 'ban' | 'deck' }, ctx): ActFn => {
     if (a.from === 'field') ctx.fail('a monster is summoned from a zone, not from the field', 'from');
+    if (a.matsTo !== undefined && a.mats === undefined) ctx.fail('needs `mats`', 'matsTo');
+    if (a.mats === 'self') ctx.fail('names a choice (choose[].as), not this card', 'mats');
     const slot = slotOf(a.what, ctx), rt = ctx.rt, noEff = !!a.noEff, nm = a.as === undefined ? undefined : ctx.ix[a.as];
-    return (n, r) => rt.each(r, slot, (c) => {
-      const lz = rt.takeOut(n, fromZone(c, a.from, n));
-      L.sum(n, c.id, 'special', lz);
-      rt.ops.place(n, c.id, { special: true, noEff, nm, from: lz });
-    });
+    const mslot = a.mats === undefined ? -2 : ctx.choiceSlot(a.mats), matsTo = a.matsTo ?? 'gy';
+    return (n, r) => {
+      const ids: number[] = [];
+      let fromGy = false;
+      if (mslot >= 0) rt.each(r, mslot, (c) => { ids.push(c.id); if (c.zone === 'gy') fromGy = true; rt.moveCard(n, c, matsTo, true); });
+      const extra = ids.length && (fromGy || matsTo !== 'gy') ? { ...(fromGy ? { materialsFrom: 'gy' } : {}), ...(matsTo !== 'gy' ? { materialsTo: matsTo === 'ban' ? 'banished' : 'deck' } : {}) } : null;
+      rt.each(r, slot, (c) => {
+        const lz = rt.takeOut(n, fromZone(c, a.from, n));
+        L.sum(n, c.id, 'special', lz, ids.length ? ids : null, extra);
+        rt.ops.place(n, c.id, { special: true, noEff, nm, from: lz });
+      });
+    };
   },
 });
 defineAct('discard', {
@@ -861,7 +870,8 @@ defineAct('fusionSummon', {
       const own = mats.filter((c) => c.zone !== 'opp');
       const field = own.filter((c) => c.zone === 'mon').map((c) => ({ c, i: rt.monIndex(n, c) })).sort((x, y) => y.i - x.i).map((x) => x.c);
       const ids: number[] = [];
-      for (const c of [...field, ...own.filter((c) => c.zone !== 'mon')]) { ids.push(c.id); rt.moveCard(n, c, to); }
+      // Quiet: the summon's ledger entry lists the materials and where they went.
+      for (const c of [...field, ...own.filter((c) => c.zone !== 'mon')]) { ids.push(c.id); rt.moveCard(n, c, to, true); }
       if (to === 'deck' && own.some((c) => !props[c.id].ext)) rt.ops.shuffle(n);
       for (const c of mats) if (c.zone === 'opp' && c.uid !== null) rt.ops.oppRemove(n, c.uid, 'material');
       const extra = to === 'deck' ? { ...(own.some((c) => c.zone === 'gy') ? { materialsFrom: 'gy' } : {}), materialsTo: 'deck' } : null;

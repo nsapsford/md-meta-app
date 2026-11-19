@@ -229,6 +229,13 @@ describe('actions', () => {
     expect(n.log[0].seq).toEqual([['s', d.deck.ix.PROBE, 'special', 'hand', null, null]]);
     expect(n.log[0].fS && n.log[0].fH).toBe(true);
   });
+  it('summon with mats: the materials go to matsTo first and the ledger lists them on the summon', () => {
+    const { d, n } = after({ choose: [{ as: 'm', pick: { fromField: { kind: 'mon' } } }], do: [{ summon: { what: 'self', mats: 'm', matsTo: 'ban' } }], tags: { inherent: true } }, { PROBE: 1 }, 'p:BIG', { prep: (s, d) => onField(d, s, 'BIG') });
+    expect(n.mons.map((m) => d.deck.ids[m.id])).toEqual(['PROBE']);
+    expect(d.count(n, 'ban', 'BIG')).toBe(1);
+    expect(n.log[0].seq).toEqual([['s', d.deck.ix.PROBE, 'special', 'hand', [d.deck.ix.BIG], { materialsTo: 'banished' }]]);
+    expect(() => probe([eff({ do: [{ summon: { what: 'self', matsTo: 'ban' } }] })])).toThrow(/needs `mats`/);
+  });
   it('summon under another name with effects negated', () => {
     const { d, n } = after({ do: [{ summon: { what: 'self', noEff: true, as: 'BIG' } }] }, { PROBE: 1 });
     expect(n.mons[0]).toMatchObject({ nm: d.deck.ix.BIG, noEff: true });
@@ -776,6 +783,8 @@ describe('group 6 words: all, level, materialAttribute, uses, burn atkOf, text h
     expect(d.lastText(n)).toBe('Big + Seeker into Sync.');
     expect(n.mons.map((m) => [d.deck.ids[m.id], m.uses])).toEqual([['WALL', 0], ['SYNC', 1]]);
     expect([d.count(n, 'gy', 'BIG'), d.count(n, 'gy', 'SEEKER'), d.count(n, 'extra', 'SYNC')]).toEqual([1, 1, 0]);
+    // The ledger lists the materials on the summon, with no moves for them.
+    expect(n.log[n.log.length - 1].seq!.filter((t) => (t as unknown[])[0] !== 'a')).toEqual([['s', d.deck.ix.SYNC, 'fusion', 'extra', [d.deck.ix.SEEKER, d.deck.ix.BIG], null]]);
     // to: deck puts your materials back in the Deck.
     const k = fuser('deck');
     const s2 = k.state({ PROBE: 1 });

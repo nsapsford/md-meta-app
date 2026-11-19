@@ -6,10 +6,12 @@ import { createMoves } from './moves';
 import { createScore, type LineEval } from './score';
 import { createSearch, type SolveOpts, type SolveResult } from './search';
 import { createOpponent, eligible } from './opponent';
-import type { Cfg, Interruption, Move, State, StepView, Tags, TurnEvent } from './types';
+import type { CardId, Cfg, Interruption, Move, State, StepView, Tags, TurnEvent } from './types';
 import type { CompiledProtection } from '../deck/compile';
+import { createReplay, type BranchResult, type BranchTask } from './replay';
+import { createSerializer, type GeneratedLine, type SerializedLine, type SerializedResult } from './serialize';
 
-export type { LineEval, SolveOpts, SolveResult };
+export type { LineEval, SolveOpts, SolveResult, BranchTask, BranchResult, GeneratedLine, SerializedLine, SerializedResult };
 
 export interface Engine {
   deck: CompiledDeck;
@@ -31,13 +33,33 @@ export interface Engine {
   /** Something that really happened, recorded by the player (`@ev` on the path). */
   applyEvent(s: State, ev: TurnEvent): State;
   protectionFor(pre: State, it: Interruption, tags: Tags): CompiledProtection | null;
+  /** Rebuild a line from its path (`key`, `~key`, `!{k, it}`, `^it`, `@ev` entries). */
+  replay(cfg: Cfg, path: string[]): State;
+  /** The line a path stands for with its interruptions taken out, finished by a short search. */
+  planOf(cfg: Cfg, path: string[]): LineEval;
+  asLine(s: State): LineEval;
+  /** One branch of the worst-case search (run in a Worker). */
+  branchTask(t: BranchTask): BranchResult;
+  serialize(r: Pick<SolveResult, 'lines' | 'safest' | 'frontier' | 'nodes' | 'ms' | 'width'>, hand: CardId[], k?: number): SerializedResult;
+  serializeLine(l: LineEval, hand: CardId[], tag: string): SerializedLine;
+  toGenerated(l: LineEval, name: string, hand: CardId[]): GeneratedLine;
 }
 
-export function createEngine(deck: CompiledDeck): Engine {
+export interface EngineOpts {
+  /** The summon count a wipe-at-summons interruption waits for (the hand-trap data's `param`); marks `wipeHere`. */
+  wipeAt?: number;
+}
+
+export function createEngine(deck: CompiledDeck, o: EngineOpts = {}): Engine {
   const moves = createMoves(deck);
   const score = createScore(deck);
   const opp = createOpponent(deck, moves, deck.state);
   const search = createSearch(moves, score, deck.state, { eligible, interrupt: opp.interrupt });
+  const ser = createSerializer(deck, opp, { wipeAt: o.wipeAt });
+  const rep = createReplay({
+    newState: (cfg) => deck.state.newState(cfg, deck.ix), gen: moves.gen, exec: moves.exec, evaluate: score.evaluate,
+    solveBeam: search.solveBeam, interrupt: opp.interrupt, startDraw: opp.startDraw, applyEvent: opp.applyEvent,
+  }, ser);
   return {
     deck,
     newState: (cfg) => deck.state.newState(cfg, deck.ix),
@@ -52,5 +74,12 @@ export function createEngine(deck: CompiledDeck): Engine {
     startDraw: opp.startDraw,
     applyEvent: opp.applyEvent,
     protectionFor: opp.protectionFor,
+    replay: rep.replay,
+    planOf: rep.planOf,
+    asLine: rep.asLine,
+    branchTask: rep.branchTask,
+    serialize: ser.serialize,
+    serializeLine: ser.serializeLine,
+    toGenerated: ser.toGenerated,
   };
 }

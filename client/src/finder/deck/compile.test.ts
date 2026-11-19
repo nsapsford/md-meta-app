@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compileDeck, DeckCompileError } from './compile';
+import { compileDeck, DeckCompileError, ITEM_ORDER } from './compile';
 import { validateDeckFile, type DeckFile } from './schema';
 import { TOY_FACTS, TOY_FILE } from '../engine/__toy__/toyDeck';
 import { driver } from '../engine/__toy__/driver';
@@ -130,9 +130,29 @@ describe('compiled deck tables', () => {
   it('scores the board from its entries, with labels only when asked', () => {
     const { n } = deck.finalize(toyState({ WALL: 1 }));
     expect(deck.boardValue(n, false)).toEqual({ sum: 0.5, items: null });
-    expect(deck.boardValue(n, true)).toEqual({ sum: 0.5, items: [['Wall: negate', 0.5]] });
+    expect(deck.boardValue(n, true)).toEqual({ sum: 0.5, items: [['Wall: negate', 0.5]], keys: [ITEM_ORDER.st] });
     const two = deck.finalize(toyState({ WALL: 2 })).n;
-    expect(deck.boardValue(two, true)).toEqual({ sum: 1, items: [['Wall: negate', 0.5], ['Wall: negate', 0.5]] });
+    expect(deck.boardValue(two, true)).toEqual({ sum: 1, items: [['Wall: negate', 0.5], ['Wall: negate', 0.5]], keys: [ITEM_ORDER.st, ITEM_ORDER.st + 1] });
+  });
+
+  it("places each item at its card's board index; other entries after the board, in file order", () => {
+    const f: DeckFile = {
+      ...TOY_FILE,
+      boardValue: [
+        { id: 'other', when: 'oppTurn', on: { has: { zone: 'gy', card: 'BIG' } }, base: [{ value: 0.1, label: 'Big in GY' }] },
+        { id: 'wall', when: 'oppTurn', on: { control: { card: 'WALL', kind: 'st', faceUp: false } }, base: [{ value: 0.5, label: 'Wall' }] },
+        { id: 'seeker', when: 'oppTurn', on: { control: { card: 'SEEKER', kind: 'mon' } }, base: [{ value: 0.2, label: 'Seeker' }] },
+      ],
+    };
+    const P = driver(f);
+    const s = P.state({ WALL: 1 });
+    const fin = P.deck.finalize(s).n;
+    const B = P.deck.ix.BIG, S = P.deck.ix.SEEKER, T = P.deck.ix.TUNER;
+    fin.mons = [{ id: T, nm: T, emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid: 1 }, { id: S, nm: S, emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid: 2 }];
+    fin.gy = fin.gy.slice(); fin.gy[B] = 1;
+    const v = P.deck.boardValue(fin, true);
+    expect(v.items).toEqual([['Big in GY', 0.1], ['Wall', 0.5], ['Seeker', 0.2]]);
+    expect(v.keys).toEqual([ITEM_ORDER.other + 0, ITEM_ORDER.st + 0, ITEM_ORDER.mon + 1]);
   });
 
   it('lets board-value entries use any condition (banished cards, once-per-turn limits)', () => {

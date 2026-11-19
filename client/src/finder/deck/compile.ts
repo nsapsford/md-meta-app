@@ -44,6 +44,9 @@ export interface CompiledProtection {
   consume: ActFn[]; destroysSource: boolean; stepNote: string | null;
 }
 
+/** Board-value item places: a monster's at ITEM_ORDER.mon + its index, then Spells/Traps, other entries, cards in hand. */
+export const ITEM_ORDER = { mon: 0, st: 1000, other: 2000, hand: 3000 } as const;
+
 export interface CompiledDeck {
   file: DeckFile; ids: CardId[]; ix: Record<CardId, number>; UNK: number; props: CardProps[]; nOpt: number; nFlags: number; markBit: Record<string, number>;
   /** Once-per-turn slot index -> its limit name (an effect key, or a `shared` limit name). */
@@ -60,7 +63,12 @@ export interface CompiledDeck {
    */
   queueAfterSummon(s: State, e: number, m: Mon): void;
   finalize(s: State): { n: FinalBoard; sets: number[] };
-  boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null };
+  /**
+   * With `full`, `keys` gives each item its place in the list (ITEM_ORDER): an entry whose `on` is
+   * a single `control` of a card or group sits at the matching card's zone and index (monsters,
+   * then Spells/Traps, in board order); any other entry follows them, in file order.
+   */
+  boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null; keys?: number[] };
   /**
    * Per card index: a board-value entry's `on` names this card (by `card`, or by a `group` that
    * holds it). A monster on the final board without one is worth the scorer's default value.
@@ -131,8 +139,11 @@ export interface Runtime {
   /** Current index of a field card (indices shift as cards leave). -1 if gone. */
   monIndex(s: State, c: CardRef): number;
   stIndex(s: State, c: CardRef): number;
-  /** Take a card out of where it is and put it in a zone (or on top of the Deck), with ledger and triggers. */
-  moveCard(n: State, c: CardRef, to: ZoneName | 'top'): void;
+  /**
+   * Take a card out of where it is and put it in a zone (or on top of the Deck), with ledger and
+   * triggers. `quiet`: no ledger entry (a summon's materials: the summon's entry says where they went).
+   */
+  moveCard(n: State, c: CardRef, to: ZoneName | 'top', quiet?: boolean): void;
   /** Take a card out of a zone other than the field (a summon's source). */
   takeOut(n: State, c: CardRef): LedgerZone;
   /** A card moved between zones (not leaving the field): queue the triggers it sets off. */
@@ -341,7 +352,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       if (c.many) for (const x of c.many) fn(x); else fn(c);
     },
     monIndex, stIndex,
-    moveCard(n, c, to) {
+    moveCard(n, c, to, quiet) {
       let id = c.id, from: LedgerZone, kind: 'mon' | 'st' | null = null, up = true;
       if (c.zone === 'mon') {
         const i = monIndex(n, c); if (i < 0) throw new Error(`card ${ids[c.id]} is not on the field`);
@@ -357,7 +368,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       const lzTo: LedgerZone = zTo === 'top' ? 'deck' : LZ[zTo];
       if (zTo === 'top') n.top.unshift(id);
       else so.W(n, zTo)[id]++;
-      if (!(from === 'deck' && to === 'top')) L.mv(n, id, from, lzTo);
+      if (!quiet && !(from === 'deck' && to === 'top')) L.mv(n, id, from, lzTo);
       if (kind) onLeaveField(n, id, kind, up, lzTo); else moved(n, id, from, lzTo, true);
     },
     takeOut(n, c) {
@@ -792,11 +803,21 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   }
 
   // Board value.
+  /** Where a board-value entry's items sit: the cards a lone `control` word counts, else null. */
+  const anchorOf = (on: unknown): { zone: 'mon' | 'st'; cards: Set<number>; faceUp: boolean | undefined } | null => {
+    if (!on || typeof on !== 'object' || Object.keys(on).join() !== 'control') return null;
+    const c = (on as { control: Record<string, unknown> }).control;
+    if (!c || (c.kind !== 'mon' && c.kind !== 'st') || Object.keys(c).some((k) => !['card', 'group', 'kind', 'faceUp'].includes(k))) return null;
+    const cards = new Set<number>();
+    if (typeof c.card === 'string' && ix[c.card] !== undefined) cards.add(ix[c.card]);
+    if (typeof c.group === 'string') for (const i of group(c.group, (m) => { throw new DeckCompileError([{ card: null, field: 'boardValue', message: m }]); })) cards.add(i);
+    return cards.size ? { zone: c.kind, cards, faceUp: typeof c.faceUp === 'boolean' ? c.faceUp : undefined } : null;
+  };
   const entries = file.boardValue.map((b: BoardValueDef, j) => {
     const f = `boardValue[${j}]`;
     const on = countWord(b.on, `${f}.on`) ?? ((cf: CondFn): CountFn => (s, r) => (cf(s, r) ? 1 : 0))(condAt(b.on, null, `${f}.on`));
     return {
-      on,
+      on, anchor: anchorOf(b.on),
       base: b.base.map((x, k) => ({ conds: (x.if ?? []).map((c, q) => condAt(c, null, `${f}.base[${k}].if[${q}]`)), value: x.value, label: x.label })),
       adds: (b.adds ?? []).map((x, k) => ({ conds: x.if.map((c, q) => condAt(c, null, `${f}.adds[${k}].if[${q}]`)), value: x.value, label: x.label })),
       extraCopies: b.extraCopies ?? null,
@@ -819,26 +840,36 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   };
   file.boardValue.forEach((b, j) => named(b.on, `boardValue[${j}].on`));
 
-  function boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null } {
+  function boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null; keys?: number[] } {
     const s = n;
     const items: [string, number][] | null = full ? [] : null;
+    const keys: number[] = [];
     let sum = 0;
-    for (const e of entries) {
+    entries.forEach((e, j) => {
       const k = e.on(s, R0);
-      if (!k) continue;
+      if (!k) return;
       const b = e.base.find((x) => x.conds.every((c) => c(s, R0)));
       let v = 0, label = '';
       if (b) {
         v = b.value; label = b.label;
         for (const a of e.adds) if (a.conds.every((c) => c(s, R0))) { v += a.value; if (full) label += `, ${a.label}`; }
       }
-      for (let i = 0; i < k; i++) {
-        if (i > 0 && e.extraCopies) { sum += e.extraCopies.value; items?.push([e.extraCopies.label, e.extraCopies.value]); continue; }
-        if (!b) continue;
-        sum += v; items?.push([label, v]);
+      // With `full`: the board index of each copy the entry counts (its item's place in the list).
+      const at: number[] = [];
+      if (items && e.anchor) {
+        const an = e.anchor;
+        if (an.zone === 'mon') n.mons.forEach((m, i) => { if (an.cards.has(m.id)) at.push(ITEM_ORDER.mon + i); });
+        else n.st.forEach((x, i) => { if (an.cards.has(x.id) && (an.faceUp === undefined || !!x.up === an.faceUp)) at.push(ITEM_ORDER.st + i); });
       }
-    }
-    return { sum, items };
+      const key = (i: number) => at[i] ?? ITEM_ORDER.other + j;
+      for (let i = 0; i < k; i++) {
+        if (i > 0 && e.extraCopies) { sum += e.extraCopies.value; if (items) { items.push([e.extraCopies.label, e.extraCopies.value]); keys.push(key(i)); } continue; }
+        if (!b) continue;
+        sum += v;
+        if (items) { items.push([label, v]); keys.push(key(i)); }
+      }
+    });
+    return items ? { sum, items, keys } : { sum, items };
   }
 
   function total(z: Uint8Array): number { let t = 0; for (let i = 0; i < z.length; i++) t += z[i]; return t; }

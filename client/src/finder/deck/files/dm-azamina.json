@@ -55,7 +55,8 @@
           "do": [{ "summon": { "what": "mon", "noEff": true } }, { "move": { "what": "add", "to": "hand" } }],
           "tags": { "deckTouch": { "any": [{ "chosen": { "as": "mon", "zone": "deck" } }, { "chosen": { "as": "add" } }] }, "deckAdd": { "chosen": { "as": "add" } } }, "marks": ["dm"],
           "stepTags": { "spell": true },
-          "text": "Dark Magical Curtain: Special Summon {mon} from {zone}{add?, add $}.", "negText": "Dark Magical Curtain: negated."
+          "text": "Dark Magical Curtain: Special Summon {mon} from {zone}{add?, add $}.", "negText": "Dark Magical Curtain: negated.",
+          "lineNote": "They may also Special Summon a DARK Spellcaster from hand or Deck."
         }
       ]
     },
@@ -417,21 +418,24 @@
           "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "named": "DM" }, { "frame": ["Normal"] }] } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "named": "DM" }, { "frame": ["Normal"] }] } } } } }] } }, { "as": "fus", "pick": { "fromZone": { "zone": "extra", "filter": { "named": "DRAG" } } } }],
           "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
           "tags": { "spell": true }, "marks": ["dm"],
-          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (1 destroy).", "negText": "The Gaze of Timaeus: negated."
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (1 destroy).", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
         },
         {
           "key": "gaze-drag0", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "gaze" }, "activates": "spell",
           "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "named": "DM" }, { "not": { "frame": ["Normal"] } }] } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "named": "DM" }, { "not": { "frame": ["Normal"] } }] } } } } }] } }, { "as": "fus", "pick": { "fromZone": { "zone": "extra", "filter": { "named": "DRAG" } } } }],
           "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
           "tags": { "spell": true }, "marks": ["dm"],
-          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (0 destroys).", "negText": "The Gaze of Timaeus: negated."
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (0 destroys).", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
         },
         {
           "key": "gaze", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "gaze" }, "activates": "spell",
           "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "named": "DM" } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "named": "DM" } } } } }] } }, { "as": "fus", "pick": { "union": [{ "onlyIf": { "if": [{ "notUsed": "dmodSS" }], "of": { "fromZone": { "zone": "extra", "filter": { "named": "DMOD" } } } } }, { "fromZone": { "zone": "extra", "filter": { "named": "MOC" } } }] } }],
           "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
           "tags": { "spell": true }, "marks": ["dm"],
-          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon {fus}.", "negText": "The Gaze of Timaeus: negated."
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon {fus}.", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
         }
       ]
     },
@@ -477,7 +481,7 @@
           "key": "dmod", "phase": "main", "from": "extra", "limit": { "shared": "dmodSS" }, "negatable": false,
           "cond": [{ "spellActivatedThisTurn": true }],
           "choose": [{ "as": "m", "pick": { "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["DARK"] }, { "level": { "atLeast": 6 } }] } } } }],
-          "do": [{ "move": { "what": "m", "to": "ban" } }, { "summon": { "what": "self", "from": "extra" } }],
+          "do": [{ "summon": { "what": "self", "from": "extra", "mats": "m", "matsTo": "ban" } }],
           "tags": { "inherent": true },
           "text": "Dark Magician of Destruction: banish {m} from the field (a Spell was activated this turn)."
         },

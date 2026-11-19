@@ -5,7 +5,7 @@
 // entry is worth min(0.2, ATK / 15000) under its short name, and each held card (CardProps.heldValue)
 // left in hand adds its value.
 
-import type { CompiledDeck } from '../deck/compile';
+import { ITEM_ORDER, type CompiledDeck } from '../deck/compile';
 import { DRAW_BIT } from './record';
 import type { FinalBoard, State } from './types';
 
@@ -53,20 +53,24 @@ export function createScore(deck: CompiledDeck): Score {
     const bv = deck.boardValue(n, full);
     let sum = bv.sum;
     const items = bv.items;
+    const keys = bv.keys ?? [];
     for (let i = 0; i < n.mons.length; i++) {
       const id = n.mons[i].id, v = monDefault[id];
       if (v < 0) continue;
       sum += v;
-      if (items) items.push([props[id].short, v]);
+      if (items) { items.push([props[id].short, v]); keys.push(ITEM_ORDER.mon + i); }
     }
     const hd = n.hand;
     for (let id = 0; id < nCards; id++) {
       const v = held[id];
       if (!v) continue;
       const k = hd[id];
-      for (let i = 0; i < k; i++) { sum += v; if (items) items.push([`${props[id].short} in hand`, v]); }
+      for (let i = 0; i < k; i++) { sum += v; if (items) { items.push([`${props[id].short} in hand`, v]); keys.push(ITEM_ORDER.hand); } }
     }
-    return { sum, items };
+    if (!items) return { sum, items };
+    // The list reads in board order: monsters, Spells/Traps, the rest, then cards in hand (the sum is unaffected).
+    const order = items.map((_, i) => i).sort((a, b) => keys[a] - keys[b] || a - b);
+    return { sum, items: order.map((i) => items[i]) };
   }
 
   function battle(n: FinalBoard): number {

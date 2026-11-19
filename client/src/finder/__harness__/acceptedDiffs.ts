@@ -57,3 +57,31 @@ export function withoutAccepted(diffs: StepDiff[], accepted: readonly AcceptedDi
     .map((d) => ({ ...d, missing: d.missing.filter(keep('missing', d.extra)), extra: d.extra.filter(keep('extra', d.missing)) }))
     .filter((d) => d.missing.length || d.extra.length || d.evalDiff || d.obsDiff);
 }
+
+// ── Line Trainer export (toGenerated) differences, used by serialize.parity.test.ts ──
+
+type ExportStep = { text: string; activations?: { card: string; from?: string }[]; summons?: unknown[]; moves?: { card: string; from: string; to: string }[] };
+export interface AcceptedExportDiff { test(ref: ExportStep, neu: ExportStep): boolean; reason: string }
+
+const CONT_SPELL_ON = /^Activate (Shining Sarcophagus|Deception of the Sinful Spoils)\.$/;
+export const ACCEPTED_EXPORT: AcceptedExportDiff[] = [
+  {
+    test: (a, b) => {
+      const m = CONT_SPELL_ON.exec(b.text);
+      if (!m || a.text !== b.text || b.summons || b.moves || !b.activations || b.activations.length !== 1) return false;
+      const act = b.activations[0];
+      if (act.card !== m[1] || Object.keys(act).sort().join() !== 'card,from') return false;
+      if (act.from === 'hand') return JSON.stringify(a) === JSON.stringify({ text: a.text, moves: [{ card: m[1], from: 'hand', to: 'field' }] });
+      return act.from === 'field' && JSON.stringify(a) === JSON.stringify({ text: a.text });
+    },
+    reason: "Activating Shining Sarcophagus or Deception of the Sinful Spoils (Continuous Spells): the reference writes the card's placement as a hand-to-field move (nothing for a Set copy flipped face-up); the new engine writes the activation, which it is. The app's ledger checker puts a Continuous Spell activated from the hand on the field and leaves one activated on the field there, so the zones come out the same.",
+  },
+];
+export const ACCEPTED_EXPORT_TEXT = {
+  /** The same text once the trailing "… in hand" parts are sorted. */
+  test: (a: string, b: string): boolean => {
+    const norm = (t: string) => { const p = t.split('; '); let k = p.length; while (k > 0 && p[k - 1].endsWith(' in hand')) k--; return p.slice(0, k).concat(p.slice(k).sort()).join('; '); };
+    return norm(a) === norm(b);
+  },
+  reason: "End-board text lists hand traps held in hand: the reference in the order they entered the hand (its hand object's key order), the new engine in card-list order. Display order only.",
+};

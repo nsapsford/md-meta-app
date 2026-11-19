@@ -61,11 +61,11 @@ describe('interrupt', () => {
   const root = e.newState(toyCfg({ SEEKER: 1, DRAWTWO: 1, BIG: 1 }));
 
   it('negDeckTouch negates the step and keeps its cost paid', () => {
-    const n = e.interrupt(root, move(e, root, 'drawtwo:BIG'), IT('negDeckTouch', { label: 'Ash' }));
+    const n = e.interrupt(root, move(e, root, 'drawtwo:BIG'), IT('negDeckTouch', { label: 'Negator' }));
     expect([hand(e, n, 'DRAWTWO'), hand(e, n, 'BIG'), gy(e, n, 'BIG'), hand(e, n, 'UNK')]).toEqual([0, 0, 1, 0]);
-    expect(note(n)).toBe('Ash negates this');
+    expect(note(n)).toBe('Negator negates this');
     expect(n.log[n.log.length - 1].text).toBe('Draw Two (discard Big): negated.');
-    expect(n.path).toEqual(['!' + JSON.stringify({ k: 'drawtwo:BIG', it: IT('negDeckTouch', { label: 'Ash' }) })]);
+    expect(n.path).toEqual(['!' + JSON.stringify({ k: 'drawtwo:BIG', it: IT('negDeckTouch', { label: 'Negator' }) })]);
   });
 
   it('lockDeckAdds sets addLock and the search is no longer offered', () => {
@@ -96,8 +96,8 @@ describe('interrupt', () => {
   });
 
   it('draw mechanisms set their bit, in response to a summon or chained to an activation', () => {
-    const a = e.interrupt(root, move(e, root, 'ns:SEEKER'), IT('drawSpecialSummon', { label: 'Maxx' }));
-    expect([a.drawFx, note(a)]).toEqual([4, 'Maxx in response to this summon: they draw 1 each time you Special Summon from here on']);
+    const a = e.interrupt(root, move(e, root, 'ns:SEEKER'), IT('drawSpecialSummon', { label: 'Drawer' }));
+    expect([a.drawFx, note(a)]).toEqual([4, 'Drawer in response to this summon: they draw 1 each time you Special Summon from here on']);
     const b = e.interrupt(root, move(e, root, 'drawtwo:BIG'), IT('drawHandSummon', { label: 'Purr' }));
     expect([b.drawFx, note(b)]).toEqual([2, 'Purr chained to this: they draw 1 each time you Normal or Special Summon from your hand, this step included']);
     const c = e.startDraw(root, IT('drawDeckExtraSummon', { label: 'Fuwa' }));
