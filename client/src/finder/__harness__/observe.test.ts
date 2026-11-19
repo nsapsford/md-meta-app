@@ -59,7 +59,8 @@ describe('observe: pending triggers and once-per-turn slots', () => {
     const v = validateDeckFile(dmFile, { staples });
     if (!v.ok) throw new Error(JSON.stringify(v.errors));
     const deck = compileDeck(v.file, [...dmFacts, ...staplesFacts] as CardFacts[]);
-    const triggers = new Set(v.file.cards.flatMap((c) => (c.effects ?? []).filter((e) => e.trigger).map((e) => e.key)));
+    // A pending effect is a trigger, or an Extra Deck rule's `then` effect.
+    const triggers = new Set([...v.file.cards.flatMap((c) => (c.effects ?? []).filter((e) => e.trigger).map((e) => e.key)), ...(v.file.extraDeck ?? []).flatMap((x) => (x.then ? [x.then] : []))]);
     for (const [r, k] of Object.entries(PEND_MAP)) expect(triggers.has(k), `${r} -> ${k}`).toBe(true);
     const refOpts = refOptNames();
     for (const [r, k] of Object.entries(OPT_MAP)) {

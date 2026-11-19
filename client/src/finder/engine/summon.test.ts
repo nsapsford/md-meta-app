@@ -199,4 +199,15 @@ describe('then', () => {
     expect(t.mv.gen(n).map((m) => m.k)).toEqual(['dec:sync-arrive', 'sync-arrive']);
     expect(t.run(n, 'sync-arrive').hand[t.deck.UNK]).toBe(1);
   });
+
+  it('thenIf: then is queued only when a material matches the filter', () => {
+    const arrive = (cards: Cards) => cards.map((c) => (c.id === 'SYNC'
+      ? { ...c, effects: [{ key: 'sync-arrive', phase: 'end' as const, from: 'field' as const, do: [{ draw: 1 }], tags: {}, text: 'Sync: draw 1.' }] }
+      : c));
+    for (const [race, queued] of [['Spellcaster', 1], ['Dragon', 0]] as const) {
+      const t = setup([{ ...synchro('exactlyOne'), then: 'sync-arrive', thenIf: { all: [{ tuner: true }, { race: [race] }] } } as ExtraRule], arrive);
+      const n = t.run(t.state(['TUNER', 'SEEKER']), 'syn:SYNC:SEEKER+TUNER');
+      expect(n.pend.length).toBe(queued);
+    }
+  });
 });

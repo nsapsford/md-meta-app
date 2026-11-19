@@ -506,7 +506,38 @@
           "text": "Garura (sent to GY): draw 1."
         }
       ]
-    }
+    },
+    { "id": "BAR", "passcodes": [84815190], "short": "Baronne", "listOrder": 33 },
+    {
+      "id": "CANG", "passcodes": [22850702], "short": "Chaos Angel", "listOrder": 34,
+      "effects": [
+        {
+          "key": "cang", "phase": "end", "from": "field", "mandatory": true,
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "t", "pick": { "oppCard": true } }],
+          "do": [{ "oppRemove": { "what": "t", "how": "banish" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 0 },
+          "text": "Chaos Angel: banish their {t}.", "negText": "Chaos Angel's banish: negated."
+        }
+      ]
+    },
+    { "id": "MASQ", "passcodes": [65741787], "short": "Masquerena", "listOrder": 35 },
+    { "id": "SHEEP", "passcodes": [50277355], "short": "Cross-Sheep", "listOrder": 36 },
+    {
+      "id": "SPLK", "passcodes": [29301450], "short": "Little Knight", "listOrder": 37,
+      "effects": [
+        {
+          "key": "splk", "phase": "end", "from": "field", "limit": "oncePerTurn", "mandatory": true,
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "t", "pick": { "oppCard": true } }],
+          "cost": [{ "noDirectAttacks": true }], "do": [{ "oppRemove": { "what": "t", "how": "banish" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 1 },
+          "text": "Little Knight: banish their {t} (your monsters cannot attack directly this turn).", "negText": "Little Knight's banish: negated."
+        }
+      ]
+    },
+    { "id": "FANCY", "passcodes": [4993187], "short": "Fancy Ball", "listOrder": 38 },
+    { "id": "CHARM", "passcodes": [27519978], "short": "Charmer Quartet", "listOrder": 39 }
   ],
   "groups": {
     "DM_ST": ["CIRC", "CURT", "GAZE", "TALI", "SSRV"],
@@ -538,9 +569,21 @@
     { "card": "MUD", "method": "fusion", "order": 4, "slots": [{ "cardKind": ["monster"] }, { "cardKind": ["monster"] }], "relations": ["sameAttr", "differentRace"] },
     { "card": "CHOR", "method": "fusion", "order": 5, "slots": [{ "extraDeckMonster": true }, { "race": ["Spellcaster"] }] },
     { "card": "ILIA", "method": "fusion", "order": 6, "slots": [{ "race": ["Illusion"] }, { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["LIGHT"] }] }] },
-    { "card": "RCIE", "method": "fusion", "order": 7, "slots": [{ "race": ["Illusion"] }, { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["LIGHT"] }] }] }
+    { "card": "RCIE", "method": "fusion", "order": 7, "slots": [{ "race": ["Illusion"] }, { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["LIGHT"] }] }] },
+    { "card": "CANG", "method": "synchro", "order": 1, "level": 10, "min": 2, "max": 3, "tuners": "atMostOne", "mats": { "attribute": ["LIGHT", "DARK"] }, "then": "cang" },
+    { "card": "BAR", "method": "synchro", "order": 2, "level": 10, "min": 2, "max": 3, "tuners": "exactlyOne" },
+    { "card": "MASQ", "method": "link", "order": 1, "rating": 2, "min": 2, "max": 2, "mats": { "not": { "frame": ["Link"] } }, "bottomArrows": true },
+    { "card": "SHEEP", "method": "link", "order": 2, "rating": 2, "min": 2, "max": 2, "mats": { "uniqueName": true }, "bottomArrows": true },
+    { "card": "SPLK", "method": "link", "order": 3, "rating": 2, "min": 2, "max": 2, "mats": { "not": { "frame": ["Normal"] } }, "then": "splk", "thenIf": { "extraDeckMonster": true } },
+    { "card": "FANCY", "method": "link", "order": 4, "rating": 3, "min": 2, "max": 3, "mats": { "not": { "frame": ["Normal"] } }, "bottomArrows": true },
+    { "card": "CHARM", "method": "link", "order": 5, "rating": 4, "min": 2, "max": 4, "bottomArrows": true }
   ],
   "boardValue": [
+    { "id": "baronne", "when": "oppTurn", "on": { "control": { "card": "BAR", "kind": "mon" } }, "base": [{ "value": 1.0, "label": "Baronne: negate" }] },
+    { "id": "little-knight", "when": "oppTurn", "on": { "control": { "card": "SPLK", "kind": "mon" } }, "base": [{ "value": 0.9, "label": "Little Knight: banish 2 until End Phase" }] },
+    { "id": "masquerena", "when": "oppTurn", "on": { "control": { "card": "MASQ", "kind": "mon" } }, "base": [{ "value": 0.4, "label": "Masquerena: Link Summon on their turn" }] },
+    { "id": "charmer", "when": "oppTurn", "on": { "control": { "card": "CHARM", "kind": "mon" } }, "base": [{ "value": 0.4, "label": "Charmer Quartet: revive 2 on their turn" }] },
+    { "id": "chaos-angel", "when": "oppTurn", "on": { "control": { "card": "CANG", "kind": "mon" } }, "base": [{ "value": 0.3, "label": "Chaos Angel: your monsters cannot be destroyed by battle" }] },
     {
       "id": "dragoon", "when": "oppTurn", "on": { "control": { "card": "DRAG", "kind": "mon" } },
       "base": [

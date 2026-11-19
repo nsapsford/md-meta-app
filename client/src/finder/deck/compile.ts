@@ -29,8 +29,8 @@ export type Push = (key: string, tags: Tags, run: Move['run'], negatable?: boole
 
 /** A word that reads a card (`mats`, `slots`) gets the candidate as `Run.self`. */
 export type CompiledExtraRule =
-  | { card: number; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats: CondFn | null; then: number }
-  | { card: number; method: 'link'; rating: number; min: number; max: number; mats: CondFn | null; bottomArrows: boolean; then: number }
+  | { card: number; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats: CondFn | null; then: number; thenIf: CondFn | null }
+  | { card: number; method: 'link'; rating: number; min: number; max: number; mats: CondFn | null; bottomArrows: boolean; then: number; thenIf: CondFn | null }
   | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then: number; uses: CondFn | null };
 
 export interface CompiledProtection {
@@ -733,8 +733,9 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const then = x.then ? effectIds.get(x.then) ?? 0 : 0;
     if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then, uses: x.uses ? condAt(x.uses, null, `${f}.uses`) : null };
     const mats = x.mats ? condAt(x.mats, null, `${f}.mats`) : null;
-    if (x.method === 'synchro') return { card: ix[x.card], method: 'synchro', level: x.level, min: x.min, max: x.max, tuners: x.tuners, mats, then };
-    return { card: ix[x.card], method: 'link', rating: x.rating, min: x.min, max: x.max, mats, bottomArrows: !!x.bottomArrows, then };
+    const thenIf = x.thenIf ? condAt(x.thenIf, null, `${f}.thenIf`) : null;
+    if (x.method === 'synchro') return { card: ix[x.card], method: 'synchro', level: x.level, min: x.min, max: x.max, tuners: x.tuners, mats, then, thenIf };
+    return { card: ix[x.card], method: 'link', rating: x.rating, min: x.min, max: x.max, mats, bottomArrows: !!x.bottomArrows, then, thenIf };
   });
   extraRules.push(...extra);
   const protections: CompiledProtection[] = (file.protections ?? []).map((p, j) => {

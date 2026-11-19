@@ -49,8 +49,8 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   text: string; negText?: string; ledger?: { effect?: number } }
 /** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
 export type ExtraRule = { order?: number } & (
-  | { card: CardId; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats?: Word; then?: string }
-  | { card: CardId; method: 'link'; rating: number; min: number; max: number; mats?: Word; bottomArrows?: boolean; then?: string }
+  | { card: CardId; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats?: Word; then?: string; thenIf?: Word }
+  | { card: CardId; method: 'link'; rating: number; min: number; max: number; mats?: Word; bottomArrows?: boolean; then?: string; thenIf?: Word }
   | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string;
       /** A filter: the Fusion Monster gets one use of its counted effect per material matching it (`usesLeft`, `spendUse`). */
       uses?: Word });
@@ -97,8 +97,8 @@ const EFFECT: Fields = {
 
 const EXTRA_RULE: ArgSpec = {
   k: 'variant', tag: 'method', cases: {
-    synchro: { order: opt(A.number), card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect) },
-    link: { order: opt(A.number), card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect) },
+    synchro: { order: opt(A.number), card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect), thenIf: opt(A.cond) },
+    link: { order: opt(A.number), card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect), thenIf: opt(A.cond) },
     fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect), uses: opt(A.cond) },
   },
 };

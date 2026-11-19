@@ -24,6 +24,8 @@ Extra Deck rules (`extraDeck`) are tried in (`order`, card id, method) order, wh
 in the file; `order` is an optional number (default 0), as on effects. That order is the order of
 the Synchro and Link moves and of the Fusion options.
 
+Synchro and Link rules take `thenIf`, a material filter: their `then` effect is queued only when at least one material (read where it was) matches it.
+
 Effect fields: `queueFirst` (a trigger) queues it at the front of the pending list instead of the back. Card fields: `materialAttribute: "any"` (see the condition). Fusion rules take `uses`, a filter: the Fusion Monster gets one use of its counted effect per material matching it. A field filter (`fromField`, `control`, `has` in `field`) reads each monster where it is (its name and Level there).
 
 Text: `{as}` the chosen card's name; `{as?text|other}` text (`$` for the name) when the choice was made; `{as@zone?text|other}` text when the choice came from that zone (hand, deck, extra, gy, ban, field, opp); `{as.atk}` the chosen card's ATK; `{zone}` where the first choice came from.

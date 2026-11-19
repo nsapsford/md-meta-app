@@ -73,12 +73,14 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
     return (s0) => {
       const n = so.clone(s0);
       step(n, `${method === 'synchro' ? 'Synchro' : 'Link'} Summon ${props[r.card].short} with ${pick.map((i) => props[s0.mons[i].id].short).join(' + ')}.`, INHERENT);
+      // `thenIf`: the rule's `then` is queued only when a material (read where it was) matches it.
+      const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }));
       const mats: number[] = [];
       for (const i of pick.slice().sort((p, q) => q - p)) mats.push(ops.monToGy(n, i, false).id);
       L.sum(n, r.card, method, 'extra', mats);
       so.W(n, 'extra')[r.card]--;
       const m = ops.place(n, r.card, { special: true, emz, from: 'extra' });
-      if (r.then) deck.queueAfterSummon(n, r.then, m);
+      if (r.then && thenOk) deck.queueAfterSummon(n, r.then, m);
       return done(n);
     };
   }
