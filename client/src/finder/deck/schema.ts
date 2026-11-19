@@ -46,6 +46,8 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   immediate?: boolean;
   /** A trigger queued at the front of the pending list (to resolve before triggers already waiting), instead of at the back. */
   queueFirst?: boolean;
+  /** A note for the line's reader on this effect's (not negated) step, e.g. what the opponent may now do. */
+  lineNote?: string;
   text: string; negText?: string; ledger?: { effect?: number } }
 /** An Extra Deck rule. Rules are tried in (`order`, card id, method) order, whatever their order in the file. */
 export type ExtraRule = { order?: number } & (
@@ -54,8 +56,17 @@ export type ExtraRule = { order?: number } & (
   | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string;
       /** A filter: the Fusion Monster gets one use of its counted effect per material matching it (`usesLeft`, `spendUse`). */
       uses?: Word });
-export interface ProtectionDef { id: string; label: string; order: number; where: Word[]; covers?: { marks?: string[]; monsterOnly?: boolean; inResponseOnly?: boolean }; limit?: string; consume: Word[]; stepNote?: string }
+/**
+ * One of your cards that answers an opponent's interruption. `card`: the card that answers (its
+ * `consume` words see it as `self`, on the field: a monster, else a Set copy first). `destroysSource`:
+ * answering destroys the interrupting card when it is on their field.
+ */
+export interface ProtectionDef { id: string; label: string; order: number; card: CardId; where: Word[]; covers?: { marks?: string[]; monsterOnly?: boolean; inResponseOnly?: boolean }; limit?: string; consume: Word[]; destroysSource?: boolean; stepNote?: string }
 export interface BoardValueDef { id: string; when: 'oppTurn' | 'endPhase'; on: Word; base: { if?: Word[]; value: number; label: string }[]; adds?: { if: Word[]; value: number; label: string }[]; extraCopies?: { value: number; label: string }; effect?: EffectDef }
+/** A hand trap the finder can play around (hand-traps.json): what it does is one of opponent.ts's MECHANISMS. */
+export interface HandTrapEntry { id: string; name: string; label: string; short: string; mechanism: string; monster: boolean; param?: number; passcodes: number[] }
+/** hand-traps.json: the hand traps, and what a card on their field can be set to do (`kind`: mechanisms joined with `+`, a floodgate, or '' for nothing). */
+export interface HandTrapFile { vocab: number; traps: HandTrapEntry[]; boardOptions: { kind: string; label: string }[] }
 export interface DeckFileError { card: string | null; field: string; message: string }
 
 /** Interruption tags an effect may carry (the engine's `Tags`, less `marks`, which a file names in `marks`). */
@@ -92,7 +103,7 @@ const EFFECT: Fields = {
   do: A.actList, onNegated: opt(A.actList),
   tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean), queueFirst: opt(A.boolean),
   marks: opt(A.list(A.mark)), stepMarks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
-  text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
+  lineNote: opt(A.string), text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };
 
 const EXTRA_RULE: ArgSpec = {
@@ -104,9 +115,9 @@ const EXTRA_RULE: ArgSpec = {
 };
 
 const PROTECTION = A.object({
-  id: A.string, label: A.string, order: A.number, where: A.condList,
+  id: A.string, label: A.string, order: A.number, card: A.card, where: A.condList,
   covers: opt(A.object({ marks: opt(A.list(A.mark)), monsterOnly: opt(A.boolean), inResponseOnly: opt(A.boolean) })),
-  limit: opt(A.string), consume: A.actList, stepNote: opt(A.string),
+  limit: opt(A.string), consume: A.actList, destroysSource: opt(A.boolean), stepNote: opt(A.string),
 });
 
 const BOARD_VALUE: Fields = {

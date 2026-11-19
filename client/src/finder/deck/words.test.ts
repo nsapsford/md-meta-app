@@ -243,6 +243,21 @@ describe('actions', () => {
     expect(n.noDirect).toBe(true);
     expect(n.flags).toBe(1);
   });
+  it('discardCheapest discards the n different lowest-value cards, ties in list order', () => {
+    // Probe is worth more; Big and Seeker tie (list order: by id, Big first).
+    const card = { discardValue: 9 };
+    const one = (() => { const d = probe([eff({ do: [{ discardCheapest: true }] })], {}, card); return { d, n: d.run(d.state({ PROBE: 1, BIG: 2, SEEKER: 1 }), 'p') }; })();
+    expect([one.d.count(one.n, 'gy', 'BIG'), one.d.count(one.n, 'gy', 'SEEKER'), one.d.count(one.n, 'gy', 'PROBE')]).toEqual([1, 0, 0]);
+    const d = probe([eff({ do: [{ discardCheapest: 2 }] })], {}, card);
+    const n = d.run(d.state({ PROBE: 1, BIG: 2, SEEKER: 1 }), 'p');
+    expect([d.count(n, 'gy', 'BIG'), d.count(n, 'gy', 'SEEKER'), d.count(n, 'hand', 'BIG'), d.count(n, 'hand', 'PROBE')]).toEqual([1, 1, 1, 1]);
+    expect(n.log[0].seq!.slice(1)).toEqual([['m', d.deck.ix.BIG, 'hand', 'gy'], ['m', d.deck.ix.SEEKER, 'hand', 'gy']]);
+  });
+  it('lineNote is put on the step when not negated', () => {
+    const d = probe([eff({ lineNote: 'They may respond.' })]);
+    const s = d.state({ PROBE: 1 });
+    expect(d.run(s, 'p').log[0].note).toBe('They may respond.');
+  });
   it('payLp half', () => { expect(after({ do: [{ payLp: 'half' }] }, { PROBE: 1 }).n.lp).toBe(4000); });
   it('setFromDeck then faceUp', () => {
     const { d, n: set } = after({ choose: [{ as: 'c', pick: { fromZone: { zone: 'deck', group: 'traps' } } }], do: [{ setFromDeck: { what: 'c' } }] }, { PROBE: 1 }, 'p:WALL', { extra: { groups: { ...TOY_FILE.groups, traps: ['WALL'] } } });

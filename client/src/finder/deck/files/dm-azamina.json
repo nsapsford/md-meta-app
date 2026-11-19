@@ -554,8 +554,23 @@
     "AZAMINA": ["ILIA", "RCIE"],
     "RCIE_ADD": ["HALL", "DECE", "WANT"],
     "DMOD_SEARCH": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "SSRV"],
-    "GAZE_FUS": ["DRAG", "DMOD", "MOC"]
+    "GAZE_FUS": ["DRAG", "DMOD", "MOC"],
+    "SPELLCASTER_IN_HAND": ["DM", "DROLL", "SOULS", "ROD", "DMG", "DIA", "DMBM", "SERV", "IOC"]
   },
+  "protections": [
+    { "id": "talisman", "label": "Talisman", "order": 1, "card": "TALI",
+      "where": [{ "control": { "card": "TALI", "kind": "st", "faceUp": false } }, { "has": { "zone": "hand", "group": "SPELLCASTER_IN_HAND" } }],
+      "covers": { "marks": ["dm"], "monsterOnly": true, "inResponseOnly": true },
+      "consume": [{ "move": { "what": "self", "to": "gy" } }], "stepNote": "talisman" },
+    { "id": "baronne", "label": "Baronne", "order": 2, "card": "BAR",
+      "where": [{ "control": { "card": "BAR", "kind": "mon" } }], "limit": "barNeg", "consume": [] },
+    { "id": "dragoon", "label": "Dragoon (discard 1)", "order": 3, "card": "DRAG",
+      "where": [{ "control": { "card": "DRAG", "kind": "mon" } }, { "has": { "zone": "hand" } }], "limit": "dragNeg",
+      "consume": [{ "discardCheapest": true }], "destroysSource": true, "stepNote": "dragoon" },
+    { "id": "ilia", "label": "Ilia Silvia (Tribute)", "order": 4, "card": "ILIA",
+      "where": [{ "control": { "card": "ILIA", "kind": "mon" } }], "limit": "iliaNeg",
+      "consume": [{ "move": { "what": "self", "to": "gy" } }], "stepNote": "ilia" }
+  ],
   "listOrder": { "DROLL": 1, "MAXX": 3, "ASH": 5, "FUWA": 6, "SPOLY": 18 },
   "endOfTurn": {
     "setOrder": ["TALI", "CURT", "GAZE", "SPOLY", "SSRV", "WANT", "FSIL"],

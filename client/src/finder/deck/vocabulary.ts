@@ -754,6 +754,18 @@ defineAct('discard', {
     return (n, r) => rt.each(r, slot, (c) => rt.moveCard(n, { id: c.id, zone: 'hand', at: -1, uid: null }, 'gy'));
   },
 });
+defineAct('discardCheapest', {
+  doc: 'Discard the given number (default 1) of different cards from the hand with the lowest discard value (ties in list order).',
+  args: FREE,
+  compile: (a, ctx): ActFn => {
+    const k = free(a), rt = ctx.rt, props = ctx.props;
+    return (n) => {
+      const ids = rt.order.filter((i) => n.hand[i] > 0);
+      const pick = ids.map((id, j) => ({ id, j })).sort((x, y) => props[x.id].discardValue - props[y.id].discardValue || x.j - y.j).slice(0, k);
+      for (const { id } of pick) rt.moveCard(n, { id, zone: 'hand', at: -1, uid: null }, 'gy');
+    };
+  },
+});
 defineAct('draw', {
   doc: 'Draw the given number of cards.', args: A.int(1),
   compile: (a: number, ctx): ActFn => { const draw = ctx.rt.ops.draw; return (n) => { draw(n, a); }; },

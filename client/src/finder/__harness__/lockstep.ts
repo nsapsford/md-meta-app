@@ -12,8 +12,8 @@
 import type { Engine } from '../engine';
 import { topK } from '../engine/search';
 import type { Move, State } from '../engine/types';
-import { refExec, type RefAction, type RefCard, type RefCfg, type RefEngine } from './loadReference';
-import { newTags, refTags, toCfg } from './mapping';
+import { refExec, type RefAction, type RefCard, type RefCfg, type RefEngine, type RefIntr } from './loadReference';
+import { newTags, refTags, toCfg, toIntr } from './mapping';
 import { newObserve, refObserve, type NameMaps } from './observe';
 
 export interface MoveView { key: string; text: string; tags: string[]; negatable: boolean; negated: boolean; obs: string }
@@ -41,6 +41,14 @@ export interface Side<S = any, M extends SideMove = any> {
    * as an unmatched result whose `obs` is `throws: <message>`.
    */
   reportThrows: boolean;
+  /** Path entries other than moves (the reference's formats: `!{k, it}`, `^it`, `@ev`). */
+  interrupt?(s: S, a: M, it: RefIntr): S;
+  startDraw?(s: S, it: RefIntr): S;
+  applyEvent?(s: S, ev: unknown): S;
+  /** The interruption as this side writes it on its path. */
+  intr?(it: RefIntr): unknown;
+  /** Replay a whole path (a side without startDraw / applyEvent runs `^` and `@` entries through it). */
+  replay?(cfg: RefCfg, path: string[]): S;
 }
 
 /** The reference as a Side. `maps` names its pending triggers and once-per-turn slots (observe.ts). */
@@ -55,6 +63,10 @@ export function refSide(ref: RefEngine, maps?: NameMaps): Side<any, RefAction> {
     rank: (s) => ref.evaluate(s, false).score + ref.potential(s),
     stateKey: (s) => ref.stateKey(s),
     reportThrows: false,
+    interrupt: (s, a, it) => ref.interrupt(s, a, it),
+    // The reference does not export startMul / applyEvent: its replay runs them.
+    replay: (cfg, path) => ref.replay(cfg, path),
+    intr: (it) => it,
   };
 }
 
@@ -71,6 +83,10 @@ export function newSide(neu: Engine): Side<State, Move> {
     rank: (s) => neu.evaluate(s, false).score + neu.potential(s),
     stateKey: (s) => neu.stateKey(s),
     reportThrows: true,
+    interrupt: (s, a, it) => neu.interrupt(s, a, toIntr(it)),
+    startDraw: (s, it) => neu.startDraw(s, toIntr(it)),
+    applyEvent: (s, ev) => neu.applyEvent(s, ev as any),
+    intr: (it) => toIntr(it),
   };
 }
 
@@ -155,7 +171,33 @@ function walk(a: Side, b: Side, cfg: RefCfg, path: string[]): { sa: any; sb: any
   const out: string[] = [];
   path.forEach((k, i) => {
     const where = `translatePath: step ${i + 1} (${k})`;
-    if (k[0] === '!' || k[0] === '^' || k[0] === '@') throw new Error(`${where}: interruption and event entries are not supported yet`);
+    if (k[0] === '^' || k[0] === '@') {
+      const o = JSON.parse(k.slice(1));
+      const run = (side: Side, st: any) => (side.replay && !side.startDraw ? side.replay(cfg, st.path.concat([k])) : k[0] === '^' ? side.startDraw!(st, o) : side.applyEvent!(st, o));
+      sa = run(a, sa); sb = run(b, sb);
+      out.push(k[0] === '^' ? '^' + JSON.stringify(b.intr!(o)) : k);
+      const oa = a.observe(sa), ob = b.observe(sb);
+      if (oa !== ob) throw new Error(`${where}: the positions differ after it:
+      ${oa}
+   vs ${ob}`);
+      return;
+    }
+    if (k[0] === '!') {
+      const o = JSON.parse(k.slice(1)) as { k: string; it: RefIntr };
+      const act = a.gen(sa).find((x: SideMove) => x.k === o.k);
+      if (!act) throw new Error(`${where}: the reference offers no such move`);
+      const na = a.interrupt!(sa, act, o.it);
+      const ma = interruptMatch(a, sa, na);
+      for (const m of b.gen(sb) as SideMove[]) {
+        let nb: any;
+        try { nb = b.interrupt!(sb, m, o.it); } catch { continue; }
+        if (interruptMatch(b, sb, nb) === ma && JSON.stringify([side_tags(a, act), act.neg]) === JSON.stringify([side_tags(b, m), m.neg])) {
+          sa = na; sb = nb; out.push('!' + JSON.stringify({ k: m.k, it: b.intr!(o.it) }));
+          return;
+        }
+      }
+      throw new Error(`${where} has no match in the other engine; reference result: ${ma}`);
+    }
     const neg = k[0] === '~';
     const key = neg ? k.slice(1) : k;
     const act = a.gen(sa).find((x: SideMove) => x.k === key);
@@ -173,6 +215,15 @@ function walk(a: Side, b: Side, cfg: RefCfg, path: string[]): { sa: any; sb: any
     out.push(neg ? '~' + hitKey : hitKey);
   });
   return { sa, sb, out };
+}
+
+const side_tags = (side: Side, a: SideMove) => side.tags(a);
+
+/** What an interrupted move gave: the position, the step's text and its interruption note. */
+export function interruptMatch(side: Side, pre: any, n: any): string {
+  const last = n.log.length ? n.log[n.log.length - 1] : null;
+  const fresh = last && last !== (pre.log.length ? pre.log[pre.log.length - 1] : null);
+  return JSON.stringify([side.observe(n), fresh ? last.text : '', fresh ? last.interrupted ?? null : null]);
 }
 
 /** Side A's line `path` as side B's keys. Throws naming the first step with no match. */

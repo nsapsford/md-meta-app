@@ -4,6 +4,10 @@
 
 import type { Cfg, Interruption, OppCard, Tags } from '../engine/types';
 import type { RefCfg, RefIntr } from './loadReference';
+import type { HandTrapFile } from '../deck/schema';
+import handTraps from '../deck/files/hand-traps.json';
+
+const TRAPS = (handTraps as HandTrapFile).traps;
 
 /** Reference step tag → new tag. The reference tag `dm` is the deck mark 'dm' (see refTags). */
 export const TAG_MAP = { ash: 'deckTouch', droll: 'deckAdd', field: 'fieldMon', handEff: 'handMon', gy: 'gy', spell: 'spell', trap: 'trap', noResp: 'noResp', inherent: 'inherent', removal: 'removal', dig: 'dig' } as const;   // reference tag `dm` → deck mark 'dm'
@@ -33,6 +37,7 @@ export const OPT_MAP: Record<string, string> = {
   diaP: 'dia', dia1: 'dia1', want1: 'want', want2: 'want2', dec1: 'dece1', dec2: 'dece2', hallG: 'hallG', rcie1: 'rcie',   // group 5
   gaze: 'gaze', dmodS: 'dmodS', dmodSS: 'dmodSS', moc1: 'moc1', moc2: 'moc2', gar: 'gar',   // group 6
   splk1: 'splk',   // group 7
+  barNeg: 'barNeg', dragNeg: 'dragNeg', iliaNeg: 'iliaNeg',   // protections (Task 17)
 };
 
 /** Map reference names through `table`, throwing on any it doesn't hold. */
@@ -73,6 +78,9 @@ export function toIntr(ref: RefIntr): Interruption {
   if (ref.uid !== undefined) out.uid = ref.uid;
   if (ref.cardKind !== undefined) out.cardKind = ref.cardKind;
   if (ref.force !== undefined) out.force = ref.force;
+  // A hand trap: whether it is a monster and its number come from hand-traps.json (the reference's kind is the entry id).
+  const t = ref.src === 'hand' ? TRAPS.find((x) => x.id === ref.kind) : undefined;
+  if (t) { out.monster = t.monster; out.short = t.short; if (t.param !== undefined) out.param = t.param; if (ref.label === undefined) out.label = t.label; }
   return out;
 }
 

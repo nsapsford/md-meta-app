@@ -39,6 +39,8 @@ export interface Tags {
 export interface StepRec {
   text: string; tags: Tags; seq: unknown[] | null; ns: number; xs: number; summonsAfter: number;
   interrupted: string | null; pre: State | null; act: Move | null; fD: boolean; fH: boolean; fS: boolean; draws: number; ev?: boolean;
+  /** The effect's `lineNote`, on its step. */
+  note?: string;
 }
 
 export interface Move { k: string; tags: Tags; neg: boolean; run(s: State, negated: boolean): State }
@@ -56,6 +58,8 @@ export type EnginePush = (key: string, tags: Tags, run: Move['run'], negatable: 
 export interface Interruption {
   kind: string; src: 'hand' | 'board'; label: string; uid?: OppCard['uid'];
   cardKind?: 'mon' | 'st'; monster?: boolean; param?: number; force?: boolean;
+  /** A short name for notes (a hand trap's `short`). */
+  short?: string;
 }
 
 export interface StepView {

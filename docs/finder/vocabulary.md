@@ -51,6 +51,19 @@ card's short name, `{zone}` where the first choice came from, and `{as?text|othe
 (with `$` for the chosen card's short name) when the choice `as` was made, else `other` (which may
 be left out with its `|`).
 
+`lineNote` on an effect is a note for the line's reader, put on the effect's step when it is not
+negated (an exported line's step carries it).
+
+Protections (`protections`): each is one of your cards that answers an opponent's interruption,
+tried in `order`. `card` is the card that answers; `where` (conditions) must hold before the step,
+and `consume`'s words see `card` as `self` on the field (a monster, else a Set copy first). They
+run outside any step: they record no ledger entry and set off no trigger. `covers.marks` limits it
+to steps with one of those marks, `covers.monsterOnly` to interruptions by a monster,
+`covers.inResponseOnly` to interruptions that respond to an activation (not `lockDeckAdds`,
+`wipeAtSummons`, `pop`, `negSummon`, `force`). `limit` names a once-per-turn slot it uses.
+`destroysSource: true` destroys the interrupting card when it is on their field. `stepNote` is the
+note an exported step carries while the protection is ready (its `where` and `marks` hold).
+
 Card fields beside the words: `fieldName` is the name a monster has on your field and `gyName`
 the name a card has in your GY (what `named`, `summonedNamed` and `namesPresent` see there).
 `listOrder` (a number, lower first; cards without one come after, by id) is the order in which a
@@ -105,6 +118,7 @@ the cards of a shared file it uses there.
 | `move` | action | `{ what, to: zone, from?: zone }` | Move a card to a zone. |
 | `summon` | action | `{ what, from?: zone, noEff?, as?: card }` | Special Summon a card, optionally with effects negated or under another name. |
 | `discard` | action | `{ what }` | Discard a card from the hand to the GY. |
+| `discardCheapest` | action | `true` or a number | Discard the given number (default 1) of different cards from the hand with the lowest discard value (ties in list order). |
 | `draw` | action | number ≥ 1 | Draw that many cards. |
 | `setFromDeck` | action | `{ what }` | Set a Spell/Trap from the Deck to your field. |
 | `faceUp` | action | `{ what }` | Turn a Set Spell/Trap face-up. |

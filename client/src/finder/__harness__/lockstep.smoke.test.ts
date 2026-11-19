@@ -85,7 +85,7 @@ describe('lockstep harness', () => {
   it('maps tags, interruption kinds and the config', () => {
     expect(refTags({ ash: true, droll: false, field: true, dm: true })).toEqual(['deckTouch', 'dm', 'fieldMon']);
     expect(newTags({ deckTouch: true, fieldMon: true, deckAdd: false, marks: 2 }, { other: 0, dm: 1 })).toEqual(['deckTouch', 'dm', 'fieldMon']);
-    expect(toIntr({ kind: 'imperm', src: 'hand', label: 'Infinite Impermanence' })).toEqual({ kind: 'negFieldMon', src: 'hand', label: 'Infinite Impermanence' });
+    expect(toIntr({ kind: 'imperm', src: 'hand', label: 'Infinite Impermanence' })).toEqual({ kind: 'negFieldMon', src: 'hand', label: 'Infinite Impermanence', monster: false, short: 'Imperm' });
     const c = toCfg({ ...sits[0].cfg, mode: 'second', mul: 5, dpen: 40, opp: oppField(FIELDS[3]) });
     expect(c).toMatchObject({ drawFx: 5, drawPenalty: 40, hand: sits[0].cfg.hand });
     expect(c.opp!.mons[0].intr).toBe('negMon');

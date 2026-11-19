@@ -34,11 +34,14 @@ export type CompiledExtraRule =
   | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then: number; uses: CondFn | null };
 
 export interface CompiledProtection {
-  id: string; label: string; order: number; where: CondFn[];
+  id: string; label: string; order: number;
+  /** The card that answers (card index). */
+  card: number;
+  where: CondFn[];
   covers: { marks: number; monsterOnly: boolean; inResponseOnly: boolean };
   /** Once-per-turn slot (index into `opt`), or -1. */
   limit: number;
-  consume: ActFn[]; stepNote: string | null;
+  consume: ActFn[]; destroysSource: boolean; stepNote: string | null;
 }
 
 export interface CompiledDeck {
@@ -542,6 +545,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     };
 
     const text = template(def.text, scope.choose, failAt('text'), props);
+    const lineNote = def.lineNote ?? null;
     const negText = template(def.negText ?? `${card.short}: negated.`, scope.choose, failAt('negText'), props);
     const limit = def.limit ? slots.get(limitOf.get(def.key)!)! : -1;
     const froms: Loc[] = Array.isArray(def.from) ? def.from : [def.from];
@@ -582,7 +586,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       return (s0, neg) => {
         const n = so.clone(s0);
         if (pending) n.pend = n.pend.slice(1);
-        step(n, neg ? negText(r, s0) : text(r, s0), stepTagsFor(s0, r));
+        const c = step(n, neg ? negText(r, s0) : text(r, s0), stepTagsFor(s0, r));
+        if (lineNote !== null && !neg) c.note = lineNote;
         if (limit >= 0) so.setOpt(n, limit);
         // A Spell is activated from the hand or the field; a Spell's effect in the GY or banishment is not that.
         if (activates === 'spell' && (r.at.zone === 'hand' || r.at.zone === 'st')) n.spell = true;
@@ -741,14 +746,14 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const protections: CompiledProtection[] = (file.protections ?? []).map((p, j) => {
     const f = `protections[${j}]`;
     return {
-      id: p.id, label: p.label, order: p.order,
+      id: p.id, label: p.label, order: p.order, card: ix[p.card],
       where: p.where.map((c, k) => condAt(c, null, `${f}.where[${k}]`)),
       covers: { marks: (p.covers?.marks ?? []).reduce((m, n) => m | (1 << markBit[n]), 0), monsterOnly: !!p.covers?.monsterOnly, inResponseOnly: !!p.covers?.inResponseOnly },
       limit: p.limit ? slots.get(p.limit)! : -1,
       consume: p.consume.map((a, k) => actAt(a, null, `${f}.consume[${k}]`)),
-      stepNote: p.stepNote ?? null,
+      destroysSource: !!p.destroysSource, stepNote: p.stepNote ?? null,
     };
-  });
+  }).sort((a, b) => a.order - b.order);
 
   // End of turn.
   const eot = file.endOfTurn;
