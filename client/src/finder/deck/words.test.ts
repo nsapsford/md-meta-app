@@ -169,6 +169,10 @@ describe('picks', () => {
     expect(keys({ fromZone: { zone: 'deck', group: 'spells' } }, { PROBE: 1 })).toEqual(['p:DRAWTWO']);
     expect(keys({ fromZone: { zone: 'deck', filter: { lpAbove: 0 } } }, { PROBE: 1 })).toEqual(['p:BIG', 'p:DRAWTWO', 'p:SEEKER', 'p:TUNER', 'p:WALL']);
   });
+  it('fromZone by a card list walks the cards in the order listed, skipping those not there', () => {
+    expect(keys({ fromZone: { zone: 'deck', cards: ['WALL', 'PROBE', 'BIG', 'TUNER', 'WALL'] } }, { PROBE: 1 })).toEqual(['p:WALL', 'p:BIG', 'p:TUNER']);
+    expect(() => probe([eff({ choose: [{ as: 'c', pick: { fromZone: { zone: 'deck', cards: ['BIG'], group: 'spells' } } }] })])).toThrow();
+  });
   it('fromField by kind', () => {
     expect(keys({ fromField: { kind: 'mon' } }, { PROBE: 1 }, (s, d) => { onField(d, s, 'BIG'); s.st.push({ id: d.deck.ix.WALL, up: true, now: false }); })).toEqual(['p:BIG']);
     expect(keys({ fromField: {} }, { PROBE: 1 }, (s, d) => { onField(d, s, 'BIG'); s.st.push({ id: d.deck.ix.WALL, up: true, now: false }); })).toEqual(['p:BIG', 'p:WALL']);

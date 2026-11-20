@@ -73,3 +73,25 @@ export const ACCEPTED_EXPORT_TEXT = {
   },
   reason: "End-board text lists hand traps held in hand: the reference in the order they entered the hand (its hand object's key order), the new engine in card-list order. Display order only.",
 };
+
+// ── Ledger checker errors that are the checker's, not the line's (ledger.ts) ──
+
+type LedgerStep = { activations?: { card: string }[]; summons?: { card: string }[] };
+export interface AcceptedLedgerError { test(issue: { severity: string; step: number | null; message: string }, steps: readonly LedgerStep[]): boolean; reason: string }
+
+/** The 0-based indices of the steps before `before` that summon `name`. */
+const summonSteps = (steps: readonly LedgerStep[], name: string, before: number) =>
+  steps.slice(0, before).flatMap((s, i) => ((s.summons ?? []).some((x) => x.card === name) ? [i] : []));
+
+export const ACCEPTED_LEDGER: AcceptedLedgerError[] = [
+  {
+    test: (issue, steps) => {
+      const m = /^"(.+)" can't activate its effects this turn \(it was summoned under a restriction that stops it\)\.$/.exec(issue.message);
+      if (issue.severity !== 'error' || !m || issue.step == null) return false;
+      const at = summonSteps(steps, m[1], issue.step - 1);
+      // Two copies summoned: the earlier one by another card's effect (restricted), the latest by its own procedure (no activation in that step).
+      return at.length >= 2 && !(steps[at[at.length - 1]].activations?.length) && !!steps[at[0]].activations?.length;
+    },
+    reason: "The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name.",
+  },
+];

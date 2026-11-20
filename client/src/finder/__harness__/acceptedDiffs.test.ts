@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACCEPTED_EXPORT, ACCEPTED_EXPORT_TEXT, withoutAccepted } from './acceptedDiffs';
+import { ACCEPTED_EXPORT, ACCEPTED_EXPORT_TEXT, ACCEPTED_LEDGER, withoutAccepted } from './acceptedDiffs';
 import type { MoveView, StepDiff } from './lockstep';
 
 const mv = (key: string, pend: string[], text = 'Master of Chaos: Special Summon DMG Apprentice from GY.'): MoveView =>
@@ -28,5 +28,24 @@ describe('ACCEPTED_EXPORT', () => {
   it('end-board text: only the trailing in-hand parts may be reordered', () => {
     expect(ACCEPTED_EXPORT_TEXT.test('A; Droll in hand; Ash in hand', 'A; Ash in hand; Droll in hand')).toBe(true);
     expect(ACCEPTED_EXPORT_TEXT.test('A; B; Ash in hand', 'B; A; Ash in hand')).toBe(false);
+  });
+});
+
+describe('ACCEPTED_LEDGER: an effect restriction recorded by card name', () => {
+  const msg = '"Witch" can\'t activate its effects this turn (it was summoned under a restriction that stops it).';
+  const issue = (step: number) => ({ severity: 'error', step, message: msg });
+  const restricted = { activations: [{ card: 'Curtain' }], summons: [{ card: 'Witch' }] };
+  const own = { summons: [{ card: 'Witch' }] };
+  const act = { activations: [{ card: 'Witch' }] };
+  const accepted = (steps: object[], at: number) => ACCEPTED_LEDGER.some((a) => a.test(issue(at), steps));
+
+  it('accepts an activation by a second copy summoned by its own procedure after the restricted one', () => {
+    expect(accepted([restricted, own, act], 3)).toBe(true);
+  });
+  it('does not accept one copy, a restricted copy summoned last, or another message', () => {
+    expect(accepted([restricted, act], 2)).toBe(false);
+    expect(accepted([own, restricted, act], 3)).toBe(false);
+    expect(accepted([restricted, own, act], 2)).toBe(false);
+    expect(ACCEPTED_LEDGER.some((a) => a.test({ severity: 'error', step: 3, message: 'other' }, [restricted, own, act]))).toBe(false);
   });
 });

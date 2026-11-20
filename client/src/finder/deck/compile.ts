@@ -851,30 +851,41 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const items: [string, number][] | null = full ? [] : null;
     const keys: number[] = [];
     let sum = 0;
-    entries.forEach((e, j) => {
+    const holds = (conds: readonly CondFn[]) => { for (let q = 0; q < conds.length; q++) if (!conds[q](s, R0)) return false; return true; };
+    for (let j = 0; j < entries.length; j++) {
+      const e = entries[j];
       const k = e.on(s, R0);
-      if (!k) return;
-      const b = e.base.find((x) => x.conds.every((c) => c(s, R0)));
+      if (!k) continue;
+      let b: (typeof e.base)[number] | undefined;
+      for (let q = 0; q < e.base.length; q++) if (holds(e.base[q].conds)) { b = e.base[q]; break; }
       let v = 0, label = '';
       if (b) {
         v = b.value; label = b.label;
-        for (const a of e.adds) if (a.conds.every((c) => c(s, R0))) { v += a.value; if (full) label += `, ${a.label}`; }
+        for (const a of e.adds) if (holds(a.conds)) { v += a.value; if (full) label += `, ${a.label}`; }
+      }
+      if (!items) {
+        // The sum only, added copy by copy in the same order as below (the same rounding).
+        for (let i = 0; i < k; i++) {
+          if (i > 0 && e.extraCopies) sum += e.extraCopies.value;
+          else if (b) sum += v;
+        }
+        continue;
       }
       // With `full`: the board index of each copy the entry counts (its item's place in the list).
       const at: number[] = [];
-      if (items && e.anchor) {
+      if (e.anchor) {
         const an = e.anchor;
         if (an.zone === 'mon') n.mons.forEach((m, i) => { if (an.cards.has(m.id)) at.push(ITEM_ORDER.mon + i); });
         else n.st.forEach((x, i) => { if (an.cards.has(x.id) && (an.faceUp === undefined || !!x.up === an.faceUp)) at.push(ITEM_ORDER.st + i); });
       }
       const key = (i: number) => at[i] ?? ITEM_ORDER.other + j;
       for (let i = 0; i < k; i++) {
-        if (i > 0 && e.extraCopies) { sum += e.extraCopies.value; if (items) { items.push([e.extraCopies.label, e.extraCopies.value]); keys.push(key(i)); } continue; }
+        if (i > 0 && e.extraCopies) { sum += e.extraCopies.value; items.push([e.extraCopies.label, e.extraCopies.value]); keys.push(key(i)); continue; }
         if (!b) continue;
         sum += v;
-        if (items) { items.push([label, v]); keys.push(key(i)); }
+        items.push([label, v]); keys.push(key(i));
       }
-    });
+    }
     return items ? { sum, items, keys } : { sum, items };
   }
 

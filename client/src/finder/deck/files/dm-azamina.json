@@ -77,21 +77,21 @@
       "effects": [
         {
           "key": "ssrv-deck", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
-          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "SSRV_PLACE" } } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
           "do": [{ "placeOnTop": { "what": "card" } }],
           "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
           "text": "Soul Servant: put {card} from deck on top of the Deck."
         },
         {
           "key": "ssrv-hand", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
-          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "hand", "group": "SSRV_PLACE" } } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "hand", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
           "do": [{ "placeOnTop": { "what": "card" } }],
           "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
           "text": "Soul Servant: put {card} from hand on top of the Deck."
         },
         {
           "key": "ssrv-gy", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
-          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "gy", "group": "SSRV_PLACE" } } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "gy", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
           "do": [{ "placeOnTop": { "what": "card" } }],
           "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
           "text": "Soul Servant: put {card} from GY on top of the Deck."
@@ -548,7 +548,6 @@
     "CIRC_ADD": ["DM", "CURT", "GAZE", "TALI", "SSRV"],
     "CURT_ADD": ["CIRC", "GAZE", "TALI", "SSRV"],
     "CURT_SS": ["DM", "SERV", "DMBM", "DIA", "DMG", "ROD", "SOULS"],
-    "SSRV_PLACE": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"],
     "SOULS_SEND": ["DM", "DMG", "DIA", "DMBM", "SERV", "IOC"],
     "IOC_ADD": ["DM", "ROD", "SOULS", "SERV", "DMBM"],
     "SARC_ADD": ["DMG", "DMBM", "GAND", "FSIL"],

@@ -185,7 +185,10 @@ type Zone = 'hand' | 'deck' | 'extra' | 'gy' | 'ban' | 'field';
 type Match = (s: FinalBoard, r: Run, id: number, at?: Place) => boolean;
 interface WhichArgs { card?: CardId; group?: string; filter?: Word }
 
-const ANY: Match = () => true;
+/** Matches that read only the card index (not the state, run or place): callers may skip building a place. */
+const ID_ONLY = new WeakSet<Match>();
+const byId = (m: Match): Match => { ID_ONLY.add(m); return m; };
+const ANY: Match = byId(() => true);
 /** Where a filter's candidate is while a word walks `zone` (the field's cards are not walked by index here). */
 const inZone = (zone: Zone): Place['zone'] => (zone === 'field' ? 'none' : zone);
 
@@ -195,11 +198,11 @@ const inZone = (zone: Zone): Place['zone'] => (zone === 'field' ? 'none' : zone)
  * or at the field place the caller gives (so it reads a monster's name and Level there).
  */
 function matcher(a: WhichArgs, ctx: CompileCtx, zone: Place['zone'] = 'none'): Match {
-  if (a.card !== undefined) { const c = ctx.ix[a.card]; return (_s, _r, id) => id === c; }
+  if (a.card !== undefined) { const c = ctx.ix[a.card]; return byId((_s, _r, id) => id === c); }
   if (a.group !== undefined) {
     const mask = new Uint8Array(ctx.props.length);
     for (const i of ctx.group(a.group)) mask[i] = 1;
-    return (_s, _r, id) => mask[id] === 1;
+    return byId((_s, _r, id) => mask[id] === 1);
   }
   if (a.filter !== undefined) {
     const f = ctx.cond(a.filter, 'filter') as CondFn;
@@ -226,29 +229,37 @@ function taken(chosen: readonly (Choice | null)[], zone: string, id: number): nu
 const takenAt = (chosen: readonly (Choice | null)[], zone: string, at: number) =>
   chosen.some((c) => c && (c.many ? c.many.some((x) => x.zone === zone && x.at === at) : c.zone === zone && c.at === at));
 
-/** Count matching cards in a zone (field: monsters and Spells/Traps). */
-function zoneCounter(zone: Zone, m: Match, n: number): CountFn {
-  if (zone === 'field') return (s, r) => {
+/**
+ * Count matching cards in a zone (field: monsters and Spells/Traps). With `cap`, counting stops
+ * once it is reached (a condition that needs one match asks for cap 1).
+ */
+function zoneCounter(zone: Zone, m: Match, n: number, cap = Infinity): CountFn {
+  if (zone === 'field') return controlCounterOf(m, true, true, undefined, cap);
+  return (s, r) => { const z = s[zone]; let k = 0; for (let i = 0; i < n && k < cap; i++) if (z[i] && m(s, r, i)) k += z[i]; return k; };
+}
+
+/** Count your matching monsters (`mons`) and Spells/Traps (`sts`, face-up or face-down only if `up` is given), up to `cap`. */
+function controlCounterOf(m: Match, mons: boolean, sts: boolean, up: boolean | undefined, cap = Infinity): CountFn {
+  if (ID_ONLY.has(m)) {
+    return (s, r) => {
+      let k = 0;
+      if (mons) for (let i = 0; i < s.mons.length && k < cap; i++) if (m(s, r, s.mons[i].id)) k++;
+      if (sts) for (let i = 0; i < s.st.length && k < cap; i++) { const x = s.st[i]; if ((up === undefined || x.up === up) && m(s, r, x.id)) k++; }
+      return k;
+    };
+  }
+  return (s, r) => {
     let k = 0;
-    s.mons.forEach((x, i) => { if (m(s, r, x.id, { zone: 'mon', at: i, uid: x.uid })) k++; });
-    s.st.forEach((x, i) => { if (m(s, r, x.id, { zone: 'st', at: i, uid: null })) k++; });
+    if (mons) for (let i = 0; i < s.mons.length && k < cap; i++) { const x = s.mons[i]; if (m(s, r, x.id, { zone: 'mon', at: i, uid: x.uid })) k++; }
+    if (sts) for (let i = 0; i < s.st.length && k < cap; i++) { const x = s.st[i]; if ((up === undefined || x.up === up) && m(s, r, x.id, { zone: 'st', at: i, uid: null })) k++; }
     return k;
   };
-  return (s, r) => { const z = s[zone]; let k = 0; for (let i = 0; i < n; i++) if (z[i] && m(s, r, i)) k += z[i]; return k; };
 }
 
 interface ControlArgs extends WhichArgs { kind?: 'mon' | 'st'; faceUp?: boolean }
-function controlCounter(a: ControlArgs, ctx: CompileCtx): CountFn {
-  const m = matcher(a, ctx);
-  const mons = a.kind !== 'st' && a.faceUp !== false;   // monsters on the field are face-up
-  const sts = a.kind !== 'mon';
-  const up = a.faceUp;
-  return (s, r) => {
-    let k = 0;
-    if (mons) s.mons.forEach((x, i) => { if (m(s, r, x.id, { zone: 'mon', at: i, uid: x.uid })) k++; });
-    if (sts) s.st.forEach((x, i) => { if ((up === undefined || x.up === up) && m(s, r, x.id, { zone: 'st', at: i, uid: null })) k++; });
-    return k;
-  };
+function controlCounter(a: ControlArgs, ctx: CompileCtx, cap = Infinity): CountFn {
+  // Monsters on the field are face-up.
+  return controlCounterOf(matcher(a, ctx), a.kind !== 'st' && a.faceUp !== false, a.kind !== 'mon', a.faceUp, cap);
 }
 
 interface OppArgs { kind?: 'mon' | 'st'; faceUp?: boolean; targetable?: boolean; destroyable?: boolean }
@@ -271,7 +282,7 @@ const trig = (on: TrigEvent['t'], f: (ev: any, self: number) => boolean): Trigge
 defineCond('has', {
   doc: 'A zone holds at least one card of the given card, group or filter (any card if none is given).',
   args: A.object({ zone: A.zone(), ...WHICH }, { atMostOne: WHICH_ONE }),
-  compile: (a: WhichArgs & { zone: Zone }, ctx): CondFn => { const c = zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length); return (s, r) => c(s, r) > 0; },
+  compile: (a: WhichArgs & { zone: Zone }, ctx): CondFn => { const c = zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length, 1); return (s, r) => c(s, r) > 0; },
   count: (a: WhichArgs & { zone: Zone }, ctx): CountFn => zoneCounter(a.zone, matcher(a, ctx, inZone(a.zone)), ctx.props.length),
 });
 defineCond('count', {
@@ -286,7 +297,7 @@ defineCond('count', {
 defineCond('control', {
   doc: 'You control a matching card on the field (optionally only monsters or Spells/Traps, or only face-up).',
   args: A.object({ ...WHICH, kind: KIND, faceUp: A.optional(A.boolean) }, { atMostOne: WHICH_ONE }),
-  compile: (a: ControlArgs, ctx): CondFn => { const c = controlCounter(a, ctx); return (s, r) => c(s, r) > 0; },
+  compile: (a: ControlArgs, ctx): CondFn => { const c = controlCounter(a, ctx, 1); return (s, r) => c(s, r) > 0; },
   count: (a: ControlArgs, ctx): CountFn => controlCounter(a, ctx),
 });
 defineCond('monsterZoneFree', {
@@ -524,16 +535,17 @@ function fieldPick(m: Match, kind: 'mon' | 'st' | undefined, faceUp: boolean | u
 }
 
 definePick('fromZone', {
-  doc: 'Each distinct card (of a group or filter, if given) in a zone, in list order; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first).',
-  args: A.object({ zone: A.zone(), group: A.optional(A.group), filter: A.optional(A.cond), eachCopy: A.optional(A.boolean), plus: A.optional(A.choice) }, { atMostOne: ['group', 'filter'] }),
-  compile: (a: { zone: Zone; group?: string; filter?: Word; eachCopy?: boolean; plus?: string }, ctx): PickFn => {
-    const m = matcher(a, ctx, inZone(a.zone));
+  doc: 'Each distinct card (of a group or filter, if given) in a zone, in list order; `cards`: only the cards listed, in the order listed; `eachCopy`: once per copy; `plus`: counting the cards of an earlier choice as already there (an effect that moves them there first).',
+  args: A.object({ zone: A.zone(), group: A.optional(A.group), filter: A.optional(A.cond), cards: A.optional(A.list(A.card, 1)), eachCopy: A.optional(A.boolean), plus: A.optional(A.choice) }, { atMostOne: ['group', 'filter', 'cards'] }),
+  compile: (a: { zone: Zone; group?: string; filter?: Word; cards?: CardId[]; eachCopy?: boolean; plus?: string }, ctx): PickFn => {
+    const m = a.cards ? ANY : matcher(a, ctx, inZone(a.zone));
     if (a.zone === 'field') {
-      if (a.plus !== undefined || a.eachCopy) ctx.fail('plus and eachCopy are for a zone other than the field');
+      if (a.plus !== undefined || a.eachCopy || a.cards) ctx.fail('cards, plus and eachCopy are for a zone other than the field');
       return fieldPick(m, undefined, undefined, ctx.rt);
     }
     if (a.plus === 'self') ctx.fail('names a choice (a choose[].as name), not this card', 'plus');
-    const z = a.zone, rt = ctx.rt, order = rt.order, each = !!a.eachCopy;
+    const z = a.zone, rt = ctx.rt, each = !!a.eachCopy;
+    const order: readonly number[] = a.cards ? [...new Set(a.cards.map((c) => ctx.ix[c]))] : rt.order;
     const plus = a.plus === undefined ? -1 : ctx.choiceSlot(a.plus);
     const extra = (r: Run, id: number): number => {
       const c = plus < 0 ? null : r.chosen[plus];
