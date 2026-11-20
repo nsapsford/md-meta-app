@@ -47,6 +47,69 @@ export function topK(h: ArrayLike<number>, m: number, k: number): number[] {
   return top;
 }
 
+/**
+ * A set of position keys (integers in 0..2^53, as stateKey returns): open addressing on the key's
+ * two halves in typed arrays. Holds the same keys a Set<number> would, without boxing each one.
+ */
+export class KeySet {
+  private lo: Int32Array;
+  private hi: Int32Array;   // high half + 1; 0 marks an empty slot
+  private mask: number;
+  size = 0;
+
+  constructor(capacity = 1024) {
+    let c = 16;
+    while (c < capacity * 2) c *= 2;
+    this.lo = new Int32Array(c); this.hi = new Int32Array(c); this.mask = c - 1;
+  }
+
+  /** Add `k`; false when it was already there. */
+  add(k: number): boolean {
+    const lo = k | 0, hi = ((k / 4294967296) | 0) + 1;
+    const L = this.lo, H = this.hi, mask = this.mask;
+    let h = Math.imul(lo ^ Math.imul(hi, 0x85ebca6b), 0x9e3779b1);
+    h = (h ^ (h >>> 15)) & mask;
+    for (;;) {
+      const x = H[h];
+      if (x === 0) break;
+      if (x === hi && L[h] === lo) return false;
+      h = (h + 1) & mask;
+    }
+    H[h] = hi; L[h] = lo;
+    if (++this.size * 2 > mask) this.grow();
+    return true;
+  }
+
+  has(k: number): boolean {
+    const lo = k | 0, hi = ((k / 4294967296) | 0) + 1;
+    const L = this.lo, H = this.hi, mask = this.mask;
+    let h = Math.imul(lo ^ Math.imul(hi, 0x85ebca6b), 0x9e3779b1);
+    h = (h ^ (h >>> 15)) & mask;
+    for (;;) {
+      const x = H[h];
+      if (x === 0) return false;
+      if (x === hi && L[h] === lo) return true;
+      h = (h + 1) & mask;
+    }
+  }
+
+  private grow(): void {
+    const L = this.lo, H = this.hi;
+    const c = H.length * 2, mask = c - 1;
+    const L2 = new Int32Array(c), H2 = new Int32Array(c);
+    for (let i = 0; i < H.length; i++) {
+      const hi = H[i];
+      if (hi === 0) continue;
+      const lo = L[i];
+      let h = Math.imul(lo ^ Math.imul(hi, 0x85ebca6b), 0x9e3779b1);
+      h = (h ^ (h >>> 15)) & mask;
+      while (H2[h] !== 0) h = (h + 1) & mask;
+      H2[h] = hi; L2[h] = lo;
+    }
+    this.lo = L2; this.hi = H2; this.mask = mask;
+  }
+}
+
 export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'stateKey'>, hooks?: SearchHooks): { solveBeam(root: State, opts?: SolveOpts): SolveResult } {
   const { gen, exec } = moves;
   const { evaluate, boardSig, potential } = score;
@@ -122,7 +185,8 @@ export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'st
     while (!timeUp) {
       rounds++;
       let layer = [root];
-      const seen = new Set<number>([stateKey(root)]);
+      const seen = new KeySet(Math.min(width * 8, 1 << 16));
+      seen.add(stateKey(root));
       for (let depth = 0; depth < 26 && layer.length && !timeUp; depth++) {
         const nextS: State[] = [], nextH: number[] = [];
         for (let li = 0; li < layer.length; li++) {
@@ -152,9 +216,7 @@ export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'st
                 }
               }
             }
-            const k = stateKey(n);
-            if (seen.has(k)) continue;
-            seen.add(k);
+            if (!seen.add(stateKey(n))) continue;
             const sc = n.pend.length ? evaluate(n, false).score : consider(n).score;
             nextS.push(n); nextH.push(sc + potential(n));
           }

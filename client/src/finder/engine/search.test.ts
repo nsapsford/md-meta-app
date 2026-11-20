@@ -4,7 +4,7 @@ import type { DeckFile } from '../deck/schema';
 import { acts, type WordDef } from '../deck/vocabulary';
 import { createMoves } from './moves';
 import { createScore, type LineEval } from './score';
-import { createSearch, topK, type SolveOpts, type SolveResult } from './search';
+import { createSearch, KeySet, topK, type SolveOpts, type SolveResult } from './search';
 import type { CardId } from './types';
 import { TOY_FACTS, TOY_FILE, toyCfg } from './__toy__/toyDeck';
 
@@ -127,5 +127,22 @@ describe('search', () => {
 
   it('policy without hooks is refused', () => {
     expect(() => solve({ SEEKER: 1 }, { rounds: 1, policy: [{ kind: 'x', src: 'hand', label: 'x' }] })).toThrow(/hooks/);
+  });
+});
+
+describe('KeySet', () => {
+  it('holds exactly the keys a Set<number> holds, across growth and the whole 53-bit range', () => {
+    const ks = new KeySet(4), ref = new Set<number>();
+    let x = 0x2545f491;
+    const nx = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return x >>> 0; };
+    const keys: number[] = [0, 1, 2 ** 32, 2 ** 32 + 1, 2 ** 53 - 1, 4294967295, 2 ** 52];
+    for (let i = 0; i < 20000; i++) keys.push((nx() >>> 11) * 4294967296 + nx(), nx() % 500);   // repeats too
+    for (const k of keys) {
+      expect(ks.add(k)).toBe(!ref.has(k));
+      ref.add(k);
+    }
+    expect(ks.size).toBe(ref.size);
+    for (const k of keys) expect(ks.has(k)).toBe(true);
+    for (const k of [3, 2 ** 32 + 2, 2 ** 53 - 2]) expect(ks.has(k)).toBe(ref.has(k));
   });
 });

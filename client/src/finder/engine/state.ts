@@ -11,8 +11,6 @@ export interface StateOps {
   stateKey(s: State): number;
 }
 
-const ZBIT: Record<ZoneName, number> = { hand: 1, deck: 2, extra: 4, gy: 8, ban: 16 };
-const ZKEY = { hand: 'k1', deck: 'k2', extra: 'k3', gy: 'k4', ban: 'k5' } as const;
 
 function mix(h: number, v: number): number {
   h = Math.imul(h ^ v, 0x9e3779b1);
@@ -41,10 +39,15 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
   }
 
   function W(s: State, z: ZoneName): Uint8Array {
-    const bit = ZBIT[z];
-    if (!(s.own & bit)) { s[z] = s[z].slice(); s.own |= bit; }
-    s[ZKEY[z]] = 0;
-    return s[z];
+    // One case per zone (hot): direct property reads and writes instead of keyed ones.
+    switch (z) {
+      case 'hand': if (!(s.own & 1)) { s.hand = s.hand.slice(); s.own |= 1; } s.k1 = 0; return s.hand;
+      case 'deck': if (!(s.own & 2)) { s.deck = s.deck.slice(); s.own |= 2; } s.k2 = 0; return s.deck;
+      case 'extra': if (!(s.own & 4)) { s.extra = s.extra.slice(); s.own |= 4; } s.k3 = 0; return s.extra;
+      case 'gy': if (!(s.own & 8)) { s.gy = s.gy.slice(); s.own |= 8; } s.k4 = 0; return s.gy;
+      case 'ban': if (!(s.own & 16)) { s.ban = s.ban.slice(); s.own |= 16; } s.k5 = 0; return s.ban;
+    }
+    throw new Error(`unknown zone ${String(z)}`);
   }
 
   function OW(s: State): OppState {
