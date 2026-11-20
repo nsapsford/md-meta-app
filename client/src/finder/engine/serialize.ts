@@ -44,7 +44,7 @@ export interface Serializer {
  * the `param` of the hand-trap data's `wipeAtSummons` entry.
  */
 export function createSerializer(deck: CompiledDeck, opp: Pick<Opponent, 'ready'>, o: { wipeAt?: number } = {}): Serializer {
-  const wipeAt = o.wipeAt ?? 5;
+  const wipeAt = o.wipeAt ?? 5;   // createEngine passes the hand-trap data's count (5 is its documented fallback)
   const { ids, props, UNK } = deck;
   const names = props.map((p, i) => (i === UNK ? '?' : p.name));
   const markNames = Object.keys(deck.markBit);

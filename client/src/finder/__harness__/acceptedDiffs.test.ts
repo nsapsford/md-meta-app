@@ -24,17 +24,7 @@ describe('ACCEPTED: Master of Chaos revives are accepted only in pairs', () => {
 });
 
 describe('ACCEPTED_EXPORT', () => {
-  const t = (a: object, b: object) => ACCEPTED_EXPORT.some((x) => x.test(a as never, b as never));
-  const SARC = 'Activate Shining Sarcophagus.';
-  it('accepts a Continuous Spell activation for the reference move (hand) or nothing (Set copy)', () => {
-    expect(t({ text: SARC, moves: [{ card: 'Shining Sarcophagus', from: 'hand', to: 'field' }] }, { text: SARC, activations: [{ card: 'Shining Sarcophagus', from: 'hand' }] })).toBe(true);
-    expect(t({ text: SARC }, { text: SARC, activations: [{ card: 'Shining Sarcophagus', from: 'field' }] })).toBe(true);
-  });
-  it('rejects mismatched zones, other cards and extra entries', () => {
-    expect(t({ text: SARC }, { text: SARC, activations: [{ card: 'Shining Sarcophagus', from: 'hand' }] })).toBe(false);
-    expect(t({ text: 'Activate X.' }, { text: 'Activate X.', activations: [{ card: 'X', from: 'field' }] })).toBe(false);
-    expect(t({ text: SARC }, { text: SARC, activations: [{ card: 'Shining Sarcophagus', from: 'field' }], moves: [{ card: 'A', from: 'hand', to: 'gy' }] })).toBe(false);
-  });
+  it('accepts no export step differences', () => { expect(ACCEPTED_EXPORT).toEqual([]); });
   it('end-board text: only the trailing in-hand parts may be reordered', () => {
     expect(ACCEPTED_EXPORT_TEXT.test('A; Droll in hand; Ash in hand', 'A; Ash in hand; Droll in hand')).toBe(true);
     expect(ACCEPTED_EXPORT_TEXT.test('A; B; Ash in hand', 'B; A; Ash in hand')).toBe(false);

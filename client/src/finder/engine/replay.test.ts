@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { compileDeck } from '../deck/compile';
-import { createEngine, type Engine } from './index';
+import { createEngine, DEFAULT_WIPE_AT, wipeAtOf, type Engine } from './index';
+import handTraps from '../deck/files/hand-traps.json';
+import type { HandTrapEntry } from '../deck/schema';
 import type { BranchTask } from './replay';
 import { robust } from './robust';
 import type { SerializedLine, SerializedStep } from './serialize';
@@ -137,5 +139,28 @@ describe('robust', () => {
     expect(pruned.pruned).toBe(true);
     const none = await robust(toyCfg({}), { ...lineOf(BASE), steps: [] }, [F], run);
     expect([none.applied, none.score]).toEqual([[{ it: F, step: null }], 10]);
+  });
+});
+
+describe('wipeHere threshold', () => {
+  const trap = (o: Partial<HandTrapEntry>): HandTrapEntry => ({ id: 'w', name: 'Wiper', label: 'Wiper', short: 'Wiper', mechanism: 'wipeAtSummons', monster: true, passcodes: [1], ...o });
+  // Normal Summon Seeker (1 summon; its search declined: no step), then Tuner Special Summons itself (2).
+  const line = (eng: Engine) => {
+    let s = eng.newState(toyCfg({ SEEKER: 1, TUNER: 1 }));
+    for (const k of ['ns:SEEKER', 'dec:seeker-search', 'tuner-ss']) s = eng.exec(s, eng.gen(s).find((x) => x.k === k)!, false);
+    return eng.serializeLine(eng.asLine(s), [], 't').steps.map((st) => st.wipeHere);
+  };
+  const deck = compileDeck(TOY_FILE, TOY_FACTS);
+  it("comes from the hand-trap data's param", () => {
+    expect(wipeAtOf({ traps: [trap({ mechanism: 'negDeckTouch' }), trap({ param: 2 })] })).toBe(2);
+    expect(wipeAtOf(handTraps as { traps: HandTrapEntry[] })).toBe(5);
+    expect(wipeAtOf({ traps: [trap({})] })).toBeUndefined();
+    expect(line(createEngine(deck, { traps: { traps: [trap({ param: 2 })] } }))).toEqual([false, true]);
+    expect(line(createEngine(deck, { traps: { traps: [trap({ param: 1 })] } }))).toEqual([true, false]);
+  });
+  it('falls back to DEFAULT_WIPE_AT without data; wipeAt overrides the data', () => {
+    expect(DEFAULT_WIPE_AT).toBe(5);
+    expect(line(createEngine(deck))).toEqual([false, false]);
+    expect(line(createEngine(deck, { traps: { traps: [trap({ param: 1 })] }, wipeAt: 2 }))).toEqual([false, true]);
   });
 });

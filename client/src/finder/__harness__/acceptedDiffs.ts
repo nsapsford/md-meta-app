@@ -63,20 +63,8 @@ export function withoutAccepted(diffs: StepDiff[], accepted: readonly AcceptedDi
 type ExportStep = { text: string; activations?: { card: string; from?: string }[]; summons?: unknown[]; moves?: { card: string; from: string; to: string }[] };
 export interface AcceptedExportDiff { test(ref: ExportStep, neu: ExportStep): boolean; reason: string }
 
-const CONT_SPELL_ON = /^Activate (Shining Sarcophagus|Deception of the Sinful Spoils)\.$/;
-export const ACCEPTED_EXPORT: AcceptedExportDiff[] = [
-  {
-    test: (a, b) => {
-      const m = CONT_SPELL_ON.exec(b.text);
-      if (!m || a.text !== b.text || b.summons || b.moves || !b.activations || b.activations.length !== 1) return false;
-      const act = b.activations[0];
-      if (act.card !== m[1] || Object.keys(act).sort().join() !== 'card,from') return false;
-      if (act.from === 'hand') return JSON.stringify(a) === JSON.stringify({ text: a.text, moves: [{ card: m[1], from: 'hand', to: 'field' }] });
-      return act.from === 'field' && JSON.stringify(a) === JSON.stringify({ text: a.text });
-    },
-    reason: "Activating Shining Sarcophagus or Deception of the Sinful Spoils (Continuous Spells): the reference writes the card's placement as a hand-to-field move (nothing for a Set copy flipped face-up); the new engine writes the activation, which it is. The app's ledger checker puts a Continuous Spell activated from the hand on the field and leaves one activated on the field there, so the zones come out the same.",
-  },
-];
+/** Export step differences accepted (none at present: steps must match exactly). */
+export const ACCEPTED_EXPORT: AcceptedExportDiff[] = [];
 export const ACCEPTED_EXPORT_TEXT = {
   /** The same text once the trailing "… in hand" parts are sorted. */
   test: (a: string, b: string): boolean => {

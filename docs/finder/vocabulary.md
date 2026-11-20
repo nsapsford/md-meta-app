@@ -46,7 +46,10 @@ conditions true) its `do` runs at once inside the step that set it off, with no 
 and its `text` (if not empty) is added to that step's text after a space. It takes no `choose`,
 `cost` or `onNegated`. An effect with
 `activates: "spell"` sets "a Spell was activated this turn" only when its card is in the hand or
-on the field (a Spell's effect in the GY does not). In `text` and `negText`, `{as}` is a chosen
+on the field (a Spell's effect in the GY does not). A bare activation (a card that stays on the
+field, with no `cost`, `choose`, `do`, `onNegated` or `ledger.effect`) writes no activation to the
+ledger: only a hand-to-field move when played from the hand, and nothing for a Set copy turned
+face-up (an activation with no effect number draws the Line Trainer's "which effect" warning). In `text` and `negText`, `{as}` is a chosen
 card's short name, `{zone}` where the first choice came from, and `{as?text|other}` is `text`
 (with `$` for the chosen card's short name) when the choice `as` was made, else `other` (which may
 be left out with its `|`).

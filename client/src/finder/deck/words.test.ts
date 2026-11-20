@@ -455,6 +455,21 @@ describe('effect fields: stepTags, text alternatives, the Spell flag', () => {
     expect(d.run(s, 'g').spell).toBe(false);
     expect(d.run(d.state({ PROBE: 1 }), 'h').spell).toBe(true);
   });
+  it('a bare activation (stays, does nothing else) writes a hand-to-field move or nothing; any other writes the activation', () => {
+    const CONT = [...TOY_FACTS, { ...PROBE_FACT, type: 'Spell Card', race: 'Continuous', attr: null, level: null, atk: null, def: null }];
+    const on = (e: Partial<EffectDef>) => driver(fileWith([eff({ from: ['faceDown', 'hand'], activates: 'spell', ...e })]), CONT);
+    const d = on({});
+    const P = d.deck.ix.PROBE;
+    const fromHand = d.run(d.state({ PROBE: 1 }), 'p');
+    expect([fromHand.st.map((x) => [x.id, x.up]), fromHand.log[0].seq]).toEqual([[[P, true]], [['m', P, 'hand', 'field']]]);
+    const s = d.state({});
+    s.st.push({ id: P, up: false, now: false });
+    const fromSet = d.run(s, 'p');
+    expect([fromSet.st.map((x) => [x.id, x.up]), fromSet.log[0].seq ?? []]).toEqual([[[P, true]], []]);
+    // With an effect number, or anything to do, it is an activation.
+    expect(on({ ledger: { effect: 1 } }).run(d.state({ PROBE: 1 }), 'p').log[0].seq).toEqual([['a', P, 1, 'hand']]);
+    expect(on({ do: [{ draw: 1 }] }).run(d.state({ PROBE: 1 }), 'p').log[0].seq![0]).toEqual(['a', P, 0, 'hand']);
+  });
 });
 
 describe('group 3 words: cardKind, first, oppRemoveAll, fromZone plus/eachCopy, subsets join, list order, names', () => {

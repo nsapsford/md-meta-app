@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { mulberry32 } from '../../utils/trainer';
 import { compileDeck } from '../deck/compile';
-import { validateDeckFile, type CardFacts } from '../deck/schema';
+import { validateDeckFile, type CardFacts, type HandTrapFile } from '../deck/schema';
+import handTraps from '../deck/files/hand-traps.json';
 import { createEngine, type Engine } from '../engine';
 import { withoutAccepted } from './acceptedDiffs';
 import { loadReference, type RefCard, type RefCfg, type RefEngine } from './loadReference';
@@ -61,7 +62,7 @@ export function loadDeckFiles(): { ok: true; engine: Engine } | { ok: false; err
   const r = validateDeckFile(readJson('dm-azamina.json'), { staples: readJson('staples.json') });
   if (!r.ok) return { ok: false, errors: r.errors.map((e) => `${e.card ?? '-'} ${e.field}: ${e.message}`).join('\n') };
   const facts = [...(readJson('dm-azamina.cards.json') as CardFacts[]), ...(readJson('staples.cards.json') as CardFacts[])];
-  return { ok: true, engine: createEngine(compileDeck(r.file, facts)) };
+  return { ok: true, engine: createEngine(compileDeck(r.file, facts), { traps: handTraps as HandTrapFile }) };
 }
 
 export function groupParity(name: string, ids: string[], o: GroupOpts): void {

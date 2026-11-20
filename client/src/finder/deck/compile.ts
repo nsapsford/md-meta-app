@@ -567,6 +567,12 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const stays = STAYS.has(p.st ?? '');
     const needsZone = activates !== null && p.st !== 'Field';
     const nChoose = choose.length;
+    // A bare activation: a Spell/Trap that stays on the field and does nothing else (no cost,
+    // choice, action or ledger effect number). The ledger writes only where the card went (a
+    // hand-to-field move; nothing for a Set copy turned face-up), as the reference does: an
+    // activation with no effect number draws the app's "which effect" warning.
+    const bare = stays && activates !== null && !ledgerEffect && nChoose === 0
+      && !(def.cost ?? []).length && !(def.do ?? []).length && !(def.onNegated ?? []).length;
     const id = effectIds.get(def.key)!;
     const key = def.key;
 
@@ -576,14 +582,14 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       if (activates) {
         if (r.at.zone === 'hand') {
           takeZone(n, 'hand', self);
-          L.act(n, self, ledgerEffect, 'hand');
+          if (bare) L.mv(n, self, 'hand', 'field'); else L.act(n, self, ledgerEffect, 'hand');
           if (stays) { n.st.push({ id: self, up: true, now: false }); return { self, at: { zone: 'st', at: n.st.length - 1, uid: null }, chosen: r.chosen }; }
           so.W(n, 'gy')[self]++;
           return { self, at: { zone: 'gy', at: -1, uid: null }, chosen: r.chosen };
         }
         if (r.at.zone === 'st') {
           const i = stIndex(n, { id: self, ...r.at });
-          L.act(n, self, ledgerEffect, 'field');
+          if (!bare) L.act(n, self, ledgerEffect, 'field');
           if (stays) { n.st[i] = { ...n.st[i], up: true }; return r; }
           n.st.splice(i, 1); so.W(n, 'gy')[self]++;
           return { self, at: { zone: 'gy', at: -1, uid: null }, chosen: r.chosen };

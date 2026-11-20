@@ -769,6 +769,9 @@ defineAct('discardCheapest', {
   compile: (a, ctx): ActFn => {
     const k = free(a), rt = ctx.rt, props = ctx.props;
     return (n) => {
+      // Ties break by list order. The reference's pickFodder breaks them by the order the cards
+      // entered the hand (its hand object's key order), which this state does not keep: equal-value
+      // discards can differ from the reference's.
       const ids = rt.order.filter((i) => n.hand[i] > 0);
       const pick = ids.map((id, j) => ({ id, j })).sort((x, y) => props[x.id].discardValue - props[y.id].discardValue || x.j - y.j).slice(0, k);
       for (const { id } of pick) rt.moveCard(n, { id, zone: 'hand', at: -1, uid: null }, 'gy');
