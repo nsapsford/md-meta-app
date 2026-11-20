@@ -48,4 +48,12 @@ describe('ACCEPTED_LEDGER: an effect restriction recorded by card name', () => {
     expect(accepted([restricted, own, act], 2)).toBe(false);
     expect(ACCEPTED_LEDGER.some((a) => a.test({ severity: 'error', step: 3, message: 'other' }, [restricted, own, act]))).toBe(false);
   });
+  it('does not accept it when a copy left the field between the unrestricted summon and the activation', () => {
+    const asMaterial = { summons: [{ card: 'Link', materials: ['Witch', 'Other'] }] };
+    const sentOff = { moves: [{ card: 'Witch', from: 'field', to: 'gy' }] };
+    expect(accepted([restricted, own, asMaterial, act], 4)).toBe(false);
+    expect(accepted([restricted, own, sentOff, act], 4)).toBe(false);
+    // Another card leaving, or a Witch moving elsewhere, changes nothing.
+    expect(accepted([restricted, own, { summons: [{ card: 'Link', materials: ['Other'] }] }, { moves: [{ card: 'Witch', from: 'deck', to: 'hand' }] }, act], 5)).toBe(true);
+  });
 });

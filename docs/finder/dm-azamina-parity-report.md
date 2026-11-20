@@ -29,7 +29,7 @@ Line Trainer export differences (`ACCEPTED_EXPORT`): none.
 
 Ledger checker errors that are the checker's, not the line's (`ACCEPTED_LEDGER`):
 
-- The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name.
+- The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name, and only when no copy of that name leaves the field (as a material or a move from the field) between that last summon and the activation.
 
 ## Higher than today
 
@@ -60,7 +60,7 @@ Hand: GAZE, ASH, FUWA, PREP, SOULS
 | 15 |  | Deception: Tribute Rod from the field, add The Hallowed Azamina. |
 | 16 |  | The Hallowed Azamina: send Deception from the field, Special Summon Ilia Silvia. |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 16): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 16): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### first-115 (first)
 
@@ -88,7 +88,7 @@ Hand: ROD, PREP, CURT, SOULS, TALI
 | 16 | DM the Magician of Black Magic: Special Summon it from hand (Sarcophagus is on the field). |  |
 | 17 | Dark Magic Talisman (GY): pay 2500 LP, Set it. |  |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### first-146 (first)
 
@@ -116,7 +116,7 @@ Hand: ASH, ASH, SOULS, DMG, TALI
 | 16 |  | Deception: Tribute Dark Magician from the field, add The Hallowed Azamina. |
 | 17 |  | The Hallowed Azamina: send Deception from the field, Special Summon Ilia Silvia. |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 17): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 17): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### first-170 (first)
 
@@ -145,7 +145,7 @@ Hand: GAZE, DIA, IOC, DMG, CIRC
 | 17 |  | Deception: Tribute Master of Chaos from the field, add The Hallowed Azamina. |
 | 18 |  | The Hallowed Azamina: send Deception from the field, Special Summon Ilia Silvia. |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 18): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 18): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### second-025 (second)
 
@@ -190,7 +190,7 @@ Hand: DIA, DECE, DROLL, GAND, SERV; opponent: Infinite Impermanence
 | 15 |  | WANTED (GY): banish it, put Deception on the bottom of the Deck, draw 1. |
 | 16 |  | The Gaze of Timaeus on DM of Destruction in GY: Fusion Summon Dragoon (0 destroys). |
 
-Ledger checker on the new line: no errors; 2 warning(s): warning (step 10): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.; warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 2 warning(s): warning (step 10): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.; warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### draw-014 (draw)
 
@@ -214,7 +214,7 @@ Hand: CURT, CURT, PREP, DROLL, IOC; draw effects 2
 | 12 |  | Deception: Tribute Illusion of Chaos from hand, add The Hallowed Azamina. |
 | 13 |  | The Hallowed Azamina: send Deception from the field, Special Summon Ilia Silvia. |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 13): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 13): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ### mid-006 (mid)
 
@@ -239,7 +239,7 @@ Hand: PREP, DMBM, CURT, ASH, TALI; continues after 5 steps
 | 13 |  | Deception: Tribute Illusion of Chaos from hand, add The Hallowed Azamina. |
 | 14 |  | The Hallowed Azamina: send Deception from the field, Special Summon Ilia Silvia. |
 
-Ledger checker on the new line: no errors; 1 warning(s): warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses..
+Ledger checker on the new line: no errors; 1 warning(s): warning (step 14): "The Hallowed Azamina" has once-per-turn effects; say which effect (effect number) this step uses.
 
 ## Lower than today
 

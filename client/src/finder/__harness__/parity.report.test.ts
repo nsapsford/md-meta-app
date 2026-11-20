@@ -54,7 +54,8 @@ function ledgerText(g: LedgerLine, ctx: ReturnType<typeof dmDeckContext>): { ok:
   const parts = [r.errors.length ? `**${r.errors.length} error(s)**: ${r.errors.map(showIssue).join('; ')}` : 'no errors'];
   if (r.accepted.length) parts.push(`${r.accepted.length} explained by ACCEPTED_LEDGER (${r.accepted.map(showIssue).join('; ')})`);
   if (r.warnings.length) parts.push(`${r.warnings.length} warning(s): ${r.warnings.map(showIssue).join('; ')}`);
-  return { ok: r.errors.length === 0, text: parts.join('; ') + '.' };
+  const text = parts.join('; ');
+  return { ok: r.errors.length === 0, text: text.endsWith('.') ? text : text + '.' };
 }
 
 describe('parity report', () => {
@@ -117,6 +118,8 @@ describe('parity report', () => {
     writeSection('scores', body.join('\n'));
     console.info(`parity report: same ${tot.same}, higher ${tot.higher}, lower ${tot.lower}, higher lines rejected by the ledger ${rejected}`);
     expect(tot.same + tot.higher + tot.lower).toBe(sits.length);
+    // A higher line the ledger checker rejects is not accepted.
+    expect(rejected).toBe(0);
   });
 
   it('bench', () => {

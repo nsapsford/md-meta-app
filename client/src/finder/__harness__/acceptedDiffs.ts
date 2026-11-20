@@ -76,7 +76,11 @@ export const ACCEPTED_EXPORT_TEXT = {
 
 // ── Ledger checker errors that are the checker's, not the line's (ledger.ts) ──
 
-type LedgerStep = { activations?: { card: string }[]; summons?: { card: string }[] };
+type LedgerStep = { activations?: { card: string }[]; summons?: { card: string; materials?: string[] }[]; moves?: { card: string; from: string }[] };
+
+/** Does the step take a card of this name off the field (as a material, or a move from the field)? */
+const leavesField = (s: LedgerStep, name: string) =>
+  (s.summons ?? []).some((x) => (x.materials ?? []).includes(name)) || (s.moves ?? []).some((x) => x.card === name && x.from === 'field');
 export interface AcceptedLedgerError { test(issue: { severity: string; step: number | null; message: string }, steps: readonly LedgerStep[]): boolean; reason: string }
 
 /** The 0-based indices of the steps before `before` that summon `name`. */
@@ -90,8 +94,11 @@ export const ACCEPTED_LEDGER: AcceptedLedgerError[] = [
       if (issue.severity !== 'error' || !m || issue.step == null) return false;
       const at = summonSteps(steps, m[1], issue.step - 1);
       // Two copies summoned: the earlier one by another card's effect (restricted), the latest by its own procedure (no activation in that step).
-      return at.length >= 2 && !(steps[at[at.length - 1]].activations?.length) && !!steps[at[0]].activations?.length;
+      if (!(at.length >= 2 && !(steps[at[at.length - 1]].activations?.length) && !!steps[at[0]].activations?.length)) return false;
+      // The unrestricted copy must still be there: no copy of the name leaves the field from its summon up to the flagged step.
+      for (let i = at[at.length - 1] + 1; i < issue.step - 1; i++) if (leavesField(steps[i], m[1])) return false;
+      return true;
     },
-    reason: "The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name.",
+    reason: "The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name, and only when no copy of that name leaves the field (as a material or a move from the field) between that last summon and the activation.",
   },
 ];
