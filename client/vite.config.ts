@@ -9,6 +9,8 @@ const BOOT_VENDOR = /[\\/]node_modules[\\/](react|react-dom|scheduler|react-rout
 export default defineConfig({
   plugins: [react()],
   base: './',
+  // The Line Finder's Workers are ES modules (src/finder/worker/pool.ts).
+  worker: { format: 'es' },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
