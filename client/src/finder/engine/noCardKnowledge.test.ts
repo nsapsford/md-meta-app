@@ -12,7 +12,9 @@ const FILES = join(SRC, 'finder/deck/files');
 
 /** What the solver may not contain, relative to client/src. */
 const SCAN_DIRS = ['finder/engine', 'finder/worker', 'finder/model', 'components/finder'];
-const SCAN_FILES = ['finder/deck/schema.ts', 'finder/deck/vocabulary.ts', 'finder/deck/compile.ts', 'finder/deck/match.ts'];
+const SCAN_FILES = ['finder/deck/schema.ts', 'finder/deck/vocabulary.ts', 'finder/deck/compile.ts', 'finder/deck/match.ts', 'finder/deck/registry.ts'];
+/** Data, not solver code: may hold passcodes (match.test.ts checks it against the deck files). Never scanned. */
+const DATA_FILES = ['finder/deck/manifest.ts'];
 const BANNED_WORDS = ['mulcharmy', 'maxx', 'nibiru', 'droll', 'ash blossom', 'impermanence', 'veiler'];
 
 interface Known { names: Set<string>; ids: Set<string>; shorts: Set<string>; passcodes: Set<number> }
@@ -82,6 +84,8 @@ describe('no card knowledge in the solver', () => {
   it('scans the engine and the compiler', () => {
     const files = sourceFiles();
     expect(files.some((f) => f.endsWith('vocabulary.ts')) && files.some((f) => f.endsWith('search.ts'))).toBe(true);
+    expect(files.some((f) => f.endsWith('match.ts')) && files.some((f) => f.endsWith('registry.ts'))).toBe(true);
+    expect(files.filter((f) => DATA_FILES.some((d) => f.endsWith(join(d))))).toEqual([]);
   });
 
   it('no solver source names a card', () => {
