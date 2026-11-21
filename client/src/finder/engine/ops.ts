@@ -13,7 +13,7 @@ export function removeAt<T>(a: T[], i: number): T {
   if (!(i >= 0 && i < a.length)) return a.splice(i, 1)[0];   // out of range: exactly as splice
   const x = a[i];
   for (let j = i + 1; j < a.length; j++) a[j - 1] = a[j];
-  a.length--;
+  a.pop();
   return x;
 }
 
