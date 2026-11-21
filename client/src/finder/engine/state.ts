@@ -81,7 +81,7 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
       gy: zo.zone(), ban: zo.zone(),
       own: 31, k1: 0, k2: 0, k3: 0, k4: 0, k5: 0,
       mons: [], st: [], top: [],
-      opt: new Uint32Array(optWords),
+      opt: Array.from({ length: optWords }, () => 0),
       flags: 0,
       ns: false, spell: false, summons: 0, lp: 8000, addLock: false, pend: [],
       opp: cfg.opp

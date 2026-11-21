@@ -99,7 +99,7 @@ export interface State {
   mons: Mon[];
   st: ST[];
   top: number[];
-  opt: Uint32Array;
+  opt: number[];
   flags: number;
   ns: boolean;
   spell: boolean;

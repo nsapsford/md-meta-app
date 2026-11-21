@@ -913,11 +913,21 @@ defineAct('fusionSummon', {
       const rule = rt.extraRules.find((x) => x.method === 'fusion' && x.card === card);
       let uses = 0;
       if (rule && rule.method === 'fusion' && rule.uses) for (const c of mats) if (rule.uses(n, { self: c.id, at: c, chosen: [] })) uses++;
-      const own = mats.filter((c) => c.zone !== 'opp');
-      const field = own.filter((c) => c.zone === 'mon').map((c) => ({ c, i: rt.monIndex(n, c) })).sort((x, y) => y.i - x.i).map((x) => x.c);
+      const own: CardRef[] = [], rest: CardRef[] = [], field: CardRef[] = [], fieldAt: number[] = [];
+      for (const c of mats) {
+        if (c.zone === 'opp') continue;
+        own.push(c);
+        if (c.zone !== 'mon') { rest.push(c); continue; }
+        // Field materials leave from the highest monster index down (insertion by index).
+        const i = rt.monIndex(n, c);
+        let p = field.length;
+        while (p > 0 && fieldAt[p - 1] < i) p--;
+        field.splice(p, 0, c); fieldAt.splice(p, 0, i);
+      }
       const ids: number[] = [];
       // Quiet: the summon's ledger entry lists the materials and where they went.
-      for (const c of [...field, ...own.filter((c) => c.zone !== 'mon')]) { ids.push(c.id); rt.moveCard(n, c, to, true); }
+      for (const c of field) { ids.push(c.id); rt.moveCard(n, c, to, true); }
+      for (const c of rest) { ids.push(c.id); rt.moveCard(n, c, to, true); }
       if (to === 'deck' && own.some((c) => !props[c.id].ext)) rt.ops.shuffle(n);
       for (const c of mats) if (c.zone === 'opp' && c.uid !== null) rt.ops.oppRemove(n, c.uid, 'material');
       const extra = to === 'deck' ? { ...(own.some((c) => c.zone === 'gy') ? { materialsFrom: 'gy' } : {}), materialsTo: 'deck' } : null;

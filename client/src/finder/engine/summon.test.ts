@@ -181,6 +181,19 @@ describe('fusionOptions', () => {
     expect(cardsOf([fus('FUS'), fus('LINKA', -1)])).toEqual(['LINKA', 'FUS']);
   });
 
+  it('differentNames / differentRace over three materials: every pair must differ', () => {
+    const three = (relations: string[]): ExtraRule => ({ card: 'FUS', method: 'fusion', slots: [{ lpAbove: 0 }, { lpAbove: 0 }, { lpAbove: 0 }], relations } as ExtraRule);
+    const mats = (rel: string[], field: CardId[]) => {
+      const t = setup([three(rel)]);
+      const s = t.state(field);
+      return fusionOptions(s, fieldPool(s, t.deck.props, t.deck.UNK), t.deck.extra).map((o) => o.mats.map((m) => t.deck.ids[m.id]));
+    };
+    // SEEKER, TUNER: Spellcasters; BIG: Dragon.
+    expect(mats(['differentNames'], ['SEEKER', 'TUNER', 'BIG'])).toEqual([['SEEKER', 'TUNER', 'BIG']]);
+    expect(mats(['differentNames'], ['SEEKER', 'TUNER', 'SEEKER'])).toEqual([]);
+    expect(mats(['differentRace'], ['SEEKER', 'TUNER', 'BIG'])).toEqual([]);
+  });
+
   it('needs the Fusion Monster in the Extra Deck', () => {
     const t = setup([sameAttrDiffRace()]);
     const s = t.state(['SEEKER', 'BIG'], { extra: {} });

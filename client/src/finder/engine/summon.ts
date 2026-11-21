@@ -211,8 +211,15 @@ function related(rel: FusionRule['relations'], mats: MatView[]): boolean {
         if (set !== undefined && !mats.every((m) => m.attr === '*' || m.attr === set)) return false;
         break;
       }
-      case 'differentRace': if (!mats.every((m) => known(m.race)) || new Set(mats.map((m) => m.race)).size !== mats.length) return false; break;
-      case 'differentNames': if (new Set(mats.map((m) => m.nm)).size !== mats.length) return false; break;
+      case 'differentRace':
+        for (let a = 0; a < mats.length; a++) {
+          if (!known(mats[a].race)) return false;
+          for (let b = 0; b < a; b++) if (mats[b].race === mats[a].race) return false;
+        }
+        break;
+      case 'differentNames':
+        for (let a = 1; a < mats.length; a++) for (let b = 0; b < a; b++) if (mats[b].nm === mats[a].nm) return false;
+        break;
     }
   }
   return true;
@@ -232,19 +239,20 @@ function matChoices(s: State, mats: MatView[]): Choice[] {
 function fillsSlots(s: State, slots: CondFn[], ch: Choice[]): boolean {
   const M = ch.length;
   const ok = new Int8Array(slots.length * M);   // 0 untested, 1 holds, -1 fails
+  const others: (Choice[] | undefined)[] = [];   // the other materials, per material (built when first needed)
   const test = (j: number, m: number): boolean => {
     const at = j * M + m;
-    if (!ok[at]) ok[at] = slots[j](s, { self: ch[m].id, at: ch[m], chosen: ch.filter((_x, k) => k !== m) }) ? 1 : -1;
+    if (!ok[at]) ok[at] = slots[j](s, { self: ch[m].id, at: ch[m], chosen: others[m] ??= ch.filter((_x, k) => k !== m) }) ? 1 : -1;
     return ok[at] === 1;
   };
-  const used = new Array<boolean>(M).fill(false);
+  let used = 0;   // bit m: material m fills an earlier slot
   const fill = (j: number): boolean => {
     if (j === slots.length) return true;
     for (let m = 0; m < M; m++) {
-      if (used[m] || !test(j, m)) continue;
-      used[m] = true;
+      if ((used & (1 << m)) || !test(j, m)) continue;
+      used |= 1 << m;
       if (fill(j + 1)) return true;
-      used[m] = false;
+      used &= ~(1 << m);
     }
     return false;
   };
