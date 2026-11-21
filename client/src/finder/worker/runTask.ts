@@ -6,8 +6,6 @@ import { validateDeckFile } from '../deck/schema';
 import { createEngine, type Engine, type SerializedResult } from '../engine';
 import type { InitMsg, PolicyResult, Reply, Task } from './protocol';
 
-export { DeckCompileError };
-
 /** Validate, compile and start an engine; throws DeckCompileError when the file is wrong. */
 export function buildEngine(init: InitMsg): Engine {
   const r = validateDeckFile(init.file, init.shared);

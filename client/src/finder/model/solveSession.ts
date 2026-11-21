@@ -41,6 +41,8 @@ export interface SessionView {
   base: { steps: number; events: RecordedEvent[]; path: string[] }; branch: BranchResult | null;
   /** What the lines were solved for (for lineName / lineText) and against. */
   mode: 'first' | 'second'; hand: CardId[]; intrs: Interruption[]; drawFx: number;
+  /** The setup the next search uses: records can change it (a hand trap used) and undo puts it back. The page shows this. */
+  snapshot: FinderSnapshot | null;
 }
 
 interface Entry { key: string; line: SerializedLine; worst: RobustResult | null; testing: boolean; rscore: number; safest: boolean; bait: boolean; trade: boolean; kept: boolean }
@@ -125,7 +127,8 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
   let last: { snap: FinderSnapshot; list: ResolvedList } | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const branchCache = new Map<string, Promise<unknown>>();
-  type Snap = { path: string[]; steps: number; n: number };
+  /** Undo entries: the base before a record or lock, and the setup it was solved with (a record can use up a hand trap). */
+  type Snap = { path: string[]; steps: number; n: number; snap: FinderSnapshot | null };
   const base = { path: [] as string[], steps: 0, events: [] as RecordedEvent[], stack: [] as Snap[] };
 
   const toView = (e: Entry): ViewLine => {
@@ -139,7 +142,7 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
       phase, lines: vs, safest: vs.find((v) => lines.find((e) => e.key === v.key)!.safest) ?? null, trade: cfg?.drawFx ? vs : [], selected,
       nodes, ms, tested, total, deep, message, better,
       base: { steps: base.steps, events: base.events.slice(), path: base.path.slice() }, branch: branch ? { ...branch } : null,
-      mode, hand: handIds.slice(), intrs: intrs.slice(), drawFx: cfg?.drawFx ?? 0,
+      mode, hand: handIds.slice(), intrs: intrs.slice(), drawFx: cfg?.drawFx ?? 0, snapshot: last ? last.snap : null,
     };
   }
   const emit = () => d.onChange(view());
@@ -187,14 +190,20 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
     emit();
   }
 
-  function clearBase() { base.path = []; base.steps = 0; base.events = []; base.stack = []; }
+  const restoreSnap = (snap: FinderSnapshot | null) => { if (snap && last) last = { ...last, snap }; };
+  /** Forget every record, putting back the setup from before the first. */
+  function clearBase() {
+    if (base.stack.length) restoreSnap(base.stack[0].snap);
+    base.path = []; base.steps = 0; base.events = []; base.stack = [];
+  }
   function popBase() {
     const sn = base.stack.pop();
     if (!sn) return false;
     base.path = sn.path; base.steps = sn.steps; base.events.length = sn.n;
+    restoreSnap(sn.snap);
     return true;
   }
-  const pushBase = () => base.stack.push({ path: base.path, steps: base.steps, n: base.events.length });
+  const pushBase = () => base.stack.push({ path: base.path, steps: base.steps, n: base.events.length, snap: last ? last.snap : null });
   const current = () => (selected ? byKey.get(selected) ?? lines.find((e) => e.key === selected) ?? null : null);
   const resolve = () => { if (last) void solve(false); };
 
@@ -352,8 +361,11 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
       interacted = true;
       emit();
     },
-    /** Something that really happened, after step `afterStep` of the selected line (default: after the locked steps). Searches again. */
-    record(ev: TurnEvent, afterStep?: number): void {
+    /**
+     * Something that really happened, after step `afterStep` of the selected line (default: after the
+     * locked steps). `snap`: the setup from now on, if the event changed it. Searches again.
+     */
+    record(ev: TurnEvent, afterStep?: number, snap?: FinderSnapshot): void {
       const e = current();
       let prefix = base.path, steps = base.steps;
       if (afterStep != null && e) {
@@ -362,17 +374,26 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
         steps = afterStep + 1;
       }
       pushBase();
+      restoreSnap(snap ?? null);
       base.path = prefix.concat(['@' + JSON.stringify(ev)]);
       base.steps = steps + 1;
       base.events.push(ev);
       resolve();
     },
-    /** Step `stepIndex` of the selected line was hit by `it` (negated, or what `it` does). Searches again. */
-    recordHit(stepIndex: number, it: Interruption): void {
+    /**
+     * Step `stepIndex` of the selected line was hit by `it` (negated, or what `it` does). `usedTrap`:
+     * the hand trap they used, switched off from now on, with one card fewer in their hand (undo
+     * puts both back). Searches again.
+     */
+    recordHit(stepIndex: number, it: Interruption, usedTrap?: string): void {
       const e = current();
       const st = e?.line.steps[stepIndex];
       if (!e || !st || !st.key) return;
       pushBase();
+      if (usedTrap && last) {
+        const s0 = last.snap;
+        restoreSnap({ ...s0, hts: s0.hts.filter((k) => k !== usedTrap), oppHand: s0.oppHand == null ? null : Math.max(0, s0.oppHand - 1) });
+      }
       base.path = e.line.path.slice(0, st.pathIdx).concat(['!' + JSON.stringify({ k: st.key, it })]);
       base.steps = stepIndex + 1;
       base.events.push({ t: 'hit', step: stepIndex, it });

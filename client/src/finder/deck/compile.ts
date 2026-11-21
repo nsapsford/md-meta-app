@@ -9,6 +9,7 @@ import { createStateOps, type StateOps } from '../engine/state';
 import { createOps, removeAt, type Ops } from '../engine/ops';
 import { step, done, L, type LedgerZone } from '../engine/record';
 import type { BoardValueDef, CardDef, CardFacts, DeckFile, DeckFileError, EffectDef, Loc } from './schema';
+import { DeckCompileError } from './deckError';
 import { KIND_LABEL, WORDS, type CompileCtx, type Compiled, type Word, type WordKind } from './vocabulary';
 
 // ---------------------------------------------------------------------------------------------
@@ -87,14 +88,8 @@ export interface CompiledDeck {
  */
 export interface EffectInfo { key: string; activates: 'spell' | 'trap' | null; fromExtra: boolean; mandatory: boolean }
 
-export class DeckCompileError extends Error {
-  errors: DeckFileError[];
-  constructor(errors: DeckFileError[]) {
-    super(errors.map((e) => `${e.card ? `${e.card}: ` : ''}${e.field ? `${e.field}: ` : ''}${e.message}`).join('; '));
-    this.name = 'DeckCompileError';
-    this.errors = errors;
-  }
-}
+/** Thrown for a broken deck file (defined in deckError.ts, so the page can use it without the compiler). */
+export { DeckCompileError };
 
 // ---------------------------------------------------------------------------------------------
 // What compiled words are called with

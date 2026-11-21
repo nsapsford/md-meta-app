@@ -4,7 +4,7 @@
 // MAIN_THREAD_SLICE_MS. The engine is only loaded on the page for that fallback (and to report a
 // broken deck file), so the pool itself stays light. Nothing here knows a card.
 
-import type { DeckCompileError } from '../deck/compile';
+import { DeckCompileError } from '../deck/deckError';
 import type { Engine, SerializedResult } from '../engine';
 import type { InitMsg, Reply, Task } from './protocol';
 
@@ -15,6 +15,8 @@ const loadRunTask = () => (runTaskModule ??= import('./runTask'));
 export const CANCEL: { cancelled: true } = Object.freeze({ cancelled: true as const });
 /** The longest a task may run on the main thread at a time. */
 export const MAIN_THREAD_SLICE_MS = 700;
+/** A job that has crashed this many workers runs on the main thread instead. */
+export const MAX_CRASHES = 2;
 
 export interface WorkerLike {
   postMessage(m: unknown): void; terminate(): void;
@@ -31,7 +33,7 @@ export interface PoolOpts {
   runLocal?: (task: Task, post?: (p: SerializedResult) => void) => unknown | Promise<unknown>;
 }
 
-interface Job { task: Task; id: number; resolve(v: unknown): void; reject(e: unknown): void; onPartial?: (p: SerializedResult) => void; dead: boolean }
+interface Job { task: Task; id: number; resolve(v: unknown): void; reject(e: unknown): void; onPartial?: (p: SerializedResult) => void; dead: boolean; crashes: number }
 interface Slot { w: WorkerLike; job: Job | null; dead: boolean }
 
 export function defaultPoolSize(): number {
@@ -69,7 +71,7 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
     workersOk = false;
     if (settled) return;
     if (o.runLocal) { readyOk(); return; }
-    localEngine().then(readyOk, (e) => { if ((e as Error)?.name === 'DeckCompileError') initErr = e as DeckCompileError; readyFail(e); });
+    localEngine().then(readyOk, (e) => { if (e instanceof DeckCompileError) fail(e); else readyFail(e); });
   }
 
   function make(): Slot {
@@ -78,7 +80,8 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
     w.onmessage = (ev) => {
       const m = ev.data;
       if (m.type === 'ready') { readyOk(); return; }
-      if (m.type === 'initError') { const errors = m.errors; void loadRunTask().then((x) => fail(new x.DeckCompileError(errors))); return; }
+      // At once: the worker answers every task after a failed init with a plain error.
+      if (m.type === 'initError') { fail(new DeckCompileError(m.errors)); return; }
       const job = slot.job;
       if (!job || m.id !== job.id) return;
       if (m.type === 'partial') { job.onPartial?.(m.result as SerializedResult); return; }
@@ -94,7 +97,7 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
       slots = slots.filter((s) => s !== slot);
       try { w.terminate(); } catch { /* already gone */ }
       if (!slots.length) fallBack();
-      if (job && !job.dead) queue.unshift(job);
+      if (job && !job.dead) { if (++job.crashes >= MAX_CRASHES) local(job); else queue.unshift(job); }
       pump();
     };
     w.postMessage(init);
@@ -104,12 +107,15 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
 
   // The deck file is broken: every job, now and later, fails with its errors.
   function fail(e: DeckCompileError) {
+    if (initErr) return;
     initErr = e;
     readyFail(e);
     for (const s of slots) { try { s.w.terminate(); } catch { /* gone */ } if (s.job) { s.job.dead = true; s.job.reject(e); } }
     slots = [];
     for (const j of queue) { j.dead = true; j.reject(e); }
     queue = [];
+    for (const j of localJobs) { j.dead = true; j.reject(e); }
+    localJobs.clear();
   }
 
   function local(job: Job) {
@@ -117,8 +123,16 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
     setTimeout(async () => {
       if (job.dead) { localJobs.delete(job); return; }
       const t = job.task as Task & { timeMs?: number };
-      try { const r = await runLocal({ ...t, timeMs: Math.min(t.timeMs || 250, MAIN_THREAD_SLICE_MS) } as Task, job.onPartial); if (!job.dead) job.resolve(r); } catch (e) { if (!job.dead) job.reject(e); }
-      localJobs.delete(job);
+      const post = (p: SerializedResult) => { if (!job.dead) job.onPartial?.(p); };
+      try {
+        if (!o.runLocal) await localEngine();   // the engine may take a moment to load: the job may be cancelled meanwhile
+        if (job.dead) return;
+        const r = await runLocal({ ...t, timeMs: Math.min(t.timeMs || 250, MAIN_THREAD_SLICE_MS) } as Task, post);
+        if (!job.dead) job.resolve(r);
+      } catch (e) {
+        if (job.dead) return;
+        if (e instanceof DeckCompileError) fail(e); else job.reject(e);
+      } finally { localJobs.delete(job); }
     }, 0);
   }
 
@@ -138,7 +152,8 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
   function run<T = unknown>(task: Task, onPartial?: (p: SerializedResult) => void, front?: boolean): Promise<T> {
     const p = new Promise<T>((resolve, reject) => {
       if (disposed) { reject(CANCEL); return; }
-      const job: Job = { task, id: ++seq, resolve: resolve as (v: unknown) => void, reject, onPartial, dead: false };
+      if (initErr) { reject(initErr); return; }
+      const job: Job = { task, id: ++seq, resolve: resolve as (v: unknown) => void, reject, onPartial, dead: false, crashes: 0 };
       if (front) queue.unshift(job); else queue.push(job);
       pump();
     });
@@ -153,11 +168,14 @@ export function createPool(init: InitMsg, o: PoolOpts = {}): Pool {
     queue = [];
     for (const j of localJobs) { j.dead = true; j.reject(CANCEL); }
     localJobs.clear();
+    // The worker that was checking the deck file may be gone: start another, so `ready` still settles.
+    if (!settled && workersOk && !slots.length && !disposed) { try { make(); } catch { fallBack(); } }
   }
 
   function dispose() {
-    cancelAll();
     disposed = true;
+    cancelAll();
+    readyFail(CANCEL);
     for (const s of slots) { try { s.w.terminate(); } catch { /* gone */ } }
     slots = [];
   }

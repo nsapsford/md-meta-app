@@ -218,6 +218,53 @@ describe('the solve session', () => {
     expect(s.view().message).toBe("That can't have happened at that point: replay: b. Last record removed.");
   });
 
+  it('a hit by a hand trap uses it up, and undo or a dropped record puts it back', async () => {
+    const negate = { kind: 'negDeckTouch', src: 'hand' as const, label: 'Ash Blossom' };
+    const { s, calls } = session((t) => (t.type === 'solve' ? (t.policy ? { paths: [], nodes: 0 } : result(LINES)) : null));
+    s.start(WITH_ASH, LIST);
+    await until(() => s.view().phase === 'done');
+    s.recordHit(1, negate, 'ash');
+    expect(s.view().snapshot).toMatchObject({ hts: [], oppHand: 4 });
+    await until(() => s.view().phase === 'done');
+    expect(s.view().intrs).toEqual([]);
+    s.undo();
+    expect(s.view().snapshot).toEqual(WITH_ASH);
+    await until(() => s.view().phase === 'done');
+    expect(s.view().intrs.map((x) => x.kind)).toEqual(['negDeckTouch']);
+    s.recordHit(1, negate, 'ash');
+    s.record({ t: 'gain', id: 'DM' });
+    s.startOver();
+    expect([s.view().snapshot, s.view().base.events]).toEqual([WITH_ASH, []]);
+    await until(() => s.view().phase === 'done');
+    expect(solves(calls).filter((t) => t.policy).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('a record that no longer fits gives the hand trap back', async () => {
+    let n = 0;
+    const { s } = session((t) => {
+      if (t.type !== 'solve') return null;
+      if (t.cfg.base && ++n === 1) return Promise.reject(new Error('replay: b'));
+      return t.policy ? { paths: [], nodes: 0 } : result(LINES);
+    });
+    s.start(WITH_ASH, LIST);
+    await until(() => s.view().phase === 'done');
+    s.recordHit(1, { kind: 'negDeckTouch', src: 'hand', label: 'Ash Blossom' }, 'ash');
+    await until(() => s.view().phase === 'done' && s.view().base.events.length === 0);
+    expect(s.view().snapshot).toEqual(WITH_ASH);
+    expect(s.view().intrs.map((x) => x.kind)).toEqual(['negDeckTouch']);
+    expect(s.view().message).toContain('Last record removed');
+  });
+
+  it('record can change the setup from then on', async () => {
+    const { s } = session(() => result(LINES));
+    s.start(SNAP, LIST);
+    await until(() => s.view().phase === 'done');
+    s.record({ t: 'gain', id: 'DM' }, 0, { ...SNAP, oppHand: 2 });
+    expect(s.view().snapshot!.oppHand).toBe(2);
+    s.undo();
+    expect(s.view().snapshot).toEqual(SNAP);
+  });
+
   it('whatIf fills the branch from a branch task', async () => {
     const alt = line(['a', 'z'], 50);
     const { s, calls } = session((t) => (t.type === 'branch' ? alt : result(LINES)));

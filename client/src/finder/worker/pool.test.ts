@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DeckCompileError } from '../deck/compile';
 import { TOY_FACTS, TOY_FILE, toyCfg } from '../engine/__toy__/toyDeck';
 import type { InitMsg, Reply, Task } from './protocol';
-import { CANCEL, createPool, defaultPoolSize, MAIN_THREAD_SLICE_MS, type WorkerLike } from './pool';
+import { CANCEL, createPool, defaultPoolSize, MAIN_THREAD_SLICE_MS, MAX_CRASHES, type WorkerLike } from './pool';
 
 /** A requested budget above the main-thread slice. */
 const REQUESTED_MS = 2500;
@@ -160,6 +160,61 @@ describe('the worker pool', () => {
     expect(e.errors).toEqual(errors);
     await expect(a).rejects.toBeInstanceOf(DeckCompileError);
     await expect(pool.run(solve())).rejects.toBeInstanceOf(DeckCompileError);
+  });
+
+  it('rejects with the deck-file errors even when the worker answers the next task first', async () => {
+    const f = fakes();
+    const pool = createPool(INIT, { size: 1, makeWorker: f.makeWorker });
+    const a = pool.run(solve());
+    const errors = [{ card: 'SEEKER', field: 'short', message: 'bad' }];
+    const w = f.made[0];
+    const id = w.job;
+    w.reply({ type: 'initError', errors });
+    w.reply({ type: 'error', id, message: 'the deck file did not load' });
+    const e = await a.catch((x: DeckCompileError) => x);
+    expect(e).toBeInstanceOf(DeckCompileError);
+    expect((e as DeckCompileError).errors).toEqual(errors);
+  });
+
+  it('runs a job that keeps crashing workers on the main thread', async () => {
+    const f = fakes();
+    const pool = createPool(INIT, { size: 2, makeWorker: f.makeWorker, runLocal: () => 'local' });
+    const a = pool.run(solve(1)), b = pool.run(solve(2));
+    f.made[0].onerror!({});
+    expect(f.made).toHaveLength(3);
+    expect(f.made[2].sent[1]).toMatchObject({ top: 1 });
+    expect(MAX_CRASHES).toBe(2);
+    f.made[2].onerror!({});
+    expect(f.made).toHaveLength(3);   // not sent to another worker
+    await expect(a).resolves.toBe('local');
+    f.made[1].done('B');
+    await expect(b).resolves.toBe('B');
+  });
+
+  it('drops partial results of a main-thread job cancelled while it runs', async () => {
+    const parts: unknown[] = [];
+    let pool: ReturnType<typeof createPool> | null = null;
+    pool = createPool(INIT, { makeWorker: () => { throw new Error('none'); }, runLocal: (_t, post) => { pool!.cancelAll(); post!({} as never); return 'late'; } });
+    const a = pool.run(solve(), (p) => parts.push(p));
+    await expect(a).rejects.toBe(CANCEL);
+    await tick();
+    expect(parts).toEqual([]);
+  });
+
+  it('still settles ready when the checking worker is cancelled before it answers', async () => {
+    const f = fakes();
+    const pool = createPool(INIT, { size: 1, makeWorker: f.makeWorker });
+    void pool.run(solve());
+    pool.cancelAll();
+    expect(f.made[0].terminated).toBe(true);
+    expect(f.made).toHaveLength(2);
+    f.made[1].reply({ type: 'ready' });
+    await expect(pool.ready).resolves.toBeUndefined();
+
+    const g = fakes();
+    const p2 = createPool(INIT, { size: 1, makeWorker: g.makeWorker });
+    p2.dispose();
+    await expect(p2.ready).rejects.toBe(CANCEL);
   });
 
   it('disposes', async () => {
