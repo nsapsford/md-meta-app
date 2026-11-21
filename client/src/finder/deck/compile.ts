@@ -841,6 +841,15 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     };
   });
 
+  // Per card: the tallied entries a copy of it adds one to, as a monster / face-up / face-down Spell/Trap.
+  const onMon: number[][] = ids.map(() => []), onUp: number[][] = ids.map(() => []), onDown: number[][] = ids.map(() => []);
+  entries.forEach((e, j) => {
+    const t = e.tally;
+    if (!t) return;
+    for (const c of t.cards) { if (t.mons) onMon[c].push(j); if (t.stUp) onUp[c].push(j); if (t.stDown) onDown[c].push(j); }
+  });
+  const tallied = Uint8Array.from(entries.map((e) => (e.tally ? 1 : 0)));
+
   const hasBoardValue: boolean[] = ids.map(() => false);
   // Only cards a `control` word names (at any depth of `on`) count: a card named by another word
   // in the same `on` (a Deck or GY check, say) keeps its default value.
@@ -857,7 +866,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   };
   file.boardValue.forEach((b, j) => named(b.on, `boardValue[${j}].on`));
 
-  const tMon = new Int32Array(ids.length), tUp = new Int32Array(ids.length), tDown = new Int32Array(ids.length);
+  const tCount = new Int32Array(entries.length);   // per tallied entry, its count on the board being valued (reset as read)
   const holds = (s: FinalBoard, conds: readonly CondFn[]): boolean => { for (let q = 0; q < conds.length; q++) if (!conds[q](s, R0)) return false; return true; };
 
   function boardValue(n: FinalBoard, full: boolean): { sum: number; items: [string, number][] | null; keys?: number[] } {
@@ -865,19 +874,14 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     const items: [string, number][] | null = full ? [] : null;
     const keys: number[] = full ? [] : EMPTY_KEYS;
     let sum = 0;
-    // Copies of each card: as monsters, face-up and face-down Spells/Traps (cleared again below).
+    // Each copy on the board adds one to the tallied entries that count it.
     const ms = n.mons, sts = n.st;
-    for (let i = 0; i < ms.length; i++) tMon[ms[i].id]++;
-    for (let i = 0; i < sts.length; i++) { const x = sts[i]; if (x.up) tUp[x.id]++; else tDown[x.id]++; }
+    for (let i = 0; i < ms.length; i++) { const L = onMon[ms[i].id]; for (let q = 0; q < L.length; q++) tCount[L[q]]++; }
+    for (let i = 0; i < sts.length; i++) { const x = sts[i]; const L = x.up ? onUp[x.id] : onDown[x.id]; for (let q = 0; q < L.length; q++) tCount[L[q]]++; }
     for (let j = 0; j < entries.length; j++) {
+      let k: number;
+      if (tallied[j] === 1) { k = tCount[j]; if (!k) continue; tCount[j] = 0; } else { k = entries[j].on(s, R0); if (!k) continue; }
       const e = entries[j];
-      let k = 0;
-      const t = e.tally;
-      if (t) {
-        const cs = t.cards;
-        for (let q = 0; q < cs.length; q++) { const c = cs[q]; if (t.mons) k += tMon[c]; if (t.stUp) k += tUp[c]; if (t.stDown) k += tDown[c]; }
-      } else k = e.on(s, R0);
-      if (!k) continue;
       let b: (typeof e.base)[number] | undefined;
       for (let q = 0; q < e.base.length; q++) if (holds(s, e.base[q].conds)) { b = e.base[q]; break; }
       let v = 0, label = '';
@@ -908,8 +912,6 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
         items.push([label, v]); keys.push(key(i));
       }
     }
-    for (let i = 0; i < ms.length; i++) tMon[ms[i].id] = 0;
-    for (let i = 0; i < sts.length; i++) { tUp[sts[i].id] = 0; tDown[sts[i].id] = 0; }
     return items ? { sum, items, keys } : { sum, items };
   }
 

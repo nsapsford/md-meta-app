@@ -23,6 +23,8 @@ export interface LineEval {
 
 export interface Score {
   evaluate(s: State, full: boolean): LineEval;
+  /** evaluate(s, false)'s score, raw score and lethal flag without building the line; read at once (the next call overwrites it). */
+  quick(s: State): { score: number; raw: number; lethal: boolean };
   battle(n: FinalBoard): number;
   boardSig(e: LineEval): string;
   potential(s: State): number;
@@ -104,16 +106,16 @@ export function createScore(deck: CompiledDeck): Score {
     return f(0, full);
   }
 
-  function evaluate(s: State, full: boolean): LineEval {
-    const { n, sets } = deck.finalize(s);
-    const { sum: val, items } = value(n, full);
+  /** The numbers of a line's score (written by `numbers`, read at once: not re-entrant). */
+  const Q = { score: 0, raw: 0, lethal: false, dmg: 0, eff: 0 };
+  function numbers(s: State, n: FinalBoard, val: number): typeof Q {
     const nlog = s.log.length;
     const draws = s.oppDraws;
     let eff = draws;
     // Hand-size cap: in the End Phase they shuffle back down to (cards you control + 6); going first they hold 4 after discarding the draw card.
     if (draws && (s.drawFx & CAPPED_DRAWS) && !(s.mode === 'second' && s.opp)) eff = Math.min(draws, n.mons.length + n.st.length + 2);
     const pen = eff * s.drawPenalty;
-    let score: number, summary: Record<string, number | boolean>;
+    Q.eff = eff;
     if (s.mode === 'second' && s.opp) {
       const opp = n.opp!;
       const dmg = battle(n);
@@ -121,18 +123,34 @@ export function createScore(deck: CompiledDeck): Score {
       let live = 0;
       for (let i = 0; i < opp.mons.length; i++) { const m = opp.mons[i]; if (m.intr && !m.faceDown) live++; }
       for (let i = 0; i < opp.st.length; i++) if (opp.st[i].intr) live++;
-      score = lethal
+      let score = lethal
         ? 1000 + Math.min(6, (dmg - opp.lp) / 500) + val * 0.5 - nlog * 0.5 - Math.max(0, s.summons - 4) * 0.5 - s.cDeckTouch * 0.6 - s.cDeckAdd * 0.3 - live * 2
         : 300 * (1 - Math.max(0, opp.lp - dmg) / opp.lp0) + 25 * s.removed + 12 * val - live * 15;
-      const raw = score;
+      Q.raw = score;
       if (!lethal) score -= pen;   // a dead opponent draws nothing useful
-      summary = { lethal, battle: dmg, burn: s.burn, oppLp: opp.lp, removed: s.removed, defense: val, draws, eff, raw };
+      Q.score = score; Q.lethal = lethal; Q.dmg = dmg;
     } else {
       const raw = val * 100 - nlog * 1.5 - Math.max(0, nlog - 12) * 2.5 - s.cDeckTouch * 2 - Math.max(0, s.summons - 5) * 3;
-      score = raw - pen;
-      summary = { value: val, draws, eff, raw };
+      Q.raw = raw; Q.score = raw - pen; Q.lethal = false; Q.dmg = 0;
     }
-    return { score, summary, items, sets, final: n, chokes: full ? { deckTouch: s.cDeckTouch, deckAdd: s.cDeckAdd, fieldMon: s.cFieldMon } : null };
+    return Q;
+  }
+
+  /** evaluate(s, false)'s score, raw score and lethal flag, without building the line (the beam's hot path). */
+  function quick(s: State): { score: number; raw: number; lethal: boolean } {
+    const n = deck.finalize(s).n;
+    return numbers(s, n, value(n, false).sum);
+  }
+
+  function evaluate(s: State, full: boolean): LineEval {
+    const { n, sets } = deck.finalize(s);
+    const { sum: val, items } = value(n, full);
+    const q = numbers(s, n, val);
+    const draws = s.oppDraws, eff = q.eff, raw = q.raw;
+    const summary: Record<string, number | boolean> = s.mode === 'second' && s.opp
+      ? { lethal: q.lethal, battle: q.dmg, burn: s.burn, oppLp: n.opp!.lp, removed: s.removed, defense: val, draws, eff, raw }
+      : { value: val, draws, eff, raw };
+    return { score: q.score, summary, items, sets, final: n, chokes: full ? { deckTouch: s.cDeckTouch, deckAdd: s.cDeckAdd, fieldMon: s.cFieldMon } : null };
   }
 
   function boardSig(e: LineEval): string {
@@ -161,5 +179,5 @@ export function createScore(deck: CompiledDeck): Score {
     return h;
   }
 
-  return { evaluate, battle, boardSig, potential };
+  return { evaluate, quick, battle, boardSig, potential };
 }

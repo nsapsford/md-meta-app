@@ -112,7 +112,7 @@ export class KeySet {
 
 export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'stateKey'>, hooks?: SearchHooks): { solveBeam(root: State, opts?: SolveOpts): SolveResult } {
   const { gen, exec } = moves;
-  const { evaluate, boardSig, potential } = score;
+  const { evaluate, quick, boardSig, potential } = score;
   const { stateKey } = ops;
 
   function solveBeam(root: State, opts: SolveOpts = {}): SolveResult {
@@ -129,25 +129,28 @@ export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'st
     const cap = K * 6;
     const front: { raw: number; s: State }[] = [];
 
-    function consider(s: State): LineEval {
-      const e = evaluate(s, false);
+    /** A finished line: kept among the best, the draw frontier and the safest lethal line when it earns it. Returns its score. */
+    function consider(s: State): number {
+      const q = quick(s);
+      const score = q.score, raw = q.raw, lethal = q.lethal;
       if (s.drawFx) {
-        const d = Math.min(s.oppDraws, 15), f = front[d], raw = e.summary.raw as number;
+        const d = Math.min(s.oppDraws, 15), f = front[d];
         if (!f || raw > f.raw + 1e-9 || (raw > f.raw - 1e-9 && s.log.length < f.s.log.length)) front[d] = { raw, s };
       }
-      if (e.summary.lethal) {
+      if (lethal) {
         const rk = s.cDeckTouch * 3 + s.cDeckAdd * 2 + s.cFieldMon + s.log.length * 0.5;
         if (rk < safestRisk) { safestRisk = rk; safest = evaluate(s, true); safest.state = s; safest.sig = boardSig(safest); }
       }
-      if (best.length >= cap && e.score <= best[best.length - 1].score) return e;
+      if (best.length >= cap && score <= best[best.length - 1].score) return score;
+      const e = evaluate(s, false);
       const sig = boardSig(e);
       const j = best.findIndex((b) => b.sig === sig);
-      if (j >= 0) { if (best[j].score >= e.score) return e; best.splice(j, 1); }
+      if (j >= 0) { if (best[j].score >= score) return score; best.splice(j, 1); }
       const fe = evaluate(s, true);
       fe.sig = sig; fe.state = s;
       best.push(fe); best.sort((a, b) => b.score - a.score);
       if (best.length > cap) best.length = cap;
-      return e;
+      return score;
     }
 
     function result(): SolveResult {
@@ -217,7 +220,7 @@ export function createSearch(moves: Moves, score: Score, ops: Pick<StateOps, 'st
               }
             }
             if (!seen.add(stateKey(n))) continue;
-            const sc = n.pend.length ? evaluate(n, false).score : consider(n).score;
+            const sc = n.pend.length ? quick(n).score : consider(n);
             nextS.push(n); nextH.push(sc + potential(n));
           }
           if ((++iter & 7) === 0 && Date.now() - t0 > timeMs) { timeUp = true; break; }

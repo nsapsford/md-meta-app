@@ -130,6 +130,26 @@ describe('search', () => {
   });
 });
 
+describe('quick score', () => {
+  it("is evaluate(s, false)'s score, raw score and lethal flag on every position a short walk reaches", () => {
+    const deck = compileDeck(TOY_FILE, TOY_FACTS);
+    const mv = createMoves(deck), sc = createScore(deck);
+    let layer = [deck.state.newState(toyCfg({ SEEKER: 1, TUNER: 1, BIG: 1, WALL: 1 }), deck.ix)];
+    let checked = 0;
+    for (let d = 0; d < 4; d++) {
+      const next = [];
+      for (const s of layer) for (const a of mv.gen(s)) {
+        const n = mv.exec(s, a, false);
+        const e = sc.evaluate(n, false), q = sc.quick(n);
+        expect([q.score, q.raw, q.lethal]).toEqual([e.score, e.summary.raw, !!e.summary.lethal]);
+        checked++; next.push(n);
+      }
+      layer = next.slice(0, 40);
+    }
+    expect(checked).toBeGreaterThan(10);
+  });
+});
+
 describe('KeySet', () => {
   it('holds exactly the keys a Set<number> holds, across growth and the whole 53-bit range', () => {
     const ks = new KeySet(4), ref = new Set<number>();
