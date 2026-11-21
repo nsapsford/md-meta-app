@@ -176,6 +176,33 @@ describe('compiled deck tables', () => {
     expect(r.items).toEqual([['Wall with Big banished', 0.3]]);
   });
 
+  it('counts lone `control` entries from one pass over the board, as the words themselves count', () => {
+    const f: DeckFile = {
+      ...TOY_FILE,
+      groups: { ...TOY_FILE.groups, pair: ['SEEKER', 'TUNER'] },
+      boardValue: [
+        { id: 'a', when: 'oppTurn', on: { control: { card: 'WALL', kind: 'st' } }, base: [{ value: 1, label: 'any' }] },
+        { id: 'b', when: 'oppTurn', on: { control: { card: 'WALL', kind: 'st', faceUp: true } }, base: [{ value: 10, label: 'up' }] },
+        { id: 'c', when: 'oppTurn', on: { control: { card: 'WALL', kind: 'st', faceUp: false } }, base: [{ value: 100, label: 'down' }] },
+        { id: 'd', when: 'oppTurn', on: { control: { group: 'pair', kind: 'mon' } }, base: [{ value: 1000, label: 'pair' }] },
+        { id: 'e', when: 'oppTurn', on: { control: { card: 'SEEKER', kind: 'mon', faceUp: false } }, base: [{ value: 10000, label: 'never' }] },
+      ],
+    };
+    expect(validateDeckFile(f, {}).ok).toBe(true);
+    const P = driver(f);
+    const W = P.deck.ix.WALL, S = P.deck.ix.SEEKER, T = P.deck.ix.TUNER;
+    const mon = (id: number, uid: number) => ({ id, nm: id, emz: false, noEff: false, uses: 0, lvl: 4, marks: 0, uid });
+    const fin = P.deck.finalize(P.state({ BIG: 1 })).n;
+    fin.st = [{ id: W, up: true, now: false }, { id: W, up: false, now: false }, { id: W, up: false, now: false }];
+    fin.mons = [mon(S, 1), mon(T, 2), mon(S, 3)];
+    // any 3, up 1, down 2, pair 3, never 0
+    expect(P.deck.boardValue(fin, false).sum).toBe(3 * 1 + 10 + 2 * 100 + 3 * 1000);
+    // The tables are cleared after each call.
+    const empty = P.deck.finalize(P.state({ BIG: 1 })).n;
+    expect(P.deck.boardValue(empty, false).sum).toBe(0);
+    expect(P.deck.boardValue(fin, true).sum).toBe(3213);
+  });
+
   it('hasBoardValue: only cards named inside `control` words count', () => {
     const f: DeckFile = {
       ...TOY_FILE,

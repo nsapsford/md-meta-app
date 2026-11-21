@@ -80,16 +80,24 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
     return out;
   };
 
+  const heads = new Map<SynchroRule | LinkRule, string>();
   /** The summon: materials to the GY (one ledger entry naming them), then the monster from the Extra Deck. */
   function summonRun(r: SynchroRule | LinkRule, pick: number[], emz: boolean): Move['run'] {
     const method = r.method;
+    let head = heads.get(r);
+    if (head === undefined) { head = `${method === 'synchro' ? 'Synchro' : 'Link'} Summon ${props[r.card].short} with `; heads.set(r, head); }
+    const hd = head;
+    // Materials leave from the highest index down (indices stay valid); `pick` is ascending.
+    const down = pick.slice().reverse();
     return (s0) => {
       const n = so.clone(s0);
-      step(n, `${method === 'synchro' ? 'Synchro' : 'Link'} Summon ${props[r.card].short} with ${pick.map((i) => props[s0.mons[i].id].short).join(' + ')}.`, INHERENT);
+      let txt = hd + props[s0.mons[pick[0]].id].short;
+      for (let j = 1; j < pick.length; j++) txt += ' + ' + props[s0.mons[pick[j]].id].short;
+      step(n, txt + '.', INHERENT);
       // `thenIf`: the rule's `then` is queued only when a material (read where it was) matches it.
       const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }));
       const mats: number[] = [];
-      for (const i of pick.slice().sort((p, q) => q - p)) mats.push(ops.monToGy(n, i, false).id);
+      for (let j = 0; j < down.length; j++) mats.push(ops.monToGy(n, down[j], false).id);
       L.sum(n, r.card, method, 'extra', mats);
       so.W(n, 'extra')[r.card]--;
       const m = ops.place(n, r.card, { special: true, emz, from: 'extra' });

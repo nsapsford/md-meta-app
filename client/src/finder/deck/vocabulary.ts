@@ -188,6 +188,8 @@ interface WhichArgs { card?: CardId; group?: string; filter?: Word }
 /** Matches that read only the card index (not the state, run or place): callers may skip building a place. */
 const ID_ONLY = new WeakSet<Match>();
 const byId = (m: Match): Match => { ID_ONLY.add(m); return m; };
+/** Card and group matches: the card indices they accept, ascending (a zone count then reads only those). */
+const MEMBERS = new WeakMap<Match, Int32Array>();
 const ANY: Match = byId(() => true);
 /** Where a filter's candidate is while a word walks `zone` (the field's cards are not walked by index here). */
 const inZone = (zone: Zone): Place['zone'] => (zone === 'field' ? 'none' : zone);
@@ -198,11 +200,20 @@ const inZone = (zone: Zone): Place['zone'] => (zone === 'field' ? 'none' : zone)
  * or at the field place the caller gives (so it reads a monster's name and Level there).
  */
 function matcher(a: WhichArgs, ctx: CompileCtx, zone: Place['zone'] = 'none'): Match {
-  if (a.card !== undefined) { const c = ctx.ix[a.card]; return byId((_s, _r, id) => id === c); }
+  if (a.card !== undefined) {
+    const c = ctx.ix[a.card];
+    const m = byId((_s, _r, id) => id === c);
+    MEMBERS.set(m, Int32Array.of(c));
+    return m;
+  }
   if (a.group !== undefined) {
     const mask = new Uint8Array(ctx.props.length);
     for (const i of ctx.group(a.group)) mask[i] = 1;
-    return byId((_s, _r, id) => mask[id] === 1);
+    const m = byId((_s, _r, id) => mask[id] === 1);
+    const ms: number[] = [];
+    for (let i = 0; i < mask.length; i++) if (mask[i]) ms.push(i);
+    MEMBERS.set(m, Int32Array.from(ms));
+    return m;
   }
   if (a.filter !== undefined) {
     const f = ctx.cond(a.filter, 'filter') as CondFn;
@@ -235,11 +246,31 @@ const takenAt = (chosen: readonly (Choice | null)[], zone: string, at: number) =
  */
 function zoneCounter(zone: Zone, m: Match, n: number, cap = Infinity): CountFn {
   if (zone === 'field') return controlCounterOf(m, true, true, undefined, cap);
+  const ms = MEMBERS.get(m);
+  if (ms) {
+    // Only the accepted cards, in the same (ascending) order: the same count, cap included.
+    if (ms.length === 1) { const c = ms[0]; return (s) => s[zone][c]; }
+    return (s) => { const z = s[zone]; let k = 0; for (let j = 0; j < ms.length && k < cap; j++) k += z[ms[j]]; return k; };
+  }
   return (s, r) => { const z = s[zone]; let k = 0; for (let i = 0; i < n && k < cap; i++) if (z[i] && m(s, r, i)) k += z[i]; return k; };
 }
 
 /** Count your matching monsters (`mons`) and Spells/Traps (`sts`, face-up or face-down only if `up` is given), up to `cap`. */
 function controlCounterOf(m: Match, mons: boolean, sts: boolean, up: boolean | undefined, cap = Infinity): CountFn {
+  const ms = MEMBERS.get(m);
+  if (ms) {
+    // The same counting with the card test inlined (a table of the accepted cards).
+    let top = 0;
+    for (let j = 0; j < ms.length; j++) top = Math.max(top, ms[j] + 1);
+    const ok = new Uint8Array(top);
+    for (let j = 0; j < ms.length; j++) ok[ms[j]] = 1;
+    return (s) => {
+      let k = 0;
+      if (mons) { const L = s.mons; for (let i = 0; i < L.length && k < cap; i++) if (ok[L[i].id] === 1) k++; }
+      if (sts) { const L = s.st; for (let i = 0; i < L.length && k < cap; i++) { const x = L[i]; if ((up === undefined || x.up === up) && ok[x.id] === 1) k++; } }
+      return k;
+    };
+  }
   if (ID_ONLY.has(m)) {
     return (s, r) => {
       let k = 0;
