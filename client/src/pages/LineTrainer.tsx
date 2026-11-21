@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,10 @@ import ReviewSession from '../components/trainer/ReviewSession';
 import CoverageView from '../components/trainer/CoverageView';
 import GeneratePanel from '../components/trainer/GeneratePanel';
 import type { CardMap } from '../components/trainer/shared';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+
+// The Finder (deck files, worker pool, solver) loads only when its tab opens.
+const FinderTab = lazy(() => import('../components/finder/FinderTab'));
 
 const DECK_KEY = 'trainer_deck_id';
 const DRAFTS_KEY = 'trainer_include_drafts';
@@ -24,7 +28,7 @@ const EMPTY_DECKS: SavedDeck[] = [];
 const EMPTY_LINES: ComboLine[] = [];
 const EMPTY_REVIEWS: DrillReview[] = [];
 
-type Tab = 'drill' | 'lines' | 'coverage';
+type Tab = 'drill' | 'lines' | 'coverage' | 'finder';
 type Editing = { line: ComboLine | null; initial: LinePayload } | null;
 
 const toPayload = (l: ComboLine): LinePayload => ({
@@ -50,6 +54,10 @@ export default function LineTrainer() {
   const deckPasscodes = useMemo(() => [...new Set(mainDeck)], [mainDeck]);
   const cardsQ = useQuery(resolvedCardsQuery(deckPasscodes));
   const cards: CardMap = useMemo(() => new Map((cardsQ.data ?? []).map((c) => [Number(c.id), c])), [cardsQ.data]);
+  const finderList = useMemo(
+    () => (deck ? { main: deck.main_json.map((r) => ({ passcode: Number(r.passcode), count: r.count })), extra: deck.extra_json.map((r) => ({ passcode: Number(r.passcode), count: r.count })) } : null),
+    [deck]
+  );
 
   const [tab, setTab] = useState<Tab>('drill');
   const [drillMode, setDrillMode] = useState<'hands' | 'review'>('hands');
@@ -216,7 +224,7 @@ export default function LineTrainer() {
   );
 
   return (
-    <div className="space-y-4 pb-8 max-w-2xl">
+    <div className={clsx('space-y-4 pb-8', tab === 'finder' ? 'max-w-6xl' : 'max-w-2xl')}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Line Trainer</h1>
@@ -238,6 +246,7 @@ export default function LineTrainer() {
         {tabBtn('drill', 'Drill')}
         {tabBtn('lines', 'Lines')}
         {tabBtn('coverage', 'Coverage')}
+        {tabBtn('finder', 'Finder')}
       </div>
 
       {editing ? (
@@ -268,6 +277,19 @@ export default function LineTrainer() {
         />
       ) : tab === 'coverage' ? (
         <CoverageView lines={eligible} mainDeck={mainDeck} />
+      ) : tab === 'finder' ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <FinderTab
+            key={deck.id}
+            deckId={deck.id}
+            deckName={deck.name}
+            list={finderList}
+            fromDevice={false}
+            cardName={(p) => cards.get(p)?.name}
+            onSaved={refreshLines}
+            onUseAiPanel={() => { setTab('lines'); setGenerating(true); }}
+          />
+        </Suspense>
       ) : linesQ.isPending ? (
         <p className="text-sm text-md-textMuted">Loading…</p>
       ) : (

@@ -208,6 +208,22 @@ describe('the solve session', () => {
     expect(solves(calls)[solves(calls).length - 1].cfg.base).toBeUndefined();
   });
 
+  it('start with reset forgets records and locks, and searches once for the new setup', async () => {
+    const { s, calls } = session(() => result(LINES));
+    s.start(SNAP, LIST);
+    await until(() => s.view().phase === 'done');
+    s.record({ t: 'gain', id: 'DM' }, 0);
+    await until(() => s.view().phase === 'done');
+    const before = solves(calls).length;
+    const next = { ...SNAP, hand: ['ROD'] };
+    s.start(next, LIST, { reset: true });
+    expect([s.view().base, s.view().snapshot]).toEqual([{ steps: 0, events: [], path: [] }, next]);
+    await until(() => s.view().phase === 'done');
+    expect(solves(calls).length).toBe(before + 1);
+    expect(solves(calls)[before]).toMatchObject({ hand: ['ROD'] });
+    expect(solves(calls)[before].cfg.base).toBeUndefined();
+  });
+
   it('drops the last record when it no longer fits', async () => {
     let n = 0;
     const { s } = session((t) => (t.type === 'solve' && t.cfg.base && ++n === 1 ? Promise.reject(new Error('replay: b')) : result(LINES)));

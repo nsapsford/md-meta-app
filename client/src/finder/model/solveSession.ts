@@ -109,7 +109,8 @@ export function worstVerdict(v: Pick<ViewLine, 'line' | 'worst'>, mode: 'first' 
   return { cls: hw >= hp - 1 ? 'warn' : 'bad', short: `worst case: ${hw}${plus}`, long: `Through ${names}: drops to ${plural(hw, 'interruption')}${soft}` };
 }
 
-export interface StartOpts { deep?: boolean; debounceMs?: number }
+/** `reset`: forget every record and lock first (the hand or turn order changed), without searching for the old setup. */
+export interface StartOpts { deep?: boolean; debounceMs?: number; reset?: boolean }
 
 export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChange(v: SessionView): void; now?: () => number }) {
   const { pool, traps } = d;
@@ -336,6 +337,7 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
   return {
     /** Search for `snap` (cancelling any search before it). With `debounceMs`, waits that long for more changes first. */
     start(snap: FinderSnapshot, list: ResolvedList, o: StartOpts = {}): void {
+      if (o.reset) clearBase();
       last = { snap, list };
       if (timer) { clearTimeout(timer); timer = null; }
       if (o.debounceMs) { const dp = !!o.deep; timer = setTimeout(() => { timer = null; void solve(dp); }, o.debounceMs); return; }
