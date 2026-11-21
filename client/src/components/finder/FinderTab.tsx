@@ -1,21 +1,29 @@
 // The Line Trainer's Finder tab: matches the saved deck's list to a deck file, loads it, starts the
 // worker pool and a solve session, restores the setup saved on this device and remembers the list.
 // Two columns from md: up (setup left, lines right); on a phone one column with a Setup / Lines
-// switch. No server call: the list is passed in, or the copy saved on this device is used.
+// switch and a dock at the bottom. No server call: the list is passed in, or the copy saved on this
+// device is used.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useIsNative } from '../../hooks/useIsNative';
+import { copyText } from '../../utils/deckShare';
 import type { DeckList } from '../../finder/deck/match';
 import { DeckCompileError } from '../../finder/deck/deckError';
 import type { DeckFileError } from '../../finder/deck/schema';
 import type { CardId } from '../../finder/engine/types';
 import { createPool, type Pool } from '../../finder/worker/pool';
+import { cardTokens, shortOf } from '../../finder/model/cards';
 import { restoreSnapshot, type FinderSnapshot } from '../../finder/model/finderState';
+import { boardShort, headline } from '../../finder/model/lineView';
+import { lineName, lineText } from '../../finder/model/lineText';
 import { errorLine, openDeck, unknownNames, type OpenDeck } from '../../finder/model/openDeck';
-import { createSolveSession, type SessionView, type SolveSession } from '../../finder/model/solveSession';
+import { createSolveSession, worstVerdict, type SessionView, type SolveSession } from '../../finder/model/solveSession';
 import { createFinderStorage } from '../../finder/model/storage';
 import LoadingSpinner from '../common/LoadingSpinner';
 import CardInspect from './CardInspect';
+import { Stepper, type LineCtx } from './LineView';
+import ResultsPanel, { type ResultsActions } from './ResultsPanel';
 import SetupPanel, { type ChangeOpts } from './SetupPanel';
 import { Btn, Fine, Panel, Seg, useThumbMap } from './ui';
 
@@ -27,9 +35,12 @@ export interface FinderTabProps {
 
 type Load = { s: 'loading' } | { s: 'nolist' } | { s: 'unknown' } | { s: 'broken'; errors: DeckFileError[] } | { s: 'failed'; message: string } | { s: 'ok'; deck: OpenDeck };
 const DEBOUNCE_MS = 260;
+const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
+const EMPTY_CAT = new Map();
 
 export default function FinderTab(p: FinderTabProps) {
   const { deckId, deckName } = p;
+  const native = useIsNative();
   const storage = useMemo(() => createFinderStorage(), []);
   // The list: the one passed in, else the copy remembered on this device.
   const recalled = useMemo(() => (p.list ? null : storage.recall(deckId)), [p.list, storage, deckId]);
@@ -42,6 +53,8 @@ export default function FinderTab(p: FinderTabProps) {
   const [view, setView] = useState<SessionView | null>(null);
   const [pane, setPane] = useState<'setup' | 'lines'>('setup');
   const [inspect, setInspect] = useState<CardId | null>(null);
+  const [prog, setProg] = useState<Record<string, number>>({});
+  const [showWorst, setShowWorst] = useState(false);
   const [toast, setToast] = useState('');
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const snapRef = useRef<FinderSnapshot | null>(null);
@@ -106,10 +119,65 @@ export default function FinderTab(p: FinderTabProps) {
     snapRef.current = next;
     setSnap(next);
     storage.saveState(deckId, next);
+    if (o.reset) { setProg({}); setShowWorst(false); }
     sessionRef.current?.start(next, deck.list, { debounceMs: o.debounceMs ?? DEBOUNCE_MS, reset: o.reset });
   }, [deck, deckId, storage]);
 
-  const thumbs = useThumbMap(deck?.catalog ?? EMPTY_CAT);
+  const cat = deck?.catalog ?? EMPTY_CAT;
+  const thumbs = useThumbMap(cat);
+  const short = useMemo(() => shortOf(cat), [cat]);
+  const tokens = useMemo(() => cardTokens(cat), [cat]);
+  const ctx: LineCtx | null = useMemo(() => (deck && view ? {
+    mode: view.mode, intrs: view.intrs, traps: deck.loaded.traps, protections: deck.file.protections ?? [],
+    cat: deck.catalog, thumbs, tokens, onInspect: setInspect,
+  } : null), [deck, view, thumbs, tokens]);
+
+  // The line shown and how far through it you are.
+  const cur = view?.lines.find((l) => l.key === view.selected) ?? null;
+  const worstOn = showWorst && !!cur?.worst;
+  const shown = cur ? (worstOn ? cur.worst!.line : cur.line) : null;
+  const progKey = cur ? cur.key + (worstOn ? '|w' : '') : '';
+  const total = shown?.steps.length ?? 0;
+  const lock = worstOn ? 0 : view?.base.steps ?? 0;
+  const n = Math.max(Math.min(lock, total), Math.min(total, prog[progKey] ?? 0));
+  const setN = useCallback((k: number) => { if (progKey) setProg((pr) => ({ ...pr, [progKey]: Math.max(0, Math.min(total, k)) })); }, [progKey, total]);
+
+  // Space and the arrow keys walk the steps (not while typing).
+  useEffect(() => {
+    if (!shown) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      const onControl = !!t?.closest?.('button, summary, a');
+      if (e.key === 'ArrowRight' || (e.key === ' ' && !onControl)) { setN(n + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { setN(n - 1); e.preventDefault(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shown, n, setN]);
+
+  const actions: ResultsActions | null = useMemo(() => {
+    const s = () => sessionRef.current;
+    const again = () => { const sn = snapRef.current; if (deck && sn) s()?.start(sn, deck.list); };
+    return {
+      select: (k) => { setShowWorst(false); s()?.select(k); },
+      deeper: () => { const sn = snapRef.current; if (deck && sn) s()?.start(sn, deck.list, { deep: true }); },
+      whatIf: (i, it) => s()?.whatIf(i, it),
+      closeBranch: () => s()?.closeBranch(),
+      lock: (k) => { s()?.lockTo(k); again(); },
+      record: (ev, after) => s()?.record(ev, after),
+      hit: (i, it, used) => s()?.recordHit(i, it, used),
+      undo: () => s()?.undo(),
+      startOver: () => s()?.startOver(),
+      copy: () => {
+        if (!cur || !shown || !view) return;
+        const lc = { mode: view.mode, hand: view.hand };
+        const text = lineText(shown, short, { ...lc, name: lineName(cur.line, short, lc) });
+        copyText(text).then(() => showToast('Steps copied.'), () => showToast('Copy was blocked. Select the steps and copy them by hand.'));
+      },
+    };
+  }, [deck, cur, shown, view, short, showToast]);
 
   if (load.s === 'nolist') {
     return <Panel><p className="text-sm text-md-textMuted">This deck's list isn't loaded yet, and none is saved on this device. Open the Finder once while online.</p></Panel>;
@@ -138,6 +206,15 @@ export default function FinderTab(p: FinderTabProps) {
 
   const unknown = deck.list.blanks ? unknownNames(list!, deck.list, p.cardName) : [];
   const traps = deck.loaded.traps;
+  const go = (v: 'setup' | 'lines') => { setPane(v); window.scrollTo(0, 0); };
+
+  // The phone dock: on the setup side a peek at the best line; on the lines side the stepper.
+  let peekBig = 'Add your hand', peekSub = 'Lines appear as you pick cards';
+  if (cur && view) {
+    const h = headline(cur.line, view.mode), v = worstVerdict(cur, view.mode, view.intrs);
+    peekBig = view.drawFx ? `${plural(Number(cur.line.summary.draws) || 0, 'draw')} for ${boardShort(cur.line, view.mode)}` : `${h.big} ${h.small}`;
+    peekSub = `${plural(cur.line.steps.length, 'step')}${cur.testing ? ' · testing…' : v ? ' · ' + v.short : ''}`;
+  } else if (view && view.phase !== 'idle') { peekBig = 'Finding lines…'; peekSub = ''; }
 
   return (
     <div className="space-y-3 pb-24 md:pb-4">
@@ -147,15 +224,37 @@ export default function FinderTab(p: FinderTabProps) {
           {unknown.length > 0 && <Fine>{deck.list.blanks} cards the Finder doesn't know are counted as blanks: {unknown.join(', ')}.</Fine>}
         </div>
       )}
-      <Seg className="md:hidden" label="View" value={pane} options={[['setup', 'Setup'], ['lines', 'Lines']]} onChange={(v) => { setPane(v); window.scrollTo(0, 0); }} />
+      <Seg className="md:hidden" label="View" value={pane} options={[['setup', 'Setup'], ['lines', 'Lines']]} onChange={go} />
       <div className="md:grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-4 md:items-start">
         <div className={clsx(pane !== 'setup' && 'hidden md:block')}>
           <SetupPanel snap={snap} list={deck.list} cat={deck.catalog} thumbs={thumbs} traps={traps} onChange={change} onToast={showToast} onInspect={setInspect} />
         </div>
-        <div className={clsx('space-y-3', pane !== 'lines' && 'hidden md:block')}>
-          <Panel><p className="text-xs text-md-textSecondary" aria-live="polite">{view ? `${view.phase} · ${view.lines.length} lines` : ''}</p></Panel>
+        <div className={clsx(pane !== 'lines' && 'hidden md:block')}>
+          {ctx && actions ? (
+            <ResultsPanel view={view} ctx={ctx} deck={deck} deckName={deck.file.name} short={short}
+              progress={n} onProgress={setN} showWorst={worstOn} onToggleWorst={() => setShowWorst((w) => !w)} actions={actions} />
+          ) : <LoadingSpinner />}
         </div>
       </div>
+
+      <nav aria-label="Quick actions" className="md:hidden fixed inset-x-0 z-30 px-3 py-2 bg-md-bg/[0.97] border-t border-md-border/60 shadow-2xl shadow-black/30"
+        style={{ bottom: native ? 'calc(3.5rem + env(safe-area-inset-bottom))' : 0, paddingBottom: native ? undefined : 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+        {pane === 'lines' ? (
+          <div className="flex items-center gap-2">
+            <Btn onClick={() => go('setup')}>‹ Setup</Btn>
+            <div className="flex-1 min-w-0">{shown && <Stepper n={n} total={total} onStep={(d) => setN(n + d)} />}</div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={!cur} onClick={() => go('lines')} className="press flex-1 min-w-0 text-left disabled:opacity-60">
+              <b className="block text-sm tabular-nums text-md-text truncate">{peekBig}</b>
+              <span className="block text-[11px] text-md-textMuted truncate">{peekSub}</span>
+            </button>
+            <Btn primary disabled={!cur} onClick={() => go('lines')}>View line ›</Btn>
+          </div>
+        )}
+      </nav>
+
       <CardInspect id={inspect} cat={deck.catalog} list={deck.list} onClose={() => setInspect(null)} />
       {toast && (
         <div role="status" className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-50 px-3 py-2 rounded-lg bg-md-surfaceAlt border border-md-border text-xs text-md-text shadow-surface-lg animate-fade-in">
@@ -165,5 +264,3 @@ export default function FinderTab(p: FinderTabProps) {
     </div>
   );
 }
-
-const EMPTY_CAT = new Map();

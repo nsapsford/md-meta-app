@@ -284,7 +284,7 @@ export default function LineTrainer() {
             deckId={deck.id}
             deckName={deck.name}
             list={finderList}
-            fromDevice={false}
+            fromDevice={decksQ.isError}
             cardName={(p) => cards.get(p)?.name}
             onSaved={refreshLines}
             onUseAiPanel={() => { setTab('lines'); setGenerating(true); }}
