@@ -37,6 +37,13 @@ function allSatisfy(s: State, f: CondFn | null, mats: Choice[]): boolean {
   return true;
 }
 
+/** Do two of your monsters have the same card index? */
+function sameIds(s: State): boolean {
+  const ms = s.mons;
+  for (let a = 1; a < ms.length; a++) for (let b = 0; b < a; b++) if (ms[a].id === ms[b].id) return true;
+  return false;
+}
+
 /** Each subset of `n` items (by index) whose size is within lo..hi, in increasing bitmask order. */
 function eachSubset(n: number, lo: number, hi: number, fn: (pick: number[]) => void): void {
   for (let mask = 1; mask < (1 << n); mask++) {
@@ -66,6 +73,8 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
   const range = (rs: { min: number; max: number }[]) => [Math.min(...rs.map((r) => r.min)), Math.max(...rs.map((r) => r.max))];
   const [synLo, synHi] = synchros.length ? range(synchros) : [0, 0];
   const [linkLo, linkHi] = links.length ? range(links) : [0, 0];
+  const synRepeat = new Set(synchros.map((r) => r.card)).size !== synchros.length;
+  const linkRepeat = new Set(links.map((r) => r.card)).size !== links.length;
 
   const fieldChoice = (s: State, i: number): Choice => matChoice(s.mons[i].id, { zone: 'mon', at: i, uid: s.mons[i].uid });
   // The materials' card ids, sorted as strings (as Array.prototype.sort does) and joined by '+'.
@@ -112,6 +121,8 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
     const ms: number[] = [];
     for (let i = 0; i < s.mons.length; i++) if (props[s.mons[i].id].lv && s.mons[i].lvl) ms.push(i);
     if (ms.length < 2) return;
+    // Two picks share a key only when the field holds two copies of a card (or two rules make one card).
+    const dup = synRepeat || sameIds(s);
     const seen = new Set<string>();
     eachSubset(ms.length, Math.max(2, synLo), synHi, (sub) => {
       const pick = sub.map((j) => ms[j]);
@@ -125,10 +136,9 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
         // seen only once its rule's checks pass: when two copies of a card differ in current Level or
         // in what `mats` reads (its name on the field), a later copy can still make the move.
         const k = 'syn:' + ids[r.card] + ':' + (sg ??= sig(s, pick));
-        if (seen.has(k)) continue;
-        mats ??= pick.map((i) => fieldChoice(s, i));
-        if (!allSatisfy(s, r.mats, mats)) continue;
-        seen.add(k);
+        if (dup && seen.has(k)) continue;
+        if (r.mats && !allSatisfy(s, r.mats, mats ??= pick.map((i) => fieldChoice(s, i)))) continue;
+        if (dup) seen.add(k);
         push(k, INHERENT, summonRun(r, pick, false), false, MOVE_EXTRA);
       }
     });
@@ -141,6 +151,8 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
     const emzAt = s.mons.findIndex((m) => m.emz);
     let main = 0;
     for (const m of s.mons) if (!m.emz) main++;
+    // Two picks share a key only when the field holds two copies of a card (or two rules make one card).
+    const dup = linkRepeat || sameIds(s);
     const seen = new Set<string>();
     eachSubset(N, Math.max(2, linkLo), linkHi, (pick) => {
       // Each material counts 1, or its Link rating.
@@ -162,10 +174,9 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
         // of a card differ in zone (one in the Extra Monster Zone) or in what `mats` reads, a later
         // copy can still make the move the first could not.
         const k = 'link:' + ids[r.card] + ':' + (sg ??= sig(s, pick));
-        if (seen.has(k)) continue;
-        mats ??= pick.map((i) => fieldChoice(s, i));
-        if (!allSatisfy(s, r.mats, mats)) continue;
-        seen.add(k);
+        if (dup && seen.has(k)) continue;
+        if (r.mats && !allSatisfy(s, r.mats, mats ??= pick.map((i) => fieldChoice(s, i)))) continue;
+        if (dup) seen.add(k);
         push(k, INHERENT, summonRun(r, pick, emzFree), false, MOVE_EXTRA);
       }
     });

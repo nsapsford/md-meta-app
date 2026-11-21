@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createStateOps } from './state';
+import { removeAt } from './ops';
 import type { Cfg, Mon } from './types';
 
 const ix = { A: 0, B: 1, C: 2, UNK: 3 };
@@ -101,5 +102,15 @@ describe('engine state', () => {
     const k = ops.stateKey(s);
     ops.W(s, 'hand')[0] = 1;
     expect(ops.stateKey(s)).not.toBe(k);
+  });
+});
+
+describe('removeAt', () => {
+  it('removes and returns one element, as splice(i, 1)[0] does, in range and out of it', () => {
+    for (const i of [0, 1, 3, 4, -1, 7]) {
+      const a = [10, 11, 12, 13, 14], b = a.slice();
+      expect(removeAt(a, i)).toBe(b.splice(i, 1)[0]);
+      expect(a).toEqual(b);
+    }
   });
 });

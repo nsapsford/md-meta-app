@@ -111,6 +111,13 @@ describe('Link Summons', () => {
     expect(t.keys(t.state(['SEEKER', 'TUNER', 'BIG']), 'link:')).toEqual(['link:LINKA:SEEKER+TUNER', 'link:LINKA:BIG+SEEKER', 'link:LINKA:BIG+TUNER']);
   });
 
+  it('offers each material set once: two copies on the field, or two rules for one card', () => {
+    const t = setup([link('LINKA', 2, 2, 3)]);
+    expect(t.keys(t.state(['SEEKER', 'SEEKER', 'TUNER']), 'link:')).toEqual(['link:LINKA:SEEKER+SEEKER', 'link:LINKA:SEEKER+TUNER']);
+    const t2 = setup([link('LINKA', 2, 2, 2), link('LINKA', 2, 2, 3)]);
+    expect(t2.keys(t2.state(['SEEKER', 'TUNER']), 'link:')).toEqual(['link:LINKA:SEEKER+TUNER']);
+  });
+
   it('a Link-2 material counts as 1 or 2 toward a rating of 3', () => {
     const t = setup([link('LINKC', 3, 2, 3)]);
     const ks = t.keys(t.state(['SEEKER', 'TUNER'], {}, ['LINKB']), 'link:');

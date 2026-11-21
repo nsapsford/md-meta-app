@@ -6,7 +6,7 @@
 
 import type { CardId, FinalBoard, Mon, Move, OppCard, Pend, State, Tags, ZoneName } from '../engine/types';
 import { createStateOps, type StateOps } from '../engine/state';
-import { createOps, type Ops } from '../engine/ops';
+import { createOps, removeAt, type Ops } from '../engine/ops';
 import { step, done, L, type LedgerZone } from '../engine/record';
 import type { BoardValueDef, CardDef, CardFacts, DeckFile, DeckFileError, EffectDef, Loc } from './schema';
 import { KIND_LABEL, WORDS, type CompileCtx, type Compiled, type Word, type WordKind } from './vocabulary';
@@ -358,10 +358,10 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       let id = c.id, from: LedgerZone, kind: 'mon' | 'st' | null = null, up = true;
       if (c.zone === 'mon') {
         const i = monIndex(n, c); if (i < 0) throw new Error(`card ${ids[c.id]} is not on the field`);
-        id = n.mons.splice(i, 1)[0].id; from = 'field'; kind = 'mon';
+        id = removeAt(n.mons, i).id; from = 'field'; kind = 'mon';
       } else if (c.zone === 'st') {
         const i = stIndex(n, c); if (i < 0) throw new Error(`card ${ids[c.id]} is not on the field`);
-        const x = n.st.splice(i, 1)[0]; id = x.id; up = x.up; from = 'field'; kind = 'st';
+        const x = removeAt(n.st, i); id = x.id; up = x.up; from = 'field'; kind = 'st';
       } else if (c.zone === 'deck' && to === 'top') {
         ops.shuffle(n); takeZone(n, 'deck', id); from = 'deck';
       } else from = rt.takeOut(n, c);
@@ -388,7 +388,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     moved: (n, id, from, to) => moved(n, id, from, to, true),
     extraRules,
     removeQuietly(n, zone, at, to) {
-      const id = zone === 'mon' ? n.mons.splice(at, 1)[0].id : n.st.splice(at, 1)[0].id;
+      const id = zone === 'mon' ? removeAt(n.mons, at).id : removeAt(n.st, at).id;
       const z: ZoneName = to === 'deck' && props[id].ext ? 'extra' : to;
       so.W(n, z)[id]++;
       L.mv(n, id, 'field', LZ[z]);
@@ -547,9 +547,17 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     }
     const stepMarks = (def.stepMarks ?? []).reduce((m, name) => m | (1 << markBit[name]), 0);
     const hasStepTags = Object.keys(stepFixed).length > 0 || stepDyn.length > 0 || stepMarks !== 0;
+    // With no conditional tags at all, the step's tags are the same object every time.
+    let stepConst: Tags | null = null;
     const stepTagsFor = (s: State, r: Run): Tags => {
+      if (stepConst) return stepConst;
       const t = tagsFor(s, r);
       if (!hasStepTags) return t;
+      if (!dyn.length && !stepDyn.length) {
+        const o = { ...t, ...stepFixed } as Tags;
+        if (stepMarks) o.marks = (t.marks ?? 0) | stepMarks;
+        return (stepConst = Object.freeze(o));
+      }
       const o = { ...t, ...stepFixed } as Record<string, boolean>;
       for (const [k, f] of stepDyn) if (f(s, r)) o[k] = true;
       const out = o as Tags;

@@ -8,6 +8,15 @@ import type { Mon, OppCard, OppCardState, ST, State } from './types';
 import type { StateOps } from './state';
 import { L, type LedgerZone } from './record';
 
+/** Remove and return a[i] (as a.splice(i, 1)[0], without the result array). */
+export function removeAt<T>(a: T[], i: number): T {
+  if (!(i >= 0 && i < a.length)) return a.splice(i, 1)[0];   // out of range: exactly as splice
+  const x = a[i];
+  for (let j = i + 1; j < a.length; j++) a[j - 1] = a[j];
+  a.length--;
+  return x;
+}
+
 export interface PlaceOpts { special?: boolean; emz?: boolean; nm?: number; noEff?: boolean; uses?: number; lvl?: number; marks?: number; ownProc?: boolean; from?: LedgerZone }
 
 export interface OpsHooks {
@@ -89,7 +98,7 @@ export function createOps(so: StateOps, h: OpsHooks): Ops {
   }
 
   function monToGy(s: State, idx: number, ledger = true): Mon {
-    const m = s.mons.splice(idx, 1)[0];
+    const m = removeAt(s.mons, idx);
     W(s, 'gy')[m.id]++;
     if (ledger) L.mv(s, m.id, 'field', 'gy');
     h.onLeaveField(s, m.id, 'mon', true, 'gy');
@@ -97,7 +106,7 @@ export function createOps(so: StateOps, h: OpsHooks): Ops {
   }
 
   function stToGy(s: State, idx: number): ST {
-    const x = s.st.splice(idx, 1)[0];
+    const x = removeAt(s.st, idx);
     W(s, 'gy')[x.id]++;
     L.mv(s, x.id, 'field', 'gy');
     h.onLeaveField(s, x.id, 'st', x.up, 'gy');
