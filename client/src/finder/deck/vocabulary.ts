@@ -9,7 +9,7 @@
 import type { CardId, FinalBoard, Mon, OppCardState, State } from '../engine/types';
 import type { EffectDef } from './schema';
 import { L } from '../engine/record';
-import { fieldPool, fusionOptions } from '../engine/summon';
+import { fieldPool, fusionOptions, poolFusionOptions, type MatView } from '../engine/summon';
 import type { ActFn, CardProps, CardRef, Choice, CondFn, CountFn, PickFn, Place, Run, Runtime, TrigEvent, TriggerFn } from './compile';
 
 export type Word = Record<string, unknown>;
@@ -453,8 +453,61 @@ defineCond('level', {
   },
 });
 defineCond('usesLeft', {
-  doc: 'This monster has a use of its counted effect left (uses come from its Fusion rule\'s `uses` when it was summoned).', args: A.none,
-  compile: (): CondFn => (s, r) => (monOf(s, r)?.uses ?? 0) > 0,
+  doc: 'This monster has a use (or at least the given number of uses) of its counted effect left (uses come from its Fusion rule\'s `uses` when it was summoned).', args: A.oneOf(A.none, A.int(1)),
+  compile: (a: true | Record<string, never> | number): CondFn => { const k = free(a); return (s, r) => (monOf(s, r)?.uses ?? 0) >= k; },
+});
+defineCond('inZone', {
+  doc: 'This card is in one of the given zones (`field`: one of your monsters or Spells/Traps; a known card on top of the Deck is in the Deck).', args: A.list(A.zone(), 1),
+  compile: (a: Zone[]): CondFn => {
+    const set = new Set<string>(a);
+    return (_s, r) => {
+      const z = r.at.zone;
+      return z === 'mon' || z === 'st' ? set.has('field') : z === 'top' ? set.has('deck') : set.has(z);
+    };
+  },
+});
+defineCond('inGroup', {
+  doc: "This card's name (on your field: its name there; in the GY: its GY name) is one of the group's cards.", args: A.group,
+  compile: (a: string, ctx): CondFn => {
+    const mask = new Uint8Array(ctx.props.length), props = ctx.props;
+    for (const i of ctx.group(a)) mask[i] = 1;
+    return (s, r) => {
+      if (r.at.zone === 'opp') return false;
+      if (r.at.zone === 'gy') return mask[props[r.self].gyName] === 1;
+      const m = monOf(s, r);
+      return mask[m ? m.nm : r.self] === 1;
+    };
+  },
+});
+defineCond('oppHasMoreMonsters', {
+  doc: 'The opponent controls more monsters than you do.', args: A.none,
+  compile: (): CondFn => (s) => !!s.opp && s.opp.mons.length > s.mons.length,
+});
+const statCond = (stat: 'atk' | 'def') => (a: { atLeast?: number; atMost?: number }, ctx: CompileCtx): CondFn => {
+  const lo = a.atLeast ?? 0, hi = a.atMost ?? Infinity;
+  return propCond(ctx, (o) => { const v = o[stat]; return typeof v === 'number' && v >= lo && v <= hi; }, (p) => p.kind === 'M' && p[stat] >= lo && p[stat] <= hi);
+};
+defineCond('atk', {
+  doc: "This monster's printed ATK (an opponent's monster: its ATK as their field gives it) is within atLeast..atMost.",
+  args: A.object({ atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }), compile: statCond('atk'),
+});
+defineCond('def', {
+  doc: "This monster's printed DEF (an opponent's monster: its DEF as their field gives it) is within atLeast..atMost.",
+  args: A.object({ atLeast: A.optional(A.int(0)), atMost: A.optional(A.int(0)) }), compile: statCond('def'),
+});
+defineCond('sameRaceAs', {
+  doc: "This card's monster Type is the same as the chosen card's (an opponent's card: as their field gives it).", args: A.choice,
+  compile: (a: string, ctx): CondFn => {
+    if (a === 'self') ctx.fail('names a choice (a choose[].as name), not this card');
+    const slot = ctx.choiceSlot(a), props = ctx.props;
+    const raceAt = (s: FinalBoard, id: number, at: Place): string | null => (at.zone === 'opp' ? oppOf(s, { at })?.race ?? null : props[id]?.race ?? null);
+    return (s, r) => {
+      const c = r.chosen[slot];
+      if (!c || c.many) return false;
+      const mine = raceAt(s, r.self, r.at);
+      return mine !== null && mine === raceAt(s, c.id, c);
+    };
+  },
 });
 defineCond('race', {
   doc: "This card's monster Type is one of the given.", args: A.list(A.string, 1),
@@ -687,29 +740,89 @@ definePick('oppCard', {
   },
 });
 
+const POOL_ZONES = ['self', 'field', 'hand', 'deck', 'gy', 'oppField'] as const;
+type PoolZone = (typeof POOL_ZONES)[number];
+const POOL_TAG: Record<'hand' | 'deck' | 'gy', { key: string; name: string }> = { hand: { key: 'h.', name: ' (hand)' }, deck: { key: 'd.', name: ' (Deck)' }, gy: { key: 'g.', name: ' (GY)' } };
+/** At most this many copies of one card in a zone count as separate materials (no rule needs more). */
+const POOL_COPIES = 3;
+
 definePick('fusionMaterials', {
-  doc: "Each set of your monsters (with `either`, also the opponent's face-up monsters) that can make a Fusion Monster in your Extra Deck by the deck's Fusion rules; its name joins the members with `join` (default \" + \"), an opponent's monster as `oppPrefix` + its name.",
-  args: A.object({ either: A.optional(A.boolean), join: A.optional(A.string), oppPrefix: A.optional(A.string) }),
-  compile: (a: { either?: boolean; join?: string; oppPrefix?: string }, ctx): PickFn => {
+  doc: "Each set of your monsters (with `either`, also the opponent's face-up monsters) that can make a Fusion Monster in your Extra Deck by the deck's Fusion rules; its name joins the members with `join` (default \" + \"), an opponent's monster as `oppPrefix` + its name. With `pool`, the materials come from those places instead: `self` (this card, wherever it is), `field` (your monsters), `hand`, `deck`, `gy`, `oppField` (the opponent's face-up monsters); a material from the hand, Deck or GY is named with where it is. `of`: only Fusion Monsters matching this filter; `count`: exactly that many materials; `max` (default 3): the most materials for a rule with `more`; `withSelf`: every set includes this card; `notSelf`: this card is not a material (a cost sends it). Summon locks (`summonLocks`) leave out Fusion Monsters they forbid.",
+  args: A.object({
+    either: A.optional(A.boolean), join: A.optional(A.string), oppPrefix: A.optional(A.string),
+    pool: A.optional(A.list(A.enum(...POOL_ZONES), 1)), of: A.optional(A.cond), count: A.optional(A.int(1)), max: A.optional(A.int(1)), withSelf: A.optional(A.boolean), notSelf: A.optional(A.boolean),
+  }),
+  compile: (a: { either?: boolean; join?: string; oppPrefix?: string; pool?: PoolZone[]; of?: Word; count?: number; max?: number; withSelf?: boolean; notSelf?: boolean }, ctx): PickFn => {
     const rt = ctx.rt, props = ctx.props, sep = a.join ?? ' + ', pre = a.oppPrefix ?? '', either = !!a.either;
-    return (s) => {
-      const pool = fieldPool(s, props, rt.UNK).filter((v) => either || v.side === 'me');
-      const out: Choice[] = [];
-      let last: unknown = null, cur: Choice | null = null, fus: number[] = [];
-      for (const o of fusionOptions(s, pool, rt.extraRules)) {
-        if (o.mats !== last) {
-          last = o.mats; fus = [];
-          const many: Choice[] = o.mats.map((v) => {
-            if (v.side === 'me') return rt.choiceOnField('mon', v.idx!, v.id, s.mons[v.idx!].uid);
-            const x = s.opp!.mons.find((y) => y.uid === v.uid)!;
-            return { id: rt.UNK, zone: 'opp', at: -1, uid: v.uid!, key: 'o' + String(v.uid), name: pre + (x.name || 'monster'), many: null };
-          });
-          cur = { id: -1, zone: many[0].zone, at: -1, uid: null, key: many.map((c) => c.key).join('+'), name: many.map((c) => c.name).join(sep), many, fusions: fus };
-          out.push(cur);
+    const of = a.of === undefined ? null : (ctx.cond(a.of, 'of') as CondFn);
+    const inExtra: Place = { zone: 'extra', at: -1, uid: null };
+    const ofRun: Run = { self: 0, at: inExtra, chosen: [] };
+    const allow = (s: State, card: number) => rt.extraAllowed(s, card) && (!of || (ofRun.self = card, of(s, ofRun)));
+    const oppChoice = (s: State, uid: NonNullable<MatView['uid']>): Choice => {
+      const x = s.opp!.mons.find((y) => y.uid === uid)!;
+      return { id: rt.UNK, zone: 'opp', at: -1, uid, key: 'o' + String(uid), name: pre + (x.name || 'monster'), many: null };
+    };
+    const setOf = (many: Choice[], fus: number[]): Choice => ({ id: -1, zone: many[0].zone, at: -1, uid: null, key: many.map((c) => c.key).join('+'), name: many.map((c) => c.name).join(sep), many, fusions: fus });
+
+    if (a.pool === undefined) {
+      if (a.count !== undefined || a.max !== undefined || a.withSelf || a.notSelf) ctx.fail('count, max, withSelf and notSelf need a pool');
+      return (s) => {
+        const pool = fieldPool(s, props, rt.UNK).filter((v) => either || v.side === 'me');
+        const out: Choice[] = [];
+        let last: unknown = null, fus: number[] = [];
+        for (const o of fusionOptions(s, pool, rt.extraRules)) {
+          if (!allow(s, o.card)) continue;
+          if (o.mats !== last) {
+            last = o.mats; fus = [];
+            out.push(setOf(o.mats.map((v) => (v.side === 'me' ? rt.choiceOnField('mon', v.idx!, v.id, s.mons[v.idx!].uid) : oppChoice(s, v.uid!))), fus));
+          }
+          fus.push(o.card);
         }
-        fus.push(o.card);
+        return out;
+      };
+    }
+    if (a.either) ctx.fail('use oppField in the pool instead of either', 'either');
+    const want = new Set<PoolZone>(a.pool), max = a.max ?? 3, notSelf = !!a.notSelf;
+    if (notSelf && want.has('self')) ctx.fail('notSelf and self in the pool contradict', 'notSelf');
+    if (a.withSelf && !want.has('self')) ctx.fail('withSelf needs self in the pool', 'withSelf');
+    const view = (id: number, zone: 'hand' | 'deck' | 'gy'): MatView => {
+      const p = props[id];
+      return { side: 'me', zone, id, nm: zone === 'gy' ? p.gyName : id, race: p.race ?? '?', attr: p.attr ?? '?', sub: p.sub, ext: p.ext };
+    };
+    return (s, r) => {
+      const field = fieldPool(s, props, rt.UNK);
+      const pool: MatView[] = [];
+      let selfAt: number | undefined;
+      let selfZone: 'hand' | 'deck' | 'gy' | null = null;
+      if (want.has('self')) {
+        if (r.at.zone === 'mon') {
+          const i = s.mons.findIndex((m) => m.uid === r.at.uid);
+          if (i >= 0) { selfAt = pool.length; pool.push(field[i]); }
+        } else if (r.at.zone === 'hand' || r.at.zone === 'deck' || r.at.zone === 'gy') {
+          selfZone = r.at.zone; selfAt = pool.length; pool.push(view(r.self, r.at.zone));
+        }
+        if (selfAt === undefined && a.withSelf) return [];
       }
-      return out;
+      // `self` or `notSelf`: this card is not also offered from where it is.
+      const skipSelf = selfAt !== undefined || notSelf;
+      const selfMon = skipSelf && r.at.zone === 'mon' ? r.at.uid : null;
+      if (want.has('field')) for (const v of field) if (v.side === 'me' && (selfMon === null || s.mons[v.idx!].uid !== selfMon)) pool.push(v);
+      for (const z of ['hand', 'deck', 'gy'] as const) {
+        if (!want.has(z)) continue;
+        const zz = s[z];
+        for (const i of rt.order) {
+          let k = zz[i];
+          if (!k || props[i].kind !== 'M') continue;
+          if ((selfZone === z || (notSelf && r.at.zone === z)) && i === r.self) k--;
+          for (let c = Math.min(k, POOL_COPIES); c > 0; c--) pool.push(view(i, z));
+        }
+      }
+      if (want.has('oppField')) for (const v of field) if (v.side === 'opp') pool.push(v);
+      const opts = poolFusionOptions(s, pool, rt.extraRules, { count: a.count, max, mustInclude: a.withSelf ? selfAt : undefined, allow: (card) => allow(s, card) });
+      return opts.map((o) => setOf(o.mats.map((v): Choice => {
+        if (v.zone) { const t = POOL_TAG[v.zone]; return { id: v.id, zone: v.zone, at: -1, uid: null, key: t.key + rt.ids[v.id], name: props[v.id].short + t.name, many: null }; }
+        return v.side === 'me' ? rt.choiceOnField('mon', v.idx!, v.id, s.mons[v.idx!].uid) : oppChoice(s, v.uid!);
+      }), o.cards));
     };
   },
 });
@@ -790,6 +903,7 @@ defineAct('summon', {
       const ids: number[] = [];
       let fromGy = false;
       if (mslot >= 0) rt.each(r, mslot, (c) => { ids.push(c.id); if (c.zone === 'gy') fromGy = true; rt.moveCard(n, c, matsTo, true); });
+      if (matsTo === 'gy' && ids.length >= 2) rt.batchToGy(n, ids.length);
       const extra = ids.length && (fromGy || matsTo !== 'gy') ? { ...(fromGy ? { materialsFrom: 'gy' } : {}), ...(matsTo !== 'gy' ? { materialsTo: matsTo === 'ban' ? 'banished' : 'deck' } : {}) } : null;
       rt.each(r, slot, (c) => {
         const lz = rt.takeOut(n, fromZone(c, a.from, n));
@@ -900,9 +1014,9 @@ defineAct('spendUse', {
   },
 });
 defineAct('fusionSummon', {
-  doc: "Fusion Summon the chosen Fusion Monster from the Extra Deck with the chosen materials: yours go to `to` (the GY by default, or the Deck: shuffled in), highest field index first, then the opponent's are sent to the GY as material; it gets one use per material matching its Fusion rule's `uses`.",
-  args: A.object({ what: A.choice, mats: A.choice, to: A.optional(A.enum('gy', 'deck')) }),
-  compile: (a: { what: string; mats: string; to?: 'gy' | 'deck' }, ctx): ActFn => {
+  doc: "Fusion Summon the chosen Fusion Monster from the Extra Deck with the chosen materials: yours go to `to` (the GY by default, the Deck: shuffled in, or banished), highest field index first, then those from the hand, Deck or GY, then the opponent's are sent to the GY as material; it gets one use per material matching its Fusion rule's `uses`. The materials are material for a Fusion Summon (`usedAsMaterial`); two or more going to the GY together set off `monstersToGyTogether`.",
+  args: A.object({ what: A.choice, mats: A.choice, to: A.optional(A.enum('gy', 'deck', 'ban')) }),
+  compile: (a: { what: string; mats: string; to?: 'gy' | 'deck' | 'ban' }, ctx): ActFn => {
     if (a.what === 'self' || a.mats === 'self') ctx.fail('names choices (choose[].as names), not this card');
     const fslot = ctx.choiceSlot(a.what), mslot = ctx.choiceSlot(a.mats), rt = ctx.rt, props = ctx.props, to = a.to ?? 'gy';
     return (n, r) => {
@@ -925,13 +1039,28 @@ defineAct('fusionSummon', {
         field.splice(p, 0, c); fieldAt.splice(p, 0, i);
       }
       const ids: number[] = [];
-      // Quiet: the summon's ledger entry lists the materials and where they went.
-      for (const c of field) { ids.push(c.id); rt.moveCard(n, c, to, true); }
-      for (const c of rest) { ids.push(c.id); rt.moveCard(n, c, to, true); }
-      if (to === 'deck' && own.some((c) => !props[c.id].ext)) rt.ops.shuffle(n);
-      for (const c of mats) if (c.zone === 'opp' && c.uid !== null) rt.ops.oppRemove(n, c.uid, 'material');
-      const extra = to === 'deck' ? { ...(own.some((c) => c.zone === 'gy') ? { materialsFrom: 'gy' } : {}), materialsTo: 'deck' } : null;
-      L.sum(n, card, 'fusion', 'extra', ids, extra);
+      let extra: Record<string, unknown> | null;
+      rt.asMaterial('fusion', () => {
+        if (!rest.length && to !== 'ban') {
+          // Quiet: the summon's ledger entry lists the materials and where they went.
+          for (const c of field) { ids.push(c.id); rt.moveCard(n, c, to, true); }
+          extra = to === 'deck' ? { materialsTo: 'deck' } : null;
+        } else {
+          // The ledger names one place the listed materials come from: the field if any is there,
+          // else the zone of the first; the others are written as moves of their own.
+          const listed = field.length ? 'mon' : rest[0].zone;
+          for (const c of [...field, ...rest]) {
+            if (c.zone === listed) { ids.push(c.id); rt.moveCard(n, c, to, true); } else rt.moveCard(n, c, to);
+          }
+          const from = listed === 'mon' ? null : listed === 'hand' ? 'hand' : listed === 'deck' ? 'deck' : 'gy';
+          extra = from || to !== 'gy' ? { ...(from ? { materialsFrom: from } : {}), ...(to !== 'gy' ? { materialsTo: to === 'ban' ? 'banished' : 'deck' } : {}) } : null;
+        }
+        if (to === 'deck' && own.some((c) => !props[c.id].ext)) rt.ops.shuffle(n);
+        for (const c of mats) if (c.zone === 'opp' && c.uid !== null) rt.ops.oppRemove(n, c.uid, 'material');
+      });
+      const toGy = (to === 'gy' ? own.length : 0) + mats.filter((c) => c.zone === 'opp').length;
+      if (toGy >= 2) rt.batchToGy(n, toGy);
+      L.sum(n, card, 'fusion', 'extra', ids, extra!);
       rt.state.W(n, 'extra')[card]--;
       rt.ops.place(n, card, { special: true, from: 'extra', uses });
     };
@@ -958,6 +1087,41 @@ defineAct('oppRemoveAll', {
       if (a.kind !== 'mon') for (const x of n.opp.st) if (t(x)) hit.push(x);
       for (const x of hit) rt.ops.oppRemove(n, x.uid, a.how);
     };
+  },
+});
+defineAct('oppNegate', {
+  doc: "Negate the effects of one of the opponent's cards: it no longer interrupts you (it stays on their field).", args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    if (a.what === 'self') ctx.fail("names one of the opponent's cards (a choice), not this card", 'what');
+    const slot = slotOf(a.what, ctx), rt = ctx.rt, OW = ctx.rt.state.OW;
+    return (n, r) => rt.each(r, slot, (c) => {
+      if (c.zone !== 'opp' || !n.opp) return;
+      const o = OW(n);
+      for (const list of [o.mons, o.st]) {
+        const i = list.findIndex((x) => x.uid === c.uid);
+        if (i >= 0) list[i] = { ...list[i], intr: null };
+      }
+    });
+  },
+});
+defineAct('destroy', {
+  doc: "Destroy a chosen card: one of yours goes to the GY (setting off its triggers), one of the opponent's is destroyed.", args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt;
+    return (n, r) => rt.each(r, slot, (c) => {
+      if (c.zone === 'opp') { if (c.uid !== null) rt.ops.oppRemove(n, c.uid, 'destroy'); return; }
+      rt.moveCard(n, c, 'gy');
+    });
+  },
+});
+defineAct('returnToHand', {
+  doc: "Return a chosen card to the hand: one of yours from where it is (an Extra Deck monster goes to the Extra Deck), one of the opponent's leaves their field (as a banish: no GY).", args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt, props = ctx.props;
+    return (n, r) => rt.each(r, slot, (c) => {
+      if (c.zone === 'opp') { if (c.uid !== null) rt.ops.oppRemove(n, c.uid, 'banish'); return; }
+      rt.moveCard(n, c, props[c.id].ext ? 'extra' : 'hand');
+    });
   },
 });
 defineAct('wipeField', {
@@ -1060,6 +1224,17 @@ defineTrigger('sentToGy', {
     const f = a === true || a.from === undefined ? null : ctx.rt.lz(a.from);
     return trig('move', (ev: MoveEv, self) => ev.id === self && ev.to === 'gy' && (f === null || ev.from === f));
   },
+});
+defineTrigger('usedAsMaterial', {
+  doc: 'This card is sent to the GY as material for a Fusion Summon (`method`, default fusion).', args: A.oneOf(A.none, A.object({ method: A.optional(A.enum('fusion')) })),
+  compile: (a: true | { method?: 'fusion' }): TriggerFn => {
+    const method = (a === true ? undefined : a.method) ?? 'fusion';
+    return trig('move', (ev: MoveEv & { mat: string | null }, self) => ev.id === self && ev.to === 'gy' && ev.mat === method);
+  },
+});
+defineTrigger('monstersToGyTogether', {
+  doc: 'Two (or the given number) or more monsters are sent to the GY at the same time (a summon\'s materials).', args: A.oneOf(A.none, A.int(2)),
+  compile: (a: true | Record<string, never> | number): TriggerFn => { const k = typeof a === 'number' ? a : 2; return trig('batch', (ev: { n: number }) => ev.n >= k); },
 });
 defineTrigger('oppMonsterToGy', {
   doc: "A monster the opponent controls is sent to the GY.", args: A.none,

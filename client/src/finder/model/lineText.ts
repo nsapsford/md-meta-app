@@ -2,6 +2,7 @@
 
 import type { SerializedLine } from '../engine/serialize';
 import type { CardId } from '../engine/types';
+import { splitItems } from '../engine/items';
 import { BLANK } from './finderState';
 
 /** What the line was solved for. `name` overrides the line's own name (the plan's, when copying its worst case). */
@@ -36,7 +37,10 @@ export function lineText(l: SerializedLine, short: (id: CardId) => string, ctx: 
   l.steps.forEach((s, i) => out.push(`${i + 1}. ${s.text}${s.interrupted ? ` [${s.interrupted}]` : ''}`));
   if (l.sets.length) out.push(`Then Set ${l.sets.map(short).join(', ')}.`);
   out.push('', 'End board: ' + l.board.mons.map((m) => short(m.id)).concat(l.board.st.map((x) => short(x.id) + (x.up ? '' : ' (Set)'))).join(', '));
-  const it = l.items.filter((x) => x[1] >= 0.3).map((x) => x[0]);
+  const { turn, end } = splitItems(l.items);
+  const it = turn.filter((x) => x[1] >= 0.3).map((x) => x[0]);
   if (it.length) out.push('Their turn: ' + it.join('; '));
+  const ep = end.filter((x) => x[1] >= 0.3).map((x) => x[0]);
+  if (ep.length) out.push('In the End Phase: ' + ep.join('; '));
   return out.join('\n');
 }

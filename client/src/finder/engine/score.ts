@@ -7,6 +7,7 @@
 
 import { ITEM_ORDER, type CompiledDeck } from '../deck/compile';
 import { DRAW_BIT } from './record';
+import { END_PHASE_HEADING } from './items';
 import type { FinalBoard, State } from './types';
 
 export interface LineEval {
@@ -72,7 +73,11 @@ export function createScore(deck: CompiledDeck): Score {
     if (!items) return { sum, items };
     // The list reads in board order: monsters, Spells/Traps, the rest, then cards in hand (the sum is unaffected).
     const order = items.map((_, i) => i).sort((a, b) => keys[a] - keys[b] || a - b);
-    return { sum, items: order.map((i) => items[i]) };
+    const out = order.map((i) => items[i]);
+    // End Phase entries come last, under a heading item worth 0 (lists that filter by value drop it).
+    const firstEnd = order.findIndex((i) => keys[i] >= ITEM_ORDER.end);
+    if (firstEnd >= 0) out.splice(firstEnd, 0, [END_PHASE_HEADING, 0]);
+    return { sum, items: out };
   }
 
   function battle(n: FinalBoard): number {

@@ -32,7 +32,9 @@ export type Push = (key: string, tags: Tags, run: Move['run'], negatable?: boole
 export type CompiledExtraRule =
   | { card: number; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats: CondFn | null; then: number; thenIf: CondFn | null }
   | { card: number; method: 'link'; rating: number; min: number; max: number; mats: CondFn | null; bottomArrows: boolean; then: number; thenIf: CondFn | null }
-  | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then: number; uses: CondFn | null };
+  | { card: number; method: 'fusion'; slots: CondFn[]; relations: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentAttr' | 'differentNames')[]; then: number; uses: CondFn | null;
+      /** The rule's "1+" materials: any number of further materials, each matching this. */
+      more: CondFn | null };
 
 export interface CompiledProtection {
   id: string; label: string; order: number;
@@ -45,8 +47,8 @@ export interface CompiledProtection {
   consume: ActFn[]; destroysSource: boolean; stepNote: string | null;
 }
 
-/** Board-value item places: a monster's at ITEM_ORDER.mon + its index, then Spells/Traps, other entries, cards in hand. */
-export const ITEM_ORDER = { mon: 0, st: 1000, other: 2000, hand: 3000 } as const;
+/** Board-value item places: a monster's at ITEM_ORDER.mon + its index, then Spells/Traps, other entries, cards in hand, then End Phase entries (`when: 'endPhase'`). */
+export const ITEM_ORDER = { mon: 0, st: 1000, other: 2000, hand: 3000, end: 4000 } as const;
 
 export interface CompiledDeck {
   file: DeckFile; ids: CardId[]; ix: Record<CardId, number>; UNK: number; props: CardProps[]; nOpt: number; nFlags: number; markBit: Record<string, number>;
@@ -56,6 +58,12 @@ export interface CompiledDeck {
   onPlace(s: State, m: Mon, special: boolean, from?: LedgerZone): void;
   onLeaveField(s: State, id: number, kind: 'mon' | 'st', wasFaceUp: boolean, to?: LedgerZone): void;
   onOppMonsterToGy(s: State): void;
+  /** Two or more monsters were sent to the GY at the same time (a summon's materials). */
+  onBatchToGy(s: State, n: number): void;
+  /** May this Extra Deck monster be Special Summoned now (the file's `summonLocks`)? */
+  extraAllowed(s: FinalBoard, card: number): boolean;
+  /** May this monster be Special Summoned now (from the Extra Deck, or from elsewhere: only `all` locks apply there)? */
+  summonAllowed(s: FinalBoard, card: number, fromExtra: boolean): boolean;
   extra: CompiledExtraRule[]; protections: CompiledProtection[];
   /**
    * Queue effect `e` to resolve next, after monster `m` was summoned (an Extra Deck rule's `then`),
@@ -114,8 +122,9 @@ export type PickFn = (s: State, r: Run) => Choice[];
 export type ActFn = (n: State, r: Run) => void;
 export type TrigEvent =
   | { t: 'place'; id: number; nm: number; special: boolean; from: LedgerZone | null }
-  | { t: 'move'; id: number; from: LedgerZone; to: LedgerZone; up: boolean }
-  | { t: 'oppMonGy' };
+  | { t: 'move'; id: number; from: LedgerZone; to: LedgerZone; up: boolean; /** The summon it was material for ('fusion'), or null. */ mat: string | null }
+  | { t: 'oppMonGy' }
+  | { t: 'batch'; n: number };
 export type TriggerFn = ((ev: TrigEvent, self: number) => boolean) & { on: TrigEvent['t'] };
 
 /** Runtime helpers a word's closures call. Built once per compiled deck. */
@@ -147,6 +156,13 @@ export interface Runtime {
   removeQuietly(n: State, zone: 'mon' | 'st', at: number, to: ZoneName): void;
   /** The compiled Extra Deck rules (filled once the deck's effects are compiled: read them at run time). */
   extraRules: readonly CompiledExtraRule[];
+  /** While `fn` runs, cards that move are material for a summon of this kind (the `usedAsMaterial` trigger reads it). */
+  asMaterial(method: string, fn: () => void): void;
+  /** Two or more monsters went to the GY at the same time: set off the triggers that wait for it. */
+  batchToGy(n: State, count: number): void;
+  /** The file's summon locks (see CompiledDeck). */
+  extraAllowed(s: FinalBoard, card: number): boolean;
+  summonAllowed(s: FinalBoard, card: number, fromExtra: boolean): boolean;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -335,6 +351,26 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   };
   const stIndex = (s: State, c: CardRef): number => (s.st[c.at]?.id === c.id ? c.at : s.st.findIndex((x) => x.id === c.id));
 
+  // Summon locks (`summonLocks`): while a lock's flag is set, only monsters matching its `allow`
+  // may be Special Summoned from the Extra Deck (`all`: from anywhere). Filled once words compile.
+  interface SummonLock { bit: number; allow: CondFn | null; all: boolean }
+  const locks: SummonLock[] = [];
+  let lockMask = 0;
+  const lockRun: Run = { self: 0, at: NOWHERE, chosen: EMPTY_CHOSEN };
+  const summonAllowed = (s: FinalBoard, card: number, fromExtra: boolean): boolean => {
+    if (!(s.flags & lockMask)) return true;
+    for (const l of locks) {
+      if (!((s.flags >>> l.bit) & 1) || (!fromExtra && !l.all)) continue;
+      if (!l.allow) return false;
+      lockRun.self = card;
+      if (!l.allow(s, lockRun)) return false;
+    }
+    return true;
+  };
+  const extraAllowed = (s: FinalBoard, card: number) => summonAllowed(s, card, true);
+  /** What the cards moving now are material for (`asMaterial`), or null. */
+  let matNow: string | null = null;
+
   const listOrder = (i: number) => cardById.get(ids[i])?.listOrder ?? Infinity;
   const order = Object.freeze(ids.map((_id, i) => i).sort((a, b) => listOrder(a) - listOrder(b) || a - b));
   const rt: Runtime = {
@@ -382,6 +418,13 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     },
     moved: (n, id, from, to) => moved(n, id, from, to, true),
     extraRules,
+    asMaterial(method, fn) {
+      const was = matNow;
+      matNow = method;
+      try { fn(); } finally { matNow = was; }
+    },
+    batchToGy: (n, count) => onBatchToGy(n, count),
+    extraAllowed, summonAllowed,
     removeQuietly(n, zone, at, to) {
       const id = zone === 'mon' ? removeAt(n.mons, at).id : removeAt(n.st, at).id;
       const z: ZoneName = to === 'deck' && props[id].ext ? 'extra' : to;
@@ -580,6 +623,21 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       && !(def.cost ?? []).length && !(def.do ?? []).length && !(def.onNegated ?? []).length;
     const id = effectIds.get(def.key)!;
     const key = def.key;
+    // The monsters its `summon` words Special Summon (the effect's own card: slot -1), for the summon locks.
+    const summonsOf = [...(def.cost ?? []), ...(def.do ?? [])]
+      .map((wd) => (wd as { summon?: { what: string; from?: string } }).summon)
+      .filter((x): x is { what: string; from?: string } => !!x && typeof x === 'object')
+      .map((x) => ({ slot: x.what === 'self' ? -1 : scope.choose.indexOf(x.what), extra: x.from === 'extra' ? true : x.from === undefined ? null : false }));
+    const lockOk = (s: State, rr: Run): boolean => {
+      if (!(s.flags & lockMask)) return true;
+      for (const x of summonsOf) {
+        if (x.slot < 0) { if (!summonAllowed(s, self, x.extra ?? rr.at.zone === 'extra')) return false; continue; }
+        const c = rr.chosen[x.slot];
+        if (!c) continue;
+        for (const m of c.many ?? [c]) if (!summonAllowed(s, m.id, x.extra ?? m.zone === 'extra')) return false;
+      }
+      return true;
+    };
 
     /** Move the card for its activation (a Spell/Trap) and write the activation to the ledger. */
     function activate(n: State, r: Run): Run {
@@ -641,6 +699,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       const leaf = () => {
         const rr: Run = { self, at, chosen: chosen.slice() };
         for (let k = 0; k < late.length; k++) if (!late[k](s, rr)) return;
+        if (summonsOf.length && !lockOk(s, rr)) return;
         let k2 = key;
         for (let k = 0; k < nChoose; k++) { const c = rr.chosen[k]; k2 += ':' + (c ? c.key : '-'); }
         push(k2, tagsFor(s, rr), mkRun(rr, pending), negatable);
@@ -683,9 +742,15 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
     ...allEffects.map(({ def }) => Object.freeze({ key: def.key, activates: def.activates ?? null, fromExtra: summonsFromExtra(def), mandatory: !!def.mandatory })),
   ];
   const byOrder = (a: CompiledEffect, b: CompiledEffect) => (a.def.order ?? 0) - (b.def.order ?? 0) || (a.def.key < b.def.key ? -1 : a.def.key > b.def.key ? 1 : 0);
-  const main = compiled.filter((e) => !e.trigger && e.def.phase === 'main').sort(byOrder);
+  // A `followUp` effect runs only when another effect queues it (`queue`): never a move of its own.
+  const main = compiled.filter((e) => !e.trigger && e.def.phase === 'main' && !e.def.followUp).sort(byOrder);
   const onTrig = (t: TrigEvent['t']) => compiled.filter((e) => e.trigger?.on === t).sort(byOrder);
-  const placeTrig = onTrig('place'), moveTrig = onTrig('move'), oppTrig = onTrig('oppMonGy');
+  const placeTrig = onTrig('place'), moveTrig = onTrig('move'), oppTrig = onTrig('oppMonGy'), batchTrig = onTrig('batch');
+  for (const [j, l] of (file.summonLocks ?? []).entries()) {
+    const bit = flagBits[l.flag];
+    locks.push({ bit, allow: l.allow ? condAt(l.allow, null, `summonLocks[${j}].allow`) : null, all: !!l.all });
+    lockMask |= 1 << bit;
+  }
 
   // Field names.
   for (const card of file.cards) {
@@ -715,7 +780,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   /** `up`: the card was face-up (a card leaving the field; true for any other move). */
   function moved(s: State, id: number, from: LedgerZone, to: LedgerZone, up: boolean): void {
     if (!moveTrig.length) return;
-    const ev: TrigEvent = { t: 'move', id, from, to, up };
+    const ev: TrigEvent = { t: 'move', id, from, to, up, mat: matNow };
     for (const e of moveTrig) {
       if (!e.trigger!(ev, e.self)) continue;
       if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id });
@@ -724,6 +789,14 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   function onLeaveField(s: State, id: number, _kind: 'mon' | 'st', up: boolean, to: LedgerZone = 'gy'): void { moved(s, id, 'field', to, up); }
   function onOppMonsterToGy(s: State): void {
     for (const e of oppTrig) { if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id }); }
+  }
+  function onBatchToGy(s: State, count: number): void {
+    if (!batchTrig.length) return;
+    const ev: TrigEvent = { t: 'batch', n: count };
+    for (const e of batchTrig) {
+      if (!e.trigger!(ev, e.self)) continue;
+      if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id });
+    }
   }
   /** Queue a trigger: at the back, or at the front for `queueFirst`. */
   function enqueue(s: State, e: CompiledEffect, p: Pend): void {
@@ -758,7 +831,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   const extra: CompiledExtraRule[] = ruleOrder.map(({ x, j }) => {
     const f = `extraDeck[${j}]`;
     const then = x.then ? effectIds.get(x.then) ?? 0 : 0;
-    if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then, uses: x.uses ? condAt(x.uses, null, `${f}.uses`) : null };
+    if (x.method === 'fusion') return { card: ix[x.card], method: 'fusion', slots: x.slots.map((c, k) => condAt(c, null, `${f}.slots[${k}]`)), relations: x.relations ?? [], then, uses: x.uses ? condAt(x.uses, null, `${f}.uses`) : null, more: x.more ? condAt(x.more, null, `${f}.more`) : null };
     const mats = x.mats ? condAt(x.mats, null, `${f}.mats`) : null;
     const thenIf = x.thenIf ? condAt(x.thenIf, null, `${f}.thenIf`) : null;
     if (x.method === 'synchro') return { card: ix[x.card], method: 'synchro', level: x.level, min: x.min, max: x.max, tuners: x.tuners, mats, then, thenIf };
@@ -841,6 +914,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       base: b.base.map((x, k) => ({ conds: (x.if ?? []).map((c, q) => condAt(c, null, `${f}.base[${k}].if[${q}]`)), value: x.value, label: x.label })),
       adds: (b.adds ?? []).map((x, k) => ({ conds: x.if.map((c, q) => condAt(c, null, `${f}.adds[${k}].if[${q}]`)), value: x.value, label: x.label })),
       extraCopies: b.extraCopies ?? null,
+      end: b.when === 'endPhase',
     };
   });
 
@@ -907,7 +981,8 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
         if (an.zone === 'mon') n.mons.forEach((m, i) => { if (an.cards.has(m.id)) at.push(ITEM_ORDER.mon + i); });
         else n.st.forEach((x, i) => { if (an.cards.has(x.id) && (an.faceUp === undefined || !!x.up === an.faceUp)) at.push(ITEM_ORDER.st + i); });
       }
-      const key = (i: number) => at[i] ?? ITEM_ORDER.other + j;
+      // End Phase entries come last, after the cards in hand, in file order.
+      const key = (i: number) => (e.end ? ITEM_ORDER.end + j : at[i] ?? ITEM_ORDER.other + j);
       for (let i = 0; i < k; i++) {
         if (i > 0 && e.extraCopies) { sum += e.extraCopies.value; items.push([e.extraCopies.label, e.extraCopies.value]); keys.push(key(i)); continue; }
         if (!b) continue;
@@ -922,7 +997,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
 
   return {
     file, ids, ix, UNK, props, nOpt, nFlags, markBit, limitNames: [...slots.keys()],
-    genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy,
+    genMain, genPending, onPlace, onLeaveField, onOppMonsterToGy, onBatchToGy, extraAllowed, summonAllowed,
     extra, protections, queueAfterSummon, finalize, boardValue, hasBoardValue, effects,
     state: so, ops,
   };

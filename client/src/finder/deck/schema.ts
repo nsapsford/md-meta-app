@@ -23,7 +23,10 @@ export interface DeckFile {
   boardValue: BoardValueDef[];
   /** List orders by card id that win over the cards' own `listOrder` (a shared file's card fits many decks; each deck orders it here). Merged into the cards. */
   listOrder?: Record<CardId, number>;
+  /** Summon restrictions: while `flag` is set, only monsters matching `allow` (none if absent) can be Special Summoned from the Extra Deck; `all`: from anywhere. */
+  summonLocks?: SummonLockDef[];
 }
+export interface SummonLockDef { flag: string; allow?: Word; all?: boolean }
 export interface CardDef { id: CardId; passcodes: number[]; short: string; discardValue?: number; heldValue?: number; immuneToRemoval?: boolean;
   hints?: { normalSummon?: boolean };
   /** `'any'`: one of your monsters that counts as any Attribute when it is used as material (`materialAttribute` condition, Fusion `sameAttr`). */
@@ -46,6 +49,8 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
   immediate?: boolean;
   /** A trigger queued at the front of the pending list (to resolve before triggers already waiting), instead of at the back. */
   queueFirst?: boolean;
+  /** Part of another effect's resolution ("then you can ..."): it runs only when that effect `queue`s it, never as a move of its own. */
+  followUp?: boolean;
   /** A note for the line's reader on this effect's (not negated) step, e.g. what the opponent may now do. */
   lineNote?: string;
   text: string; negText?: string; ledger?: { effect?: number } }
@@ -53,9 +58,11 @@ export interface EffectDef { key: string; order?: number; phase: 'main' | 'end' 
 export type ExtraRule = { order?: number } & (
   | { card: CardId; method: 'synchro'; level: number; min: number; max: number; tuners: 'exactlyOne' | 'atMostOne'; mats?: Word; then?: string; thenIf?: Word }
   | { card: CardId; method: 'link'; rating: number; min: number; max: number; mats?: Word; bottomArrows?: boolean; then?: string; thenIf?: Word }
-  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentNames')[]; then?: string;
+  | { card: CardId; method: 'fusion'; slots: Word[]; relations?: ('sameRace' | 'sameAttr' | 'differentRace' | 'differentAttr' | 'differentNames')[]; then?: string;
       /** A filter: the Fusion Monster gets one use of its counted effect per material matching it (`usesLeft`, `spendUse`). */
-      uses?: Word });
+      uses?: Word;
+      /** A filter for its "1+" materials: beside one material per slot, any number more, each matching it. */
+      more?: Word });
 /**
  * One of your cards that answers an opponent's interruption. `card`: the card that answers (its
  * `consume` words see it as `self`, on the field: a monster, else a Set copy first). `destroysSource`:
@@ -101,7 +108,7 @@ const EFFECT: Fields = {
   cond: opt(A.condList), cost: opt(A.actList),
   choose: opt(A.list(A.object({ as: A.string, pick: A.pick, optional: opt(A.boolean) }))),
   do: A.actList, onNegated: opt(A.actList),
-  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean), queueFirst: opt(A.boolean),
+  tags: A.record(A.oneOf(A.boolean, A.cond), 'tag'), stepTags: opt(A.record(A.oneOf(A.boolean, A.cond), 'tag')), mandatory: opt(A.boolean), immediate: opt(A.boolean), queueFirst: opt(A.boolean), followUp: opt(A.boolean),
   marks: opt(A.list(A.mark)), stepMarks: opt(A.list(A.mark)), negatable: opt(A.boolean), activates: opt(A.enum('spell', 'trap')),
   lineNote: opt(A.string), text: A.string, negText: opt(A.string), ledger: opt(A.object({ effect: opt(A.number) })),
 };
@@ -110,7 +117,7 @@ const EXTRA_RULE: ArgSpec = {
   k: 'variant', tag: 'method', cases: {
     synchro: { order: opt(A.number), card: A.card, level: A.int(1), min: A.int(1), max: A.int(1), tuners: A.enum('exactlyOne', 'atMostOne'), mats: opt(A.cond), then: opt(A.effect), thenIf: opt(A.cond) },
     link: { order: opt(A.number), card: A.card, rating: A.int(1), min: A.int(1), max: A.int(1), mats: opt(A.cond), bottomArrows: opt(A.boolean), then: opt(A.effect), thenIf: opt(A.cond) },
-    fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentNames'))), then: opt(A.effect), uses: opt(A.cond) },
+    fusion: { order: opt(A.number), card: A.card, slots: A.list(A.cond, 1), relations: opt(A.list(A.enum('sameRace', 'sameAttr', 'differentRace', 'differentAttr', 'differentNames'))), then: opt(A.effect), uses: opt(A.cond), more: opt(A.cond) },
   },
 };
 
@@ -136,6 +143,7 @@ const top = (required: boolean): Fields => {
     marks: opt(A.list(A.string)), flags: opt(A.list(A.string)),
     groups: r(A.record(A.oneOf(A.cardList, A.object({ filter: A.cond })))),
     extraDeck: opt(A.list(EXTRA_RULE)), protections: opt(A.list(PROTECTION)),
+    summonLocks: opt(A.list(A.object({ flag: A.flag, allow: opt(A.cond), all: opt(A.boolean) }))),
     endOfTurn: r(END_OF_TURN),
     listOrder: opt(A.record(A.number, 'card')),
   };
@@ -384,9 +392,9 @@ function merge(deck: Record<string, unknown>, sources: Source[]): DeckFile {
   const out = { ...deck } as unknown as DeckFile;
   const all = sources.map((s) => s.f);
   const union = (k: 'marks' | 'flags') => { const u = [...new Set(all.flatMap((f) => list<string>(f[k])))]; if (u.length) out[k] = u; };
-  const concat = <K extends 'extraDeck' | 'protections'>(k: K) => { const u = all.flatMap((f) => list<NonNullable<DeckFile[K]>[number]>(f[k])); if (u.length) out[k] = u as DeckFile[K]; };
+  const concat = <K extends 'extraDeck' | 'protections' | 'summonLocks'>(k: K) => { const u = all.flatMap((f) => list<NonNullable<DeckFile[K]>[number]>(f[k])); if (u.length) out[k] = u as DeckFile[K]; };
   union('marks'); union('flags');
-  concat('extraDeck'); concat('protections');
+  concat('extraDeck'); concat('protections'); concat('summonLocks');
   // `listOrder` maps: a later file's entries win (the deck file comes last), and win over the cards' own.
   const order: Record<string, number> = Object.assign({}, ...all.map((f) => (isObj(f.listOrder) ? f.listOrder : {})));
   out.cards = all.flatMap((f) => list<CardDef>(f.cards)).map((c) => (Object.prototype.hasOwnProperty.call(order, c.id) ? { ...c, listOrder: order[c.id] } : c));

@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import type { CardMap } from '../trainer/shared';
 import type { HandTrapFile } from '../../finder/deck/schema';
 import type { SerializedLine, SerializedStep } from '../../finder/engine/serialize';
+import { END_PHASE_HEADING, splitItems } from '../../finder/engine/items';
 import type { CardId, Interruption } from '../../finder/engine/types';
 import type { Catalog, TextPart } from '../../finder/model/cards';
 import {
@@ -138,7 +139,18 @@ export function BoardRows({ line, ctx }: { line: SerializedLine; ctx: LineCtx })
 }
 
 export function TurnList({ line, ctx }: { line: SerializedLine; ctx: LineCtx }) {
-  const items = line.items.filter((x) => x[1] >= 0.3);
+  const { turn, end } = splitItems(line.items);
+  const items = turn.filter((x) => x[1] >= 0.3), late = end.filter((x) => x[1] >= 0.3);
+  if (!items.length && !late.length) return null;
+  return (
+    <>
+      <ItemList items={items} ctx={ctx} />
+      {late.length > 0 && <><h4 className="mt-2 mb-1 text-[11px] font-bold uppercase tracking-wide text-md-textMuted">{END_PHASE_HEADING}</h4><ItemList items={late} ctx={ctx} /></>}
+    </>
+  );
+}
+
+function ItemList({ items, ctx }: { items: [string, number][]; ctx: LineCtx }) {
   if (!items.length) return null;
   return (
     <ul className="space-y-1">

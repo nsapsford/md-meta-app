@@ -11,7 +11,9 @@ import { step, done, L } from './record';
 import { MOVE_EXTRA, type EnginePush, type Move, type OppCard, type State, type Tags } from './types';
 
 /** A possible material: one of your monsters (`idx` in `s.mons`) or a face-up opponent's monster (`uid`). */
-export interface MatView { side: 'me' | 'opp'; idx?: number; uid?: OppCard['uid']; id: number; nm: number; race: string; attr: string; sub: string; ext: boolean }
+export interface MatView { side: 'me' | 'opp'; idx?: number; uid?: OppCard['uid']; id: number; nm: number; race: string; attr: string; sub: string; ext: boolean;
+  /** One of your materials that is not on the field: the zone it is in (a Fusion from the hand, Deck or GY). */
+  zone?: 'hand' | 'deck' | 'gy' }
 
 type SynchroRule = Extract<CompiledExtraRule, { method: 'synchro' }>;
 type LinkRule = Extract<CompiledExtraRule, { method: 'link' }>;
@@ -107,6 +109,7 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }));
       const mats: number[] = [];
       for (let j = 0; j < down.length; j++) mats.push(ops.monToGy(n, down[j], false).id);
+      if (mats.length >= 2) deck.onBatchToGy(n, mats.length);
       L.sum(n, r.card, method, 'extra', mats);
       so.W(n, 'extra')[r.card]--;
       const m = ops.place(n, r.card, { special: true, emz, from: 'extra' });
@@ -130,7 +133,7 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       for (const i of pick) { sum += s.mons[i].lvl; if (props[s.mons[i].id].tuner) tuners++; }
       let mats: Choice[] | null = null, sg: string | null = null;
       for (const r of synchros) {
-        if (!s.extra[r.card] || pick.length < r.min || pick.length > r.max || sum !== r.level) continue;
+        if (!s.extra[r.card] || !deck.extraAllowed(s, r.card) || pick.length < r.min || pick.length > r.max || sum !== r.level) continue;
         if (r.tuners === 'exactlyOne' ? tuners !== 1 : tuners > 1) continue;
         // Unlike the reference (which marks the signature seen before any rule check), a key is marked
         // seen only once its rule's checks pass: when two copies of a card differ in current Level or
@@ -168,7 +171,7 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       if (!emzFree && !(bottomArrows.has(s.mons[emzAt].id) && main - mainUsed < 5)) return;
       let mats: Choice[] | null = null, sg: string | null = null;
       for (const r of links) {
-        if (!s.extra[r.card] || pick.length < r.min || pick.length > r.max) continue;
+        if (!s.extra[r.card] || !deck.extraAllowed(s, r.card) || pick.length < r.min || pick.length > r.max) continue;
         if (!(pick.length === r.rating || (pick.length <= r.rating && hi >= r.rating && anyLink))) continue;
         // Marked seen only after the zone and rule checks pass, unlike the reference: when two copies
         // of a card differ in zone (one in the Extra Monster Zone) or in what `mats` reads, a later
@@ -228,6 +231,12 @@ function related(rel: FusionRule['relations'], mats: MatView[]): boolean {
           for (let b = 0; b < a; b++) if (mats[b].race === mats[a].race) return false;
         }
         break;
+      case 'differentAttr':
+        for (let a = 0; a < mats.length; a++) {
+          if (!known(mats[a].attr)) return false;
+          for (let b = 0; b < a; b++) if (mats[a].attr !== '*' && mats[b].attr === mats[a].attr) return false;
+        }
+        break;
       case 'differentNames':
         for (let a = 1; a < mats.length; a++) for (let b = 0; b < a; b++) if (mats[b].nm === mats[a].nm) return false;
         break;
@@ -238,16 +247,18 @@ function related(rel: FusionRule['relations'], mats: MatView[]): boolean {
 
 /** The materials as chosen cards (each slot condition sees one as its card, the others as its chosen cards). */
 function matChoices(s: State, mats: MatView[]): Choice[] {
-  return mats.map((v) => matChoice(v.id, v.side === 'me'
-    ? { zone: 'mon', at: v.idx!, uid: s.mons[v.idx!].uid }
-    : { zone: 'opp', at: -1, uid: v.uid! }));
+  return mats.map((v) => matChoice(v.id, v.zone
+    ? { zone: v.zone, at: -1, uid: null }
+    : v.side === 'me'
+      ? { zone: 'mon', at: v.idx!, uid: s.mons[v.idx!].uid }
+      : { zone: 'opp', at: -1, uid: v.uid! }));
 }
 
 /**
  * Can the materials (`ch`, from matChoices) fill the rule's slots, one each (in any order)? A
  * slot's condition is tested on a material only when the search reaches that pair, at most once.
  */
-function fillsSlots(s: State, slots: CondFn[], ch: Choice[]): boolean {
+function fillsSlots(s: State, slots: CondFn[], ch: Choice[], more: CondFn | null = null): boolean {
   const M = ch.length;
   const ok = new Int8Array(slots.length * M);   // 0 untested, 1 holds, -1 fails
   const others: (Choice[] | undefined)[] = [];   // the other materials, per material (built when first needed)
@@ -257,8 +268,16 @@ function fillsSlots(s: State, slots: CondFn[], ch: Choice[]): boolean {
     return ok[at] === 1;
   };
   let used = 0;   // bit m: material m fills an earlier slot
+  // A rule's `more` ("1+" materials): every material no slot took must match it.
+  const rest = (): boolean => {
+    for (let m = 0; m < M; m++) {
+      if (used & (1 << m)) continue;
+      if (!more!(s, { self: ch[m].id, at: ch[m], chosen: others[m] ??= ch.filter((_x, k) => k !== m) })) return false;
+    }
+    return true;
+  };
   const fill = (j: number): boolean => {
-    if (j === slots.length) return true;
+    if (j === slots.length) return M === slots.length || (more !== null && rest());
     for (let m = 0; m < M; m++) {
       if ((used & (1 << m)) || !test(j, m)) continue;
       used |= 1 << m;
@@ -287,6 +306,56 @@ export function fusionOptions(s: State, pool: MatView[], rules: readonly Compile
     });
   }
   return out;
+}
+
+export interface PoolFusionOpts {
+  /** Exactly this many materials ("using 2 monsters"). */
+  count?: number;
+  /** At most this many materials for a rule with `more` (its "1+" materials). */
+  max: number;
+  /** A pool index that every set must include ("including this card"). */
+  mustInclude?: number;
+  /** Which Fusion Monsters may be made (the effect's `of`, summon locks). */
+  allow(card: number): boolean;
+}
+
+/** A material's place, for telling sets apart: copies of a card in one zone are the same material. */
+const matSig = (v: MatView): string => (v.zone ? v.zone + v.id : v.side === 'me' ? 'm' + v.idx : 'o' + String(v.uid));
+
+/**
+ * The Fusion Summons a pool of materials from several places allows (a Fusion "using monsters from
+ * your hand, Deck or field"): each different set of materials (the same cards from the same places
+ * once) with the Fusion Monsters it makes, in the compiled rules' (order, card id) order. Only the
+ * pool members that can fill one of a rule's slots (or its `more`) on their own are combined for
+ * that rule; each set is then checked whole, as `fusionOptions` does.
+ */
+export function poolFusionOptions(s: State, pool: MatView[], rules: readonly CompiledExtraRule[], o: PoolFusionOpts): { mats: MatView[]; cards: number[] }[] {
+  const by = new Map<string, { mats: MatView[]; cards: number[] }>();
+  const ch = matChoices(s, pool);
+  for (const r of rules) {
+    if (r.method !== 'fusion' || !(s.extra[r.card] > 0) || !o.allow(r.card)) continue;
+    let lo = r.slots.length, hi = r.more ? Math.max(lo, o.max) : lo;
+    if (o.count !== undefined) { if (o.count < lo || o.count > hi) continue; lo = hi = o.count; }
+    const cand: number[] = [];
+    for (let i = 0; i < pool.length; i++) {
+      const run = { self: ch[i].id, at: ch[i], chosen: [] as Choice[] };
+      if (r.slots.some((f) => f(s, run)) || (r.more !== null && r.more(s, run))) cand.push(i);
+    }
+    if (o.mustInclude !== undefined && !cand.includes(o.mustInclude)) continue;
+    for (let k = lo; k <= hi && k <= cand.length; k++) {
+      eachCombination(cand.length, k, (pick) => {
+        const idx = pick.map((j) => cand[j]);
+        if (o.mustInclude !== undefined && !idx.includes(o.mustInclude)) return;
+        const mats = idx.map((i) => pool[i]);
+        const sig = mats.map(matSig).sort().join('+');
+        const have = by.get(sig);
+        if (have?.cards.includes(r.card)) return;
+        if (!related(r.relations, mats) || !fillsSlots(s, r.slots, idx.map((i) => ch[i]), r.more)) return;
+        if (have) have.cards.push(r.card); else by.set(sig, { mats, cards: [r.card] });
+      });
+    }
+  }
+  return [...by.values()];
 }
 
 /** Each set of `k` of `n` items (by index), in lexicographic order (as the reference's nested pair loops). */
