@@ -3,6 +3,8 @@
 import type { importGenerated } from '../../api/lines';
 import type { SerializedLine } from '../engine/serialize';
 
+const WAKING = [502, 503, 504];
+
 export type SaveResult = { ok: true; message: string } | { ok: false; message: string };
 
 export async function saveFoundLine(
@@ -15,7 +17,8 @@ export async function saveFoundLine(
     return { ok: true, message: 'Saved to your lines as a draft.' };
   } catch (err) {
     const e = err as { name?: unknown; status?: unknown; message?: unknown } | null;
-    if (e?.name === 'ApiError' && e.status === null) {
+    // No answer at all, or the gateway's answer while the sleeping server wakes up.
+    if (e?.name === 'ApiError' && (e.status === null || WAKING.includes(e.status as number))) {
       return { ok: false, message: "Can't reach the server. The line stays here; try again in a minute." };
     }
     return { ok: false, message: typeof e?.message === 'string' && e.message ? e.message : String(err) };

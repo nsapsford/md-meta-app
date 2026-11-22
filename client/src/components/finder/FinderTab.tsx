@@ -17,7 +17,7 @@ import { CANCEL, createPool, type Pool } from '../../finder/worker/pool';
 import { cardTokens, shortOf } from '../../finder/model/cards';
 import { restoreSnapshot, type FinderSnapshot } from '../../finder/model/finderState';
 import { boardShort, headline } from '../../finder/model/lineView';
-import { lineName, lineText } from '../../finder/model/lineText';
+import { lineName, lineText, savedLineName } from '../../finder/model/lineText';
 import { errorLine, openDeck, unknownNames, type OpenDeck } from '../../finder/model/openDeck';
 import { createSolveSession, worstVerdict, type SessionView, type SolveSession } from '../../finder/model/solveSession';
 import { saveFoundLine } from '../../finder/model/saveLine';
@@ -196,7 +196,7 @@ export default function FinderTab(p: FinderTabProps) {
       save: () => {
         if (!cur || !shown || !view || saving) return;
         setSaving(true);
-        saveFoundLine(deckId, shown, lineName(cur.line, short, { mode: view.mode, hand: view.hand }), importGenerated).then((r) => {
+        saveFoundLine(deckId, shown, savedLineName(cur.line, shown, short, { mode: view.mode, hand: view.hand }), importGenerated).then((r) => {
           setSaving(false);
           showToast(r.message);
           if (r.ok) onSaved();

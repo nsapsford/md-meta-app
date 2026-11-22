@@ -46,6 +46,11 @@ describe('saveFoundLine', () => {
     expect(r).toEqual({ ok: false, message: "Can't reach the server. The line stays here; try again in a minute." });
   });
 
+  it.each([502, 503, 504])('treats %i (the server waking up) as unreachable', async (status) => {
+    const r = await saveFoundLine(7, line, 'n', async () => { throw apiError(status, `Request failed with status code ${status}`); });
+    expect(r).toEqual({ ok: false, message: "Can't reach the server. The line stays here; try again in a minute." });
+  });
+
   it('passes on any other error message', async () => {
     const r = await saveFoundLine(7, line, 'n', async () => { throw apiError(404, 'Deck not found'); });
     expect(r).toEqual({ ok: false, message: 'Deck not found' });

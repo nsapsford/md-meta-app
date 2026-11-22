@@ -28,6 +28,7 @@ const FinderTab = lazy(() => import('../components/finder/FinderTab'));
 const DECK_KEY = 'trainer_deck_id';
 const DRAFTS_KEY = 'trainer_include_drafts';
 const EMPTY_DECKS: SavedDeck[] = [];
+const CANT_REACH_AI = "Can't reach the server, and generating lines needs it. Try again in a minute.";
 const EMPTY_LINES: ComboLine[] = [];
 const EMPTY_REVIEWS: DrillReview[] = [];
 
@@ -58,11 +59,16 @@ export default function LineTrainer() {
   const deckPasscodes = useMemo(() => [...new Set(mainDeck)], [mainDeck]);
   const cardsQ = useQuery(resolvedCardsQuery(deckPasscodes));
   const cards: CardMap = useMemo(() => new Map((cardsQ.data ?? []).map((c) => [Number(c.id), c])), [cardsQ.data]);
-  const finderList = useMemo(() => finderSource(deck, null)?.list ?? null, [deck]);
+  const deckList = useMemo(() => finderSource(deck, null)?.list ?? null, [deck]);
   // The Finder is offered when a deck file knows at least half of this deck's Main Deck cards.
-  const finderAvailable = useMemo(() => finderList != null && matchDeckFile(finderList) != null, [finderList]);
+  const finderAvailable = useMemo(() => deckList != null && matchDeckFile(deckList) != null, [deckList]);
 
   const [tab, setTab] = useState<Tab>(() => initialTab(location.search));
+  // The server asleep or unreachable: the Finder still opens, from the list remembered on this device.
+  const offline = !deck && tab === 'finder' && deckId != null && !decksQ.data;
+  const finderStorage = useMemo(() => createFinderStorage(), []);
+  const recalled = useMemo(() => (offline && deckId != null ? finderStorage.recall(deckId) : null), [offline, deckId, finderStorage]);
+  const finder = useMemo(() => (deck ? finderSource(deck, null) : finderSource(null, recalled)), [deck, recalled]);
   const [drillMode, setDrillMode] = useState<'hands' | 'review'>('hands');
   const [reviewRun, setReviewRun] = useState(0); // bump to start a fresh review snapshot
   const [goingSecond, setGoingSecond] = useState(false);
@@ -187,37 +193,7 @@ export default function LineTrainer() {
     ]);
   }
 
-  // The server asleep or unreachable: the Finder still opens from the list remembered on this device.
-  if (!deck && tab === 'finder' && deckId != null && !decksQ.data) {
-    const offline = finderSource(null, createFinderStorage().recall(deckId));
-    return (
-      <div className="space-y-4 pb-8 max-w-6xl">
-        <div>
-          <h1 className="page-title">Line Trainer</h1>
-          {offline && <p className="text-xs text-md-textMuted">{offline.name}</p>}
-        </div>
-        {offline ? (
-          <Suspense fallback={<LoadingSpinner />}>
-            <FinderTab
-              key={deckId}
-              deckId={deckId}
-              deckName={offline.name}
-              list={offline.list}
-              fromDevice
-              onSaved={refreshLines}
-              onUseAiPanel={() => setTab('lines')}
-            />
-          </Suspense>
-        ) : decksQ.isError ? (
-          <p className="text-sm text-md-textMuted">Can't reach the server, and this deck has not been opened in the Finder on this device yet.</p>
-        ) : (
-          <p className="text-sm text-md-textMuted">Loading…</p>
-        )}
-      </div>
-    );
-  }
-
-  if (!deck) {
+  if (!deck && !offline) {
     return (
       <div className="space-y-4">
         <h1 className="page-title">Line Trainer</h1>
@@ -261,7 +237,7 @@ export default function LineTrainer() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Line Trainer</h1>
-          <p className="text-xs text-md-textMuted">{deck.name} · {lines.length} line{lines.length === 1 ? '' : 's'}</p>
+          <p className="text-xs text-md-textMuted">{deck ? `${deck.name} · ${lines.length} line${lines.length === 1 ? '' : 's'}` : finder?.name}</p>
         </div>
         <button type="button" onClick={() => setDeckId(null)} className="text-xs text-md-blue">Switch deck</button>
       </div>
@@ -275,12 +251,16 @@ export default function LineTrainer() {
       )}
       {flash && <p className="text-xs text-md-green">{flash}</p>}
 
-      <div className="flex gap-2">
-        {tabBtn('drill', 'Drill')}
-        {tabBtn('lines', 'Lines')}
-        {tabBtn('coverage', 'Coverage')}
-        {tabBtn('finder', 'Finder')}
-      </div>
+      {/* Offline only the Finder works, so only it shows. The Finder below stays at the same place in
+          the tree either way, so it is not restarted when the saved decks arrive. */}
+      {deck && (
+        <div className="flex gap-2">
+          {tabBtn('drill', 'Drill')}
+          {tabBtn('lines', 'Lines')}
+          {tabBtn('coverage', 'Coverage')}
+          {tabBtn('finder', 'Finder')}
+        </div>
+      )}
 
       {editing ? (
         <LineEditor
@@ -311,19 +291,26 @@ export default function LineTrainer() {
         />
       ) : tab === 'coverage' ? (
         <CoverageView lines={eligible} mainDeck={mainDeck} />
-      ) : tab === 'finder' ? (
+      ) : tab === 'finder' && finder && deckId != null ? (
         <Suspense fallback={<LoadingSpinner />}>
           <FinderTab
-            key={deck.id}
-            deckId={deck.id}
-            deckName={deck.name}
-            list={finderList}
-            fromDevice={decksQ.isError}
+            key={deckId}
+            deckId={deckId}
+            deckName={finder.name}
+            list={finder.list}
+            fromDevice={finder.fromDevice || decksQ.isError}
             cardName={(p) => cards.get(p)?.name}
             onSaved={refreshLines}
-            onUseAiPanel={() => { setTab('lines'); setGenerating(true); }}
+            onUseAiPanel={() => {
+              if (deck) { setTab('lines'); setGenerating(true); }
+              else setActionError(CANT_REACH_AI);
+            }}
           />
         </Suspense>
+      ) : tab === 'finder' && decksQ.isError ? (
+        <p className="text-sm text-md-textMuted">Can't reach the server, and this deck has not been opened in the Finder on this device yet.</p>
+      ) : !deck ? (
+        <p className="text-sm text-md-textMuted">Loading…</p>
       ) : linesQ.isPending ? (
         <p className="text-sm text-md-textMuted">Loading…</p>
       ) : (
