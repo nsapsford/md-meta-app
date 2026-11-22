@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useIsNative } from '../../hooks/useIsNative';
+import { importGenerated } from '../../api/lines';
 import { copyText } from '../../utils/deckShare';
 import type { DeckList } from '../../finder/deck/match';
 import { DeckCompileError } from '../../finder/deck/deckError';
@@ -19,6 +20,7 @@ import { boardShort, headline } from '../../finder/model/lineView';
 import { lineName, lineText } from '../../finder/model/lineText';
 import { errorLine, openDeck, unknownNames, type OpenDeck } from '../../finder/model/openDeck';
 import { createSolveSession, worstVerdict, type SessionView, type SolveSession } from '../../finder/model/solveSession';
+import { saveFoundLine } from '../../finder/model/saveLine';
 import { createFinderStorage } from '../../finder/model/storage';
 import LoadingSpinner from '../common/LoadingSpinner';
 import CardInspect from './CardInspect';
@@ -39,7 +41,7 @@ const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
 const EMPTY_CAT = new Map();
 
 export default function FinderTab(p: FinderTabProps) {
-  const { deckId, deckName } = p;
+  const { deckId, deckName, onSaved } = p;
   const native = useIsNative();
   const storage = useMemo(() => createFinderStorage(), []);
   // The list: the one passed in, else the copy remembered on this device.
@@ -56,6 +58,7 @@ export default function FinderTab(p: FinderTabProps) {
   const [prog, setProg] = useState<Record<string, number>>({});
   const [showWorst, setShowWorst] = useState(false);
   const [toast, setToast] = useState('');
+  const [saving, setSaving] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const snapRef = useRef<FinderSnapshot | null>(null);
   const sessionRef = useRef<SolveSession | null>(null);
@@ -72,7 +75,7 @@ export default function FinderTab(p: FinderTabProps) {
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastT.current) clearTimeout(toastT.current);
-    toastT.current = setTimeout(() => setToast(''), 2200);
+    toastT.current = setTimeout(() => setToast(''), Math.max(2200, msg.length * 50));
   }, []);
   useEffect(() => () => { if (toastT.current) clearTimeout(toastT.current); }, []);
 
@@ -190,8 +193,18 @@ export default function FinderTab(p: FinderTabProps) {
         const text = lineText(shown, short, { ...lc, name: lineName(cur.line, short, lc) });
         copyText(text).then(() => showToast('Steps copied.'), () => showToast('Copy was blocked. Select the steps and copy them by hand.'));
       },
+      save: () => {
+        if (!cur || !shown || !view || saving) return;
+        setSaving(true);
+        saveFoundLine(deckId, shown, lineName(cur.line, short, { mode: view.mode, hand: view.hand }), importGenerated).then((r) => {
+          setSaving(false);
+          showToast(r.message);
+          if (r.ok) onSaved();
+        });
+      },
+      saving,
     };
-  }, [deck, cur, shown, view, short, showToast]);
+  }, [deck, cur, shown, view, short, showToast, saving, deckId, onSaved]);
 
   if (load.s === 'nolist') {
     return <Panel><p className="text-sm text-md-textMuted">This deck's list isn't loaded yet, and none is saved on this device. Open the Finder once while online.</p></Panel>;

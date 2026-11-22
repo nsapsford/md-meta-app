@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { buildDeckContext, type CardRow } from './deckContext.js';
 import { checkLineLedger, matchesPhrase, optRules } from './ledgerChecker.js';
 import { parseGeneratedLine, buildPastePrompt, extractJson } from './prompts.js';
-import { toTrainerLine } from './convert.js';
+import { importSource, toTrainerLine } from './convert.js';
 import { validateLineInput } from '../comboLineService.js';
 import type { GeneratedLine } from './types.js';
 
@@ -183,6 +183,17 @@ describe('parsing and conversion', () => {
 
   it('rejects malformed lines', () => {
     expect(parseGeneratedLine({ name: 'x', starters: 'Rod', steps: [] }).ok).toBe(false);
+  });
+
+  it('keeps the source it is given, ai-draft by default', () => {
+    expect(toTrainerLine(rodLine(), ctx, 10, () => 'id', 'solver').source).toBe('solver');
+    expect(toTrainerLine(rodLine(), ctx, 10, () => 'id').source).toBe('ai-draft');
+  });
+
+  it('reads the import source from the request body', () => {
+    expect(importSource({ source: 'solver' })).toBe('solver');
+    expect(importSource({ source: 'manual' })).toBe('ai-draft');
+    expect(importSource(null)).toBe('ai-draft');
   });
 });
 

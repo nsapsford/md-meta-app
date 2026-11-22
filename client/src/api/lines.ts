@@ -123,8 +123,12 @@ export interface ImportResult {
   repairPrompt: string | null;
 }
 
-export async function importGenerated(deckId: number, text: string): Promise<ImportResult> {
-  return (await api.post(`/lines/import-generated/${deckId}`, { text, generator: 'Claude (pasted)' })).data;
+export async function importGenerated(
+  deckId: number, text: string, o: { generator?: string; source?: 'solver' } = {},
+): Promise<ImportResult> {
+  const body: Record<string, string> = { text, generator: o.generator ?? 'Claude (pasted)' };
+  if (o.source) body.source = o.source;
+  return (await api.post(`/lines/import-generated/${deckId}`, body)).data;
 }
 
 export interface GenerationJob {

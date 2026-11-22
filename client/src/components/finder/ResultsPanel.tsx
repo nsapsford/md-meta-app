@@ -21,6 +21,7 @@ const DOT: Record<string, string> = { good: 'bg-md-green', warn: 'bg-md-orange',
 export interface ResultsActions extends RecordActions {
   select(key: string): void; deeper(): void; whatIf(i: number, it: Interruption): void; closeBranch(): void;
   undo(): void; startOver(): void; copy(): void;
+  save(): void; saving: boolean;
 }
 export interface ResultsPanelProps {
   view: SessionView | null; ctx: LineCtx; deck: OpenDeck; deckName: string; short(id: CardId): string;
@@ -103,7 +104,7 @@ export default function ResultsPanel({ view, ctx, deck, deckName, short, progres
             <RecordEvent key={`${cur.key}-${i}`} index={i} step={s} traps={ctx.traps} cat={ctx.cat} list={deck.list} events={view.base.events.length}
               actions={actions} onDone={() => setRecording(null)} />
           )}
-          onCopy={actions.copy}
+          onCopy={actions.copy} onSave={actions.save} saving={actions.saving}
           happened={<HappenedPanel events={view.base.events} locked={view.base.steps} short={short} onUndo={actions.undo} onStartOver={actions.startOver} />}
           branch={view.branch && (
             <BranchView key={`${view.branch.step}|${view.branch.it.kind}|${view.branch.it.uid ?? ''}`} b={view.branch} line={cur.line} ctx={ctx} onClose={actions.closeBranch} />

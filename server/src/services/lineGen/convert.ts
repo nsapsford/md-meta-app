@@ -12,6 +12,7 @@ export interface StoredChecks extends CheckReport {
 
 export function toTrainerLine(
   gen: GeneratedLine, ctx: DeckContext, rank: number, newId: () => string = randomUUID,
+  source: 'ai-draft' | 'solver' = 'ai-draft',
 ): LineInput {
   const byName = new Map(ctx.main.map((c) => [normName(c.name), c.passcode]));
   const starters = gen.starters
@@ -36,9 +37,14 @@ export function toTrainerLine(
     name: gen.name.slice(0, 120),
     rank,
     status: 'draft',
-    source: 'ai-draft',
+    source,
     starters,
     steps,
     end_board: endBoard ? endBoard.slice(0, 500) : null,
   };
+}
+
+/** Where imported lines came from: 'solver' (the Line Finder) only when the body says so. */
+export function importSource(body: unknown): 'ai-draft' | 'solver' {
+  return (body as { source?: unknown } | null)?.source === 'solver' ? 'solver' : 'ai-draft';
 }

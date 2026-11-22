@@ -203,6 +203,7 @@ export interface LineViewProps {
   onWhatIf(i: number, it: Interruption): void;
   recording: number | null; onRecord(i: number | null): void; renderRecord(i: number, s: SerializedStep): ReactNode;
   onCopy(): void;
+  onSave(): void; saving?: boolean;
   happened?: ReactNode; branch?: ReactNode;
 }
 
@@ -219,7 +220,7 @@ export default function LineView(p: LineViewProps) {
       <Verdict v={v} ctx={ctx} drawFx={p.drawFx} showWorst={p.showWorst} onToggleWorst={p.onToggleWorst} />
       {p.happened}
       <Panel title={p.showWorst ? 'Worst case: what you do instead' : 'Steps'}
-        right={<><Btn quiet onClick={p.onCopy}>Copy</Btn><Btn quiet disabled title="Comes with the next update">Save to my lines</Btn></>}>
+        right={<><Btn quiet onClick={p.onCopy}>Copy</Btn><Btn quiet onClick={p.onSave} disabled={p.saving}>Save to my lines</Btn></>}>
         <div className="hidden md:block"><Stepper n={n} total={total} onStep={(d) => p.onProgress(n + d)} /></div>
         {shown.opening.map((t, i) => <p key={i} className="text-[12px] text-md-orange">{t}.</p>)}
         {total === 0 && <p className="text-sm text-md-textMuted">Nothing to play: pass with this hand.</p>}

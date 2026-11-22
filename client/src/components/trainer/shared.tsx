@@ -55,7 +55,7 @@ export function StatusBadge({ line }: { line: Pick<ComboLine, 'status' | 'source
     <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-md-green/15 text-md-green border border-md-green/30">Verified</span>
   ) : (
     <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-md-orange/15 text-md-orange border border-md-orange/30">
-      {line.source === 'ai-draft' ? 'AI draft · unverified' : 'Unverified'}
+      {line.source === 'ai-draft' ? 'AI draft · unverified' : line.source === 'solver' ? 'Line Finder · unverified' : 'Unverified'}
     </span>
   );
 }
