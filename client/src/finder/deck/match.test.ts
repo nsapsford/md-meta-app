@@ -5,6 +5,7 @@ import { matchDeckFile, type DeckList } from './match';
 import { loadDeck } from './registry';
 import { validateDeckFile, type CardFacts, type DeckFile } from './schema';
 import { compileDeck } from './compile';
+import { resolveList } from '../model/finderState';
 
 const m = (codes: number[]): DeckList => ({ main: codes.map((passcode) => ({ passcode, count: 1 })), extra: [] });
 const EXTRA = /Fusion|Synchro|Link|XYZ/i;
@@ -52,6 +53,17 @@ describe('matchDeckFile', () => {
       extra: data.filter((c) => c.zone === 'extra').map((c) => ({ passcode: c.pass_, count: c.count })),
     };
     expect(matchDeckFile(list)).toEqual({ fileId: 'dm-azamina', known: list.main.length, total: list.main.length, unknown: [] });
+  });
+
+  it('a list with the official passcodes (not the old tool\'s artworks) matches with none unknown', async () => {
+    const real = [94145021, 23434538, 7084129, 14558127, 42141493, 46986420];
+    expect(matchDeckFile(m(real))).toEqual({ fileId: 'dm-azamina', known: real.length, total: real.length, unknown: [] });
+    const d = await loadDeck('dm-azamina');
+    const r = validateDeckFile(d.file, d.shared);
+    if (!r.ok) throw new Error('invalid');
+    const res = resolveList(m(real), r.file);
+    expect([res.blanks, res.unknown]).toEqual([0, []]);
+    expect(Object.keys(res.main).sort()).toEqual(['ASH', 'DM', 'DROLL', 'FUWA', 'MAXX', 'ROD']);
   });
 
   it('knows every passcode a card lists', () => {

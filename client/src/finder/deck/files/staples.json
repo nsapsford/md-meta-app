@@ -1,7 +1,7 @@
 {
   "vocab": 1,
   "cards": [
-    { "id": "ASH", "passcodes": [14558128], "short": "Ash", "heldValue": 1.0, "discardValue": 5 },
+    { "id": "ASH", "passcodes": [14558128, 14558127], "short": "Ash", "heldValue": 1.0, "discardValue": 5 },
     { "id": "DROLL", "passcodes": [94145021, 94145022], "short": "Droll", "heldValue": 0.9, "discardValue": 5, "hints": { "normalSummon": false } },
     { "id": "FUWA", "passcodes": [42141493], "short": "Fuwalos", "heldValue": 0.8, "discardValue": 5, "hints": { "normalSummon": false } },
     { "id": "MAXX", "passcodes": [23434538], "short": "Maxx \"C\"", "heldValue": 0.8, "discardValue": 5, "hints": { "normalSummon": false } },

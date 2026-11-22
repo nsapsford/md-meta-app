@@ -95,11 +95,11 @@ function PickChip({ id, cat, left, dim, hit, full, onAdd, onInspect }: {
   const lp = useLongPress(() => { if (c) onInspect(); });
   const blank = id === BLANK;
   return (
-    <button type="button" disabled={left <= 0} {...lp.handlers}
+    <button type="button" aria-disabled={left <= 0} {...lp.handlers}
       onClick={() => { if (!lp.swallow()) onAdd(); }}
       title={blank ? 'A card the line will not use: a brick, a side card or an unknown draw' : c?.name}
       className={clsx('press inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg border border-l-[3px] text-xs font-semibold transition-colors select-none',
-        'bg-md-surfaceAlt text-md-text border-md-border disabled:opacity-35 disabled:pointer-events-none',
+        'bg-md-surfaceAlt text-md-text border-md-border', left <= 0 && 'opacity-35',
         FRAME_BORDER[c?.frame ?? 'other'], dim && 'opacity-40', hit && 'ring-2 ring-md-blue/60', full && 'cursor-not-allowed')}>
       <span>{blank ? 'Blank / other' : c?.short ?? id}</span>
       {!blank && <span className="min-w-[18px] px-1 rounded bg-md-bg/70 text-[10px] tabular-nums text-md-textMuted text-center">{left}</span>}

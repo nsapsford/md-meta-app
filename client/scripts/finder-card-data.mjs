@@ -6,6 +6,8 @@
 //       file, keyed by the card's first passcode, in the file's card order.
 //   node client/scripts/finder-card-data.mjs --passcodes <p1,p2,...> --out <file>
 //       writes the facts of those passcodes to <file> (same format).
+//   node client/scripts/finder-card-data.mjs --artworks <file,...>
+//       adds every official passcode (alternate artworks) to each card's passcodes in those files.
 //   node client/scripts/finder-card-data.mjs --index
 //       rewrites src/finder/data/card-index.txt (the artifact's format) from every Master Duel
 //       card. What a card does on your turn (its interruption) is kept from the current index by
@@ -63,6 +65,40 @@ async function deckFacts(id) {
   write(join(FILES, `${id}.cards.json`), await factsFor(deck.cards.map((c) => c.passcodes[0])));
 }
 
+// Every `"passcodes": [...]` list in a file under files/ gets each of the card's official
+// passcodes (alternate artworks included). The ids already there stay first, in their order, so
+// facts keyed by the first passcode and the reference's ids keep matching. Only the lists change;
+// the rest of the file keeps its formatting.
+async function artworks(name) {
+  const file = join(FILES, `${name}.json`);
+  const text = readFileSync(file, 'utf8');
+  const re = /"passcodes":\s*\[([^\]]*)\]/g;
+  const lists = [...text.matchAll(re)].map((m) => m[1].split(',').map((s) => +s.trim()).filter(Boolean));
+  // Asked by id, the API answers with that one artwork only; asked by exact name, with every
+  // artwork. So: ids → names (public card names, nothing else is sent), then names → all ids.
+  const byId = await fetchCards([...new Set(lists.flat())]);
+  const names = [...new Set([...byId.values()].map((c) => c.name))];
+  const byName = new Map();
+  for (let i = 0; i < names.length; i += 20) {
+    const j = await getJson(`${API}?name=${names.slice(i, i + 20).map(encodeURIComponent).join('|')}`);
+    for (const c of j.data ?? []) byName.set(c.name, c);
+  }
+  const by = new Map([...byId].map(([p, c]) => [p, byName.get(c.name) ?? c]));
+  let added = 0;
+  const out = text.replace(re, (_, inner) => {
+    const have = inner.split(',').map((s) => +s.trim()).filter(Boolean);
+    const all = [...have];
+    for (const p of have) {
+      const c = by.get(p);
+      if (!c) throw new Error(`passcode ${p} is not in the card database`);
+      for (const id of [c.id, ...(c.card_images ?? []).map((im) => im.id)].sort((a, b) => a - b)) if (!all.includes(id)) { all.push(id); added++; }
+    }
+    return `"passcodes": [${all.join(', ')}]`;
+  });
+  writeFileSync(file, out);
+  console.log(`${file}: ${lists.length} cards, ${added} passcodes added`);
+}
+
 const KINDS = [/Fusion/, /Synchro/, /XYZ/, /Link/];
 
 async function index() {
@@ -89,12 +125,13 @@ async function index() {
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 if (args[0] === '--index') await index();
+else if (opt('--artworks')) for (const n of opt('--artworks').split(',')) await artworks(n.trim());
 else if (opt('--passcodes')) {
   const out = opt('--out');
   if (!out) throw new Error('--passcodes needs --out <file>');
   write(out, await factsFor(opt('--passcodes').split(',').map((s) => +s.trim()).filter(Boolean)));
 } else if (args[0] && !args[0].startsWith('--')) await deckFacts(args[0]);
 else {
-  console.error('usage: finder-card-data.mjs <deck-file-id> | --passcodes <list> --out <file> | --index');
+  console.error('usage: finder-card-data.mjs <deck-file-id> | --passcodes <list> --out <file> | --artworks <file,...> | --index');
   process.exit(1);
 }

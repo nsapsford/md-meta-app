@@ -6,7 +6,7 @@
   "marks": ["dm"],
   "flags": ["deceReset"],
   "cards": [
-    { "id": "DM", "passcodes": [36996508], "short": "Dark Magician", "listOrder": 0 },
+    { "id": "DM", "passcodes": [36996508, 46986414, 46986415, 46986416, 46986417, 46986418, 46986419, 46986420, 46986421], "short": "Dark Magician", "listOrder": 0 },
     {
       "id": "ROD", "passcodes": [7084129], "short": "Rod", "listOrder": 4,
       "effects": [
@@ -525,7 +525,7 @@
         }
       ]
     },
-    { "id": "MASQ", "passcodes": [65741787], "short": "Masquerena", "listOrder": 35 },
+    { "id": "MASQ", "passcodes": [65741787, 65741786], "short": "Masquerena", "listOrder": 35 },
     { "id": "SHEEP", "passcodes": [50277355], "short": "Cross-Sheep", "listOrder": 36 },
     {
       "id": "SPLK", "passcodes": [29301450], "short": "Little Knight", "listOrder": 37,

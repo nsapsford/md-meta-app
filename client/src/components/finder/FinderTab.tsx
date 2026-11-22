@@ -12,7 +12,7 @@ import type { DeckList } from '../../finder/deck/match';
 import { DeckCompileError } from '../../finder/deck/deckError';
 import type { DeckFileError } from '../../finder/deck/schema';
 import type { CardId } from '../../finder/engine/types';
-import { createPool, type Pool } from '../../finder/worker/pool';
+import { CANCEL, createPool, type Pool } from '../../finder/worker/pool';
 import { cardTokens, shortOf } from '../../finder/model/cards';
 import { restoreSnapshot, type FinderSnapshot } from '../../finder/model/finderState';
 import { boardShort, headline } from '../../finder/model/lineView';
@@ -59,6 +59,15 @@ export default function FinderTab(p: FinderTabProps) {
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const snapRef = useRef<FinderSnapshot | null>(null);
   const sessionRef = useRef<SolveSession | null>(null);
+  // The setup is saved once typing pauses (not on every keystroke), and on leaving the tab.
+  const saveT = useRef<{ t: ReturnType<typeof setTimeout>; run(): void } | null>(null);
+  const flushSave = useCallback(() => { if (saveT.current) { clearTimeout(saveT.current.t); saveT.current.run(); saveT.current = null; } }, []);
+  const saveSoon = useCallback((s: FinderSnapshot, ms: number) => {
+    if (saveT.current) clearTimeout(saveT.current.t);
+    const run = () => storage.saveState(deckId, s);
+    saveT.current = { t: setTimeout(() => { saveT.current = null; run(); }, ms), run };
+  }, [storage, deckId]);
+  useEffect(() => flushSave, [flushSave]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -97,13 +106,18 @@ export default function FinderTab(p: FinderTabProps) {
       setLoad({ s: 'failed', message: (e as Error)?.message || String(e) });
       return;
     }
-    pool.ready.catch((e) => { if (e instanceof DeckCompileError) setLoad({ s: 'broken', errors: e.errors }); });
+    let live = true;
+    pool.ready.catch((e) => {
+      if (!live || e === CANCEL) return;
+      if (e instanceof DeckCompileError) setLoad({ s: 'broken', errors: e.errors });
+      else setLoad({ s: 'failed', message: (e as Error)?.message || String(e) || 'the search could not start' });
+    });
     const session = createSolveSession({
       pool, traps: loaded.traps,
       onChange: (v) => {
         setView(v);
         // A record (a hand trap used) or undo changes the setup: show and keep it.
-        if (v.snapshot && v.snapshot !== snapRef.current) { snapRef.current = v.snapshot; setSnap(v.snapshot); storage.saveState(deckId, v.snapshot); }
+        if (v.snapshot && v.snapshot !== snapRef.current) { snapRef.current = v.snapshot; setSnap(v.snapshot); flushSave(); storage.saveState(deckId, v.snapshot); }
       },
     });
     sessionRef.current = session;
@@ -111,17 +125,17 @@ export default function FinderTab(p: FinderTabProps) {
     snapRef.current = first;
     setSnap(first);
     session.start(first, resolved);
-    return () => { session.dispose(); pool.dispose(); sessionRef.current = null; };
-  }, [deck, deckId, storage]);
+    return () => { live = false; session.dispose(); pool.dispose(); sessionRef.current = null; };
+  }, [deck, deckId, storage, flushSave]);
 
   const change = useCallback((next: FinderSnapshot, o: ChangeOpts = {}) => {
     if (!deck) return;
     snapRef.current = next;
     setSnap(next);
-    storage.saveState(deckId, next);
+    saveSoon(next, o.debounceMs ?? DEBOUNCE_MS);
     if (o.reset) { setProg({}); setShowWorst(false); }
     sessionRef.current?.start(next, deck.list, { debounceMs: o.debounceMs ?? DEBOUNCE_MS, reset: o.reset });
-  }, [deck, deckId, storage]);
+  }, [deck, saveSoon]);
 
   const cat = deck?.catalog ?? EMPTY_CAT;
   const thumbs = useThumbMap(cat);
