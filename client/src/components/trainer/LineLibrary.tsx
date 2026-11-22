@@ -13,7 +13,7 @@ function ChecksBadge({ checks }: { checks: LineChecks | null | undefined }) {
 }
 
 export default function LineLibrary({
-  lines, cards, mainDeck, busy, onNew, onEdit, onDelete, onMove, onGenerate, onSetStatus,
+  lines, cards, mainDeck, busy, onNew, onEdit, onDelete, onMove, onGenerate, onSetStatus, finderAvailable,
 }: {
   lines: ComboLine[];
   cards: CardMap;
@@ -25,6 +25,8 @@ export default function LineLibrary({
   onMove: (line: ComboLine, direction: -1 | 1) => void;
   onGenerate: () => void;
   onSetStatus: (line: ComboLine, status: 'draft' | 'verified') => void;
+  /** A deck file knows this deck: the button opens the Line Finder instead of the AI panel. */
+  finderAvailable: boolean;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
 
@@ -34,7 +36,7 @@ export default function LineLibrary({
         <button type="button" onClick={onNew} className="press px-3 py-2 rounded-lg bg-md-blue text-white text-sm font-bold">+ New line</button>
         <button type="button" onClick={onGenerate} disabled={busy}
           className="press px-3 py-2 rounded-lg border border-md-blue/40 bg-md-blue/10 text-sm font-bold text-md-blue disabled:opacity-50">
-          Generate lines
+          {finderAvailable ? 'Find lines' : 'Generate lines'}
         </button>
       </div>
       <p className="text-[11px] text-md-textMuted">

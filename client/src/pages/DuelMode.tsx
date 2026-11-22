@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SavedDeck } from '../api/deckIO';
 import { logGame } from '../api/personalGames';
@@ -254,7 +255,10 @@ export default function DuelMode() {
           <h1 className="text-2xl font-extrabold text-md-text">Duel Mode</h1>
           <p className="text-xs text-md-textMuted">Playing {myDeck.name}</p>
         </div>
-        <button onClick={() => setMyDeckId(null)} className="text-xs text-md-blue">Switch deck</button>
+        <div className="flex items-center gap-3">
+          <Link to="/trainer?tab=finder" onClick={() => localStorage.setItem('trainer_deck_id', String(myDeckId))} className="text-xs text-md-blue">Find a line</Link>
+          <button onClick={() => setMyDeckId(null)} className="text-xs text-md-blue">Switch deck</button>
+        </div>
       </div>
 
       {error && <ErrorBanner message={error} />}

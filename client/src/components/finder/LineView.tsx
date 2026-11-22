@@ -221,7 +221,7 @@ export default function LineView(p: LineViewProps) {
       {p.happened}
       <Panel title={p.showWorst ? 'Worst case: what you do instead' : 'Steps'}
         right={<><Btn quiet onClick={p.onCopy}>Copy</Btn><Btn quiet onClick={p.onSave} disabled={p.saving}>Save to my lines</Btn></>}>
-        <div className="hidden md:block"><Stepper n={n} total={total} onStep={(d) => p.onProgress(n + d)} /></div>
+        <div className="hidden xl:block"><Stepper n={n} total={total} onStep={(d) => p.onProgress(n + d)} /></div>
         {shown.opening.map((t, i) => <p key={i} className="text-[12px] text-md-orange">{t}.</p>)}
         {total === 0 && <p className="text-sm text-md-textMuted">Nothing to play: pass with this hand.</p>}
         <StepList steps={shown.steps} ctx={ctx} o={{

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SavedDeck } from '../api/deckIO';
@@ -18,6 +18,9 @@ import CoverageView from '../components/trainer/CoverageView';
 import GeneratePanel from '../components/trainer/GeneratePanel';
 import type { CardMap } from '../components/trainer/shared';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { matchDeckFile } from '../finder/deck/match';
+import { createFinderStorage } from '../finder/model/storage';
+import { finderSource, initialTab, type TrainerTab } from '../finder/model/trainerTab';
 
 // The Finder (deck files, worker pool, solver) loads only when its tab opens.
 const FinderTab = lazy(() => import('../components/finder/FinderTab'));
@@ -28,7 +31,7 @@ const EMPTY_DECKS: SavedDeck[] = [];
 const EMPTY_LINES: ComboLine[] = [];
 const EMPTY_REVIEWS: DrillReview[] = [];
 
-type Tab = 'drill' | 'lines' | 'coverage' | 'finder';
+type Tab = TrainerTab;
 type Editing = { line: ComboLine | null; initial: LinePayload } | null;
 
 const toPayload = (l: ComboLine): LinePayload => ({
@@ -36,6 +39,7 @@ const toPayload = (l: ComboLine): LinePayload => ({
 });
 
 export default function LineTrainer() {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const decksQ = useQuery(savedDecksQuery());
   const decks = decksQ.data ?? EMPTY_DECKS;
@@ -54,12 +58,11 @@ export default function LineTrainer() {
   const deckPasscodes = useMemo(() => [...new Set(mainDeck)], [mainDeck]);
   const cardsQ = useQuery(resolvedCardsQuery(deckPasscodes));
   const cards: CardMap = useMemo(() => new Map((cardsQ.data ?? []).map((c) => [Number(c.id), c])), [cardsQ.data]);
-  const finderList = useMemo(
-    () => (deck ? { main: deck.main_json.map((r) => ({ passcode: Number(r.passcode), count: r.count })), extra: deck.extra_json.map((r) => ({ passcode: Number(r.passcode), count: r.count })) } : null),
-    [deck]
-  );
+  const finderList = useMemo(() => finderSource(deck, null)?.list ?? null, [deck]);
+  // The Finder is offered when a deck file knows at least half of this deck's Main Deck cards.
+  const finderAvailable = useMemo(() => finderList != null && matchDeckFile(finderList) != null, [finderList]);
 
-  const [tab, setTab] = useState<Tab>('drill');
+  const [tab, setTab] = useState<Tab>(() => initialTab(location.search));
   const [drillMode, setDrillMode] = useState<'hands' | 'review'>('hands');
   const [reviewRun, setReviewRun] = useState(0); // bump to start a fresh review snapshot
   const [goingSecond, setGoingSecond] = useState(false);
@@ -184,6 +187,36 @@ export default function LineTrainer() {
     ]);
   }
 
+  // The server asleep or unreachable: the Finder still opens from the list remembered on this device.
+  if (!deck && tab === 'finder' && deckId != null && !decksQ.data) {
+    const offline = finderSource(null, createFinderStorage().recall(deckId));
+    return (
+      <div className="space-y-4 pb-8 max-w-6xl">
+        <div>
+          <h1 className="page-title">Line Trainer</h1>
+          {offline && <p className="text-xs text-md-textMuted">{offline.name}</p>}
+        </div>
+        {offline ? (
+          <Suspense fallback={<LoadingSpinner />}>
+            <FinderTab
+              key={deckId}
+              deckId={deckId}
+              deckName={offline.name}
+              list={offline.list}
+              fromDevice
+              onSaved={refreshLines}
+              onUseAiPanel={() => setTab('lines')}
+            />
+          </Suspense>
+        ) : decksQ.isError ? (
+          <p className="text-sm text-md-textMuted">Can't reach the server, and this deck has not been opened in the Finder on this device yet.</p>
+        ) : (
+          <p className="text-sm text-md-textMuted">Loading…</p>
+        )}
+      </div>
+    );
+  }
+
   if (!deck) {
     return (
       <div className="space-y-4">
@@ -272,7 +305,8 @@ export default function LineTrainer() {
           onEdit={(l) => { setEditorError(''); setEditing({ line: l, initial: toPayload(l) }); }}
           onDelete={removeLine}
           onMove={moveLine}
-          onGenerate={() => setGenerating(true)}
+          onGenerate={() => (finderAvailable ? setTab('finder') : setGenerating(true))}
+          finderAvailable={finderAvailable}
           onSetStatus={setStatus}
         />
       ) : tab === 'coverage' ? (

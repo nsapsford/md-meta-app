@@ -1,7 +1,7 @@
 // The Line Trainer's Finder tab: matches the saved deck's list to a deck file, loads it, starts the
 // worker pool and a solve session, restores the setup saved on this device and remembers the list.
-// Two columns from md: up (setup left, lines right); on a phone one column with a Setup / Lines
-// switch and a dock at the bottom. No server call: the list is passed in, or the copy saved on this
+// Two columns from xl: up (setup left, lines right); below that (phones, and desktops where the
+// app's sidebar leaves too little room) one column with a Setup / Lines switch and a dock at the bottom. No server call: the list is passed in, or the copy saved on this
 // device is used.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -244,19 +244,19 @@ export default function FinderTab(p: FinderTabProps) {
   } else if (view && view.phase !== 'idle') { peekBig = 'Finding lines…'; peekSub = ''; }
 
   return (
-    <div className="space-y-3 pb-24 md:pb-4">
+    <div className="space-y-3 pb-24 xl:pb-4">
       {(onDevice || unknown.length > 0) && (
         <div className="space-y-1">
           {onDevice && <Fine className="text-md-orange">Using the list saved on this device.</Fine>}
           {unknown.length > 0 && <Fine>{deck.list.blanks} cards the Finder doesn't know are counted as blanks: {unknown.join(', ')}.</Fine>}
         </div>
       )}
-      <Seg className="md:hidden" label="View" value={pane} options={[['setup', 'Setup'], ['lines', 'Lines']]} onChange={go} />
-      <div className="md:grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-4 md:items-start">
-        <div className={clsx(pane !== 'setup' && 'hidden md:block')}>
+      <Seg className="xl:hidden" label="View" value={pane} options={[['setup', 'Setup'], ['lines', 'Lines']]} onChange={go} />
+      <div className="xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:gap-4 xl:items-start">
+        <div className={clsx(pane !== 'setup' && 'hidden xl:block')}>
           <SetupPanel snap={snap} list={deck.list} cat={deck.catalog} thumbs={thumbs} traps={traps} onChange={change} onToast={showToast} onInspect={setInspect} />
         </div>
-        <div className={clsx(pane !== 'lines' && 'hidden md:block')}>
+        <div className={clsx(pane !== 'lines' && 'hidden xl:block')}>
           {ctx && actions ? (
             <ResultsPanel view={view} ctx={ctx} deck={deck} deckName={deck.file.name} short={short}
               progress={n} onProgress={setN} showWorst={worstOn} onToggleWorst={() => setShowWorst((w) => !w)} actions={actions} />
@@ -264,7 +264,7 @@ export default function FinderTab(p: FinderTabProps) {
         </div>
       </div>
 
-      <nav aria-label="Quick actions" className="md:hidden fixed inset-x-0 z-30 px-3 py-2 bg-md-bg/[0.97] border-t border-md-border/60 shadow-2xl shadow-black/30"
+      <nav aria-label="Quick actions" className={clsx('xl:hidden fixed inset-x-0 z-30 px-3 py-2 bg-md-bg/[0.97] border-t border-md-border/60 shadow-2xl shadow-black/30', !native && 'md:left-40')}
         style={{ bottom: native ? 'calc(3.5rem + env(safe-area-inset-bottom))' : 0, paddingBottom: native ? undefined : 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
         {pane === 'lines' ? (
           <div className="flex items-center gap-2">
@@ -284,7 +284,7 @@ export default function FinderTab(p: FinderTabProps) {
 
       <CardInspect id={inspect} cat={deck.catalog} list={deck.list} onClose={() => setInspect(null)} />
       {toast && (
-        <div role="status" className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-50 px-3 py-2 rounded-lg bg-md-surfaceAlt border border-md-border text-xs text-md-text shadow-surface-lg animate-fade-in">
+        <div role="status" className="fixed left-1/2 -translate-x-1/2 bottom-24 xl:bottom-6 z-50 px-3 py-2 rounded-lg bg-md-surfaceAlt border border-md-border text-xs text-md-text shadow-surface-lg animate-fade-in">
           {toast}
         </div>
       )}
