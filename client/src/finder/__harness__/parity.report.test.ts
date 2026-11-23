@@ -2,7 +2,7 @@
 //  - "scores" (npm run finder:report): every situation at PIN through both engines; the counts
 //    (same, higher, lower), every ACCEPTED entry with its reason, and for each situation where the
 //    new engine scores higher (or lower) both lines side by side with the new line's ledger result.
-//  - "bench" (npm run finder:bench): the set at the real settings (width 60, growth 4, 2.5 s) through
+//  - "bench" (npm run finder:bench): the set at the real settings (width 60, growth 4, the Finder's default budget) through
 //    both engines; every situation where the new engine scored lower in equal time. Timing varies:
 //    read by a person, not a gate.
 // Each part rewrites its own section of the file and keeps the other.
@@ -19,9 +19,11 @@ import { loadReference, type RefEngine } from './loadReference';
 import { handOf, newRoot, readBaseline, SCORE_EPS } from './runSituation';
 import { toIntr } from './mapping';
 import { buildSituations, PIN, refRoot, type Situation } from './situations';
+import { DEFAULT_BUDGET_MS } from '../model/solveSession';
 
 const OUT = fileURLToPath(new URL('../../../../docs/finder/dm-azamina-parity-report.md', import.meta.url));
-const BENCH = { width: 60, growth: 4, timeMs: 2500, top: 3 } as const;
+// The Finder's default budget (DEFAULT_BUDGET_MS), so the bench measures what the page runs.
+const BENCH = { width: 60, growth: 4, timeMs: DEFAULT_BUDGET_MS, top: 3 } as const;
 const BEGIN = (n: string) => `<!-- ${n}:begin -->`, END = (n: string) => `<!-- ${n}:end -->`;
 
 /** Replace (or add) one section of the report. */

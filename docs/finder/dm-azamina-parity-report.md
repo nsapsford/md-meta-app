@@ -249,17 +249,16 @@ None.
 <!-- bench:begin -->
 ## Bench at the real settings
 
-Both engines with the solve task's settings (width 60, growth 4, 2500 ms), one after the other on the same machine, on 2026-11-21. Timing varies from run to run; this list is for reading, not a gate.
+Both engines with the solve task's settings (width 60, growth 4, 2750 ms), one after the other on the same machine, on 2026-11-23. Timing varies from run to run; this list is for reading, not a gate.
 
-Positions explored in total: reference 178852212, new engine 182014807. New engine higher on 19 situation(s), lower on 7.
+Positions explored in total: reference 277385908, new engine 290863193. New engine higher on 22 situation(s), lower on 6.
 
 | Situation | Reference | New | Difference | Reference last width / positions | New last width / positions |
 |---|---|---|---|---|---|
-| first-101 | 422.6667 | 418.0000 | -4.6667 | 15360 / 523702 | 15360 / 544961 |
-| first-109 | 411.0000 | 408.0000 | -3.0000 | 15360 / 446655 | 15360 / 406592 |
-| first-137 | 439.0000 | 434.0000 | -5.0000 | 15360 / 481286 | 15360 / 523864 |
-| first-168 | 426.0000 | 424.6667 | -1.3333 | 15360 / 519541 | 15360 / 555871 |
-| trap-022 | 337.5000 | 331.6667 | -5.8333 | 15360 / 369713 | 15360 / 326375 |
-| trap-033 | 270.3333 | 265.5000 | -4.8333 | 3840 / 399413 | 3840 / 371824 |
-| trap-042 | 228.5000 | 222.6667 | -5.8333 | 15360 / 510007 | 15360 / 470526 |
+| first-030 | 438.5000 | 432.0000 | -6.5000 | 15360 / 744887 | 15360 / 701152 |
+| first-132 | 481.3333 | 477.6667 | -3.6667 | 15360 / 747301 | 15360 / 864636 |
+| first-137 | 439.0000 | 434.0000 | -5.0000 | 15360 / 767833 | 15360 / 868160 |
+| first-190 | 464.0000 | 461.0000 | -3.0000 | 15360 / 809894 | 15360 / 863411 |
+| trap-023 | 491.0000 | 476.0000 | -15.0000 | 15360 / 571966 | 15360 / 487755 |
+| trap-028 | 420.0000 | 416.6667 | -3.3333 | 15360 / 677358 | 15360 / 669609 |
 <!-- bench:end -->
