@@ -348,7 +348,7 @@ describe('Extra Deck monsters', () => {
     const s = st({}, { field: ['EDD'] });
     expect(keys(s)).toEqual(expect.arrayContaining(['edd-ss:ALBAZ', 'edd-ss:CART', 'edd-ss:ECCL', 'edd-ss:WHITE']));
     const x = run(s, 'edd-ss:ALBAZ');
-    expect([onField(x), n(x, 'ban', 'EDD'), used(x, 'edd-ss')]).toEqual([['ALBAZ'], 1, true]);
+    expect([onField(x), n(x, 'ban', 'EDD'), used(x, 'edd-ss'), flag(x, 'eddAway')]).toEqual([['ALBAZ'], 1, true, true]);
     expect(has(st({}, { field: ['EDD'], deck: { MULULU: 1 } }), 'edd-ss')).toBe(false);
   });
   it('Predaplant Verte Anaconda: a Link-2 of 2 Effect Monsters; pays 2000 and sends Branded Fusion to use its effect, then no more Special Summons', () => {
@@ -379,10 +379,17 @@ describe('Extra Deck monsters', () => {
 describe('board value', () => {
   it('End Phase effects are scored and listed under the End Phase heading', () => {
     const sc = createScore(d.deck);
-    const s = st({}, { gy: ['TITAN', 'ECCL'] });
+    const s = st({}, { gy: ['TITAN', 'ECCL', 'ECCL', 'EDD'] });
     s.flags |= 1 << [...FILE.flags!].sort().indexOf('fusionToGy');
     const e = sc.evaluate(s, true);
+    // Two Ecclesia in the GY: only one returns (once per turn).
     expect(e.items).toEqual([[END_PHASE_HEADING, 0], ['Titaniklad: add or Special Summon Albaz from the Deck', 0.5], ['Ecclesia returns to the hand', 0.3]]);
+    // Ecclesia and the Dark Dragon comes back only when its own effect banished it.
+    const b = st({}, { gy: ['ALBAZ'] });
+    b.ban[ix.EDD] = 1;
+    expect(sc.evaluate(b, true).items).toEqual([]);
+    b.flags |= 1 << [...FILE.flags!].sort().indexOf('eddAway');
+    expect(sc.evaluate(b, true).items).toEqual([[END_PHASE_HEADING, 0], ['Ecclesia and the Dark Dragon returns to the field (its effect ready for their turn)', 0.5]]);
   });
   it('their-turn effects: Mirrorjade with an Albaz Fusion to send, The Fallen & The Virtuous Set', () => {
     const sc = createScore(d.deck);

@@ -9,7 +9,8 @@
     "lockFusion",
     "lockL8",
     "lockAll",
-    "fusionToGy"
+    "fusionToGy",
+    "eddAway"
   ],
   "cards": [
     {
@@ -2542,6 +2543,9 @@
               }
             },
             {
+              "setFlag": "eddAway"
+            },
+            {
               "summon": {
                 "what": "c"
               }
@@ -3096,7 +3100,11 @@
           "value": 0.1,
           "label": "Ecclesia"
         }
-      ]
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Ecclesia (its effect is once per turn)"
+      }
     },
     {
       "id": "cart-field",
@@ -3121,7 +3129,11 @@
           "value": 0.1,
           "label": "Cartesia"
         }
-      ]
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Cartesia (its effect is once per turn)"
+      }
     },
     {
       "id": "mululu-field",
@@ -3152,16 +3164,24 @@
           "value": 0.1,
           "label": "Mululu"
         }
-      ]
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Mululu (its effect is once per turn)"
+      }
     },
     {
       "id": "faimena-hand",
       "when": "oppTurn",
       "on": {
-        "has": {
-          "zone": "hand",
-          "card": "FAIMENA"
-        }
+        "any": [
+          {
+            "has": {
+              "zone": "hand",
+              "card": "FAIMENA"
+            }
+          }
+        ]
       },
       "base": [
         {
@@ -3547,10 +3567,14 @@
       "id": "eccl-end",
       "when": "endPhase",
       "on": {
-        "has": {
-          "zone": "gy",
-          "card": "ECCL"
-        }
+        "any": [
+          {
+            "has": {
+              "zone": "gy",
+              "card": "ECCL"
+            }
+          }
+        ]
       },
       "base": [
         {
@@ -3568,10 +3592,14 @@
       "id": "cart-end",
       "when": "endPhase",
       "on": {
-        "has": {
-          "zone": "gy",
-          "card": "CART"
-        }
+        "any": [
+          {
+            "has": {
+              "zone": "gy",
+              "card": "CART"
+            }
+          }
+        ]
       },
       "base": [
         {
@@ -3620,6 +3648,11 @@
       },
       "base": [
         {
+          "if": [
+            {
+              "flag": "eddAway"
+            }
+          ],
           "value": 0.5,
           "label": "Ecclesia and the Dark Dragon returns to the field (its effect ready for their turn)"
         }
