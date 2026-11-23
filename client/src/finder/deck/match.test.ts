@@ -68,8 +68,10 @@ describe('matchDeckFile', () => {
 
   it('knows every passcode a card lists', () => {
     // Droll & Lock Bird has two passcodes (the file lists both); the old tool's list uses the second.
-    expect(matchDeckFile(m([94145022]))).toEqual({ fileId: 'dm-azamina', known: 1, total: 1, unknown: [] });
-    expect(matchDeckFile(m([94145021]))?.fileId).toBe('dm-azamina');
+    // Droll is a staple both deck files know: with nothing else, the tie goes to the lower id.
+    expect(matchDeckFile(m([94145022, 7084129]))).toEqual({ fileId: 'dm-azamina', known: 2, total: 2, unknown: [] });
+    expect(matchDeckFile(m([94145021, 7084129]))?.fileId).toBe('dm-azamina');
+    expect(matchDeckFile(m([94145022]))).toEqual({ fileId: 'branded-dracotail', known: 1, total: 1, unknown: [] });
   });
 });
 
