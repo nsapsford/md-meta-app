@@ -10,7 +10,8 @@
     "lockL8",
     "lockAll",
     "fusionToGy",
-    "eddAway"
+    "eddAway",
+    "arthRevived"
   ],
   "cards": [
     {
@@ -378,6 +379,7 @@
       "id": "PURU",
       "passcodes": [84192580],
       "short": "Purulia",
+      "generic": true,
       "heldValue": 0.2,
       "discardValue": 2,
       "hints": {
@@ -388,6 +390,7 @@
       "id": "GHOST",
       "passcodes": [59438930, 59438931],
       "short": "Ghost Ogre",
+      "generic": true,
       "heldValue": 0.6,
       "discardValue": 5,
       "hints": {
@@ -398,6 +401,7 @@
       "id": "TTT",
       "passcodes": [25311006],
       "short": "Triple Tactics",
+      "generic": true,
       "discardValue": 1
     },
     {
@@ -739,15 +743,6 @@
                   "group": "dracotailST"
                 }
               }
-            },
-            {
-              "as": "o",
-              "pick": {
-                "oppCard": {
-                  "kind": "st"
-                }
-              },
-              "optional": true
             }
           ],
           "do": [
@@ -757,9 +752,7 @@
               }
             },
             {
-              "destroy": {
-                "what": "o"
-              }
+              "queue": "urgula-destroy"
             }
           ],
           "tags": {
@@ -769,7 +762,69 @@
           "ledger": {
             "effect": 1
           },
-          "text": "Urgula (material): Set {c} from the Deck{o?, destroy $|}."
+          "text": "Urgula (material): Set {c} from the Deck."
+        },
+        {
+          "key": "urgula-destroy",
+          "phase": "main",
+          "from": "gy",
+          "followUp": true,
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "union": [
+                  {
+                    "oppCard": {
+                      "kind": "st"
+                    }
+                  },
+                  {
+                    "oppCard": {
+                      "kind": "st",
+                      "targetable": false
+                    }
+                  },
+                  {
+                    "fromField": {
+                      "kind": "st"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "destroy": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "inherent": true
+          },
+          "negatable": false,
+          "stepTags": {
+            "removal": {
+              "chosen": {
+                "as": "t",
+                "filter": {
+                  "not": {
+                    "inZone": [
+                      "hand",
+                      "deck",
+                      "extra",
+                      "gy",
+                      "ban",
+                      "field"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "text": "Urgula: then destroy {t}."
         },
         {
           "key": "urgula-gy",
@@ -1716,6 +1771,7 @@
       "id": "LENATUS",
       "passcodes": [3410461],
       "short": "Lenatus",
+      "notFusionMaterial": true,
       "effects": [
         {
           "key": "lenatus-to-gy",
@@ -2037,7 +2093,14 @@
             }
           ],
           "tags": {},
-          "text": ""
+          "text": "",
+          "cond": [
+            {
+              "not": {
+                "flag": "arthRevived"
+              }
+            }
+          ]
         },
         {
           "key": "arth-1",
@@ -2177,6 +2240,68 @@
           "text": "Arthalion: return {t} to the hand."
         },
         {
+          "key": "arth-3",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "arth-bounce"
+          },
+          "cond": [
+            {
+              "usesLeft": 3
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "subsets": {
+                  "of": {
+                    "union": [
+                      {
+                        "oppCard": {
+                          "kind": "mon"
+                        }
+                      },
+                      {
+                        "fromZone": {
+                          "zone": "gy",
+                          "filter": {
+                            "cardKind": [
+                              "monster"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "min": 3,
+                  "max": 3
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "returnToHand": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Arthalion: return {t} to the hand."
+        },
+        {
           "key": "arth-revive",
           "phase": "main",
           "from": "gy",
@@ -2194,6 +2319,9 @@
               "summon": {
                 "what": "self"
               }
+            },
+            {
+              "setFlag": "arthRevived"
             }
           ],
           "tags": {
@@ -2799,16 +2927,7 @@
           "inGroup": "albazName"
         },
         {
-          "all": [
-            {
-              "extraDeckMonster": true
-            },
-            {
-              "not": {
-                "named": "LENATUS"
-              }
-            }
-          ]
+          "extraDeckMonster": true
         }
       ]
     },
@@ -2979,46 +3098,19 @@
       "method": "fusion",
       "slots": [
         {
-          "all": [
-            {
-              "frame": [
-                "Fusion"
-              ]
-            },
-            {
-              "not": {
-                "named": "LENATUS"
-              }
-            }
+          "frame": [
+            "Fusion"
           ]
         },
         {
-          "all": [
-            {
-              "frame": [
-                "Fusion"
-              ]
-            },
-            {
-              "not": {
-                "named": "LENATUS"
-              }
-            }
+          "frame": [
+            "Fusion"
           ]
         }
       ],
       "more": {
-        "all": [
-          {
-            "frame": [
-              "Fusion"
-            ]
-          },
-          {
-            "not": {
-              "named": "LENATUS"
-            }
-          }
+        "frame": [
+          "Fusion"
         ]
       },
       "relations": [
@@ -3409,6 +3501,11 @@
           "if": [
             {
               "notUsed": "arth-revive"
+            },
+            {
+              "not": {
+                "flag": "arthRevived"
+              }
             }
           ],
           "value": 0.2,

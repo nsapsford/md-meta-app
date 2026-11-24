@@ -5,7 +5,8 @@
 // This is DATA, not solver code: it holds passcodes, so noCardKnowledge.test.ts does not scan it.
 // match.test.ts checks every row against the deck files; update a row when a file's cards change.
 
-export interface ManifestRow { id: string; name: string; main: number[] }
+/** `own`: the passcodes of the file's own Main Deck cards that identify the deck (not shared staples, not cards marked `generic`); a saved list must hold one of them to match. */
+export interface ManifestRow { id: string; name: string; main: number[]; own?: number[] }
 
 export const DECK_MANIFEST: ManifestRow[] = [
   {
@@ -16,6 +17,10 @@ export const DECK_MANIFEST: ManifestRow[] = [
       71440209, 23020408, 97631303, 88570003, 12266229, 96729612, 79791878, 78679226, 2501624, 342673,
       2333466, 72270339, 80845034, 66328392, 94845588, 22283204,
     ],
+    own: [
+      36996508, 46986414, 46986415, 46986416, 46986417, 46986418, 46986419, 46986420, 46986421, 7084129, 47222536, 41350417, 71440209, 23020408,
+      97631303, 88570003, 12266229, 96729612, 79791878, 78679226, 2501624, 342673, 2333466, 72270339, 80845034, 66328392, 94845588, 22283204,
+    ],
   },
   {
     id: 'branded-dracotail',
@@ -25,5 +30,6 @@ export const DECK_MANIFEST: ManifestRow[] = [
       7375867, 68468459, 55273560, 95515789, 84192580, 59438930, 59438931, 25311006, 75003700, 73819701, 1498449,
       70871153, 25451383, 44362883, 6153210, 32548318, 29948294, 30271097, 5431722,
     ],
+    own: [7375867, 68468459, 55273560, 95515789, 75003700, 73819701, 1498449, 70871153, 25451383, 44362883, 6153210, 32548318, 29948294, 30271097, 5431722],
   },
 ];

@@ -22,6 +22,8 @@ export interface CardProps {
   discardValue: number; heldValue: number; normalSummon: boolean; immuneToRemoval: boolean;
   /** As material, one of your monsters with this counts as any Attribute (`CardDef.materialAttribute: 'any'`). */
   materialAnyAttr: boolean;
+  /** `CardDef.notFusionMaterial`: no Fusion pick offers it as material. */
+  notFusionMat: boolean;
   /** The card index whose name this card has in the GY (`CardDef.gyName`; itself by default). */
   gyName: number;
 }
@@ -59,7 +61,7 @@ export interface CompiledDeck {
   onLeaveField(s: State, id: number, kind: 'mon' | 'st', wasFaceUp: boolean, to?: LedgerZone): void;
   onOppMonsterToGy(s: State): void;
   /** Two or more monsters were sent to the GY at the same time (a summon's materials). */
-  onBatchToGy(s: State, n: number): void;
+  onBatchToGy(s: State, ids: readonly number[]): void;
   /** May this Extra Deck monster be Special Summoned now (the file's `summonLocks`)? */
   extraAllowed(s: FinalBoard, card: number): boolean;
   /** May this monster be Special Summoned now (from the Extra Deck, or from elsewhere: only `all` locks apply there)? */
@@ -124,7 +126,7 @@ export type TrigEvent =
   | { t: 'place'; id: number; nm: number; special: boolean; from: LedgerZone | null }
   | { t: 'move'; id: number; from: LedgerZone; to: LedgerZone; up: boolean; /** The summon it was material for ('fusion'), or null. */ mat: string | null }
   | { t: 'oppMonGy' }
-  | { t: 'batch'; n: number };
+  | { t: 'batch'; n: number; /** The card indices of the monsters that went (an opponent's monster: UNK). */ ids: readonly number[] };
 export type TriggerFn = ((ev: TrigEvent, self: number) => boolean) & { on: TrigEvent['t'] };
 
 /** Runtime helpers a word's closures call. Built once per compiled deck. */
@@ -159,7 +161,7 @@ export interface Runtime {
   /** While `fn` runs, cards that move are material for a summon of this kind (the `usedAsMaterial` trigger reads it). */
   asMaterial(method: string, fn: () => void): void;
   /** Two or more monsters went to the GY at the same time: set off the triggers that wait for it. */
-  batchToGy(n: State, count: number): void;
+  batchToGy(n: State, ids: readonly number[]): void;
   /** The file's summon locks (see CompiledDeck). */
   extraAllowed(s: FinalBoard, card: number): boolean;
   summonAllowed(s: FinalBoard, card: number, fromExtra: boolean): boolean;
@@ -184,13 +186,13 @@ function propsOf(c: CardDef, f: CardFacts, gyName: number): CardProps {
     lv: link ? null : f.level, link: link ? (f.link ?? f.level) : null,
     atk: f.atk || 0, def: f.def || 0,
     discardValue: c.discardValue ?? 3, heldValue: c.heldValue ?? 0,
-    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval, materialAnyAttr: c.materialAttribute === 'any', gyName,
+    normalSummon: c.hints?.normalSummon !== false, immuneToRemoval: !!c.immuneToRemoval, materialAnyAttr: c.materialAttribute === 'any', notFusionMat: !!c.notFusionMaterial, gyName,
   };
 }
 
 const UNK_PROPS = (gyName: number): CardProps => ({
   id: 'UNK', name: '?', short: 'unknown card', kind: '?', st: null, ext: false, sub: '?', tuner: false,
-  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false, materialAnyAttr: false, gyName,
+  race: null, attr: null, lv: null, link: null, atk: 0, def: 0, discardValue: 0, heldValue: 0, normalSummon: false, immuneToRemoval: false, materialAnyAttr: false, notFusionMat: false, gyName,
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -423,7 +425,7 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
       matNow = method;
       try { fn(); } finally { matNow = was; }
     },
-    batchToGy: (n, count) => onBatchToGy(n, count),
+    batchToGy: (n, ids) => onBatchToGy(n, ids),
     extraAllowed, summonAllowed,
     removeQuietly(n, zone, at, to) {
       const id = zone === 'mon' ? removeAt(n.mons, at).id : removeAt(n.st, at).id;
@@ -790,11 +792,14 @@ export function compileDeck(file: DeckFile, facts: CardFacts[]): CompiledDeck {
   function onOppMonsterToGy(s: State): void {
     for (const e of oppTrig) { if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id }); }
   }
-  function onBatchToGy(s: State, count: number): void {
+  function onBatchToGy(s: State, ids: readonly number[]): void {
     if (!batchTrig.length) return;
-    const ev: TrigEvent = { t: 'batch', n: count };
+    const ev: TrigEvent = { t: 'batch', n: ids.length, ids };
     for (const e of batchTrig) {
       if (!e.trigger!(ev, e.self)) continue;
+      // "While this card is in your GY": a card that went there in this very batch was not there before.
+      const froms: Loc[] = Array.isArray(e.def.from) ? e.def.from : [e.def.from];
+      if (froms.includes('gy') && s.gy[e.self] <= ids.filter((x) => x === e.self).length) continue;
       if (e.immediate) e.fire(s, null); else if (e.canQueue(s, null)) enqueue(s, e, { e: e.id });
     }
   }

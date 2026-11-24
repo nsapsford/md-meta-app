@@ -131,11 +131,16 @@ describe('Dracotail monsters', () => {
     // Faimena alone in hand: it is the cost, never a material.
     expect(has(st({ FAIMENA: 1 }), 'faimena-fuse')).toBe(false);
   });
-  it('Urgula as material: Set a Dracotail Spell/Trap, then destroy a Spell/Trap they control', () => {
+  it('Urgula as material: Set a Dracotail Spell/Trap, then you can destroy 1 Spell/Trap on the field (theirs or yours)', () => {
     const s = st({ URGULA: 1 }, { field: ['MULULU'], opp: [LID] });
     const x = resolve(run(s, 'mululu-fuse:MULULU+h.URGULA:ARTH'), 'urgula-set');
-    const y = run(x, 'urgula-set:KETU:os1');
-    expect([y.st.map((c) => d.deck.ids[c.id]), y.opp!.st.length, y.removed]).toEqual([['KETU'], 0, 1]);
+    const y = run(x, 'urgula-set:KETU');
+    expect([y.st.map((c) => d.deck.ids[c.id]), pend(y)[0]]).toEqual([['KETU'], 'urgula-destroy']);
+    expect(keys(y)).toEqual(['dec:urgula-destroy', 'urgula-destroy:os1', 'urgula-destroy:KETU']);
+    const z = run(y, 'urgula-destroy:os1');
+    expect([z.st.map((c) => d.deck.ids[c.id]), z.opp!.st.length, z.removed]).toEqual([['KETU'], 0, 1]);
+    // Declining keeps their card.
+    expect(moves.exec(y, moves.gen(y)[0], false).opp!.st.length).toBe(1);
   });
   it('Urgula in the GY: goes to the bottom of the Deck and adds a Spellcaster Dracotail from the GY', () => {
     const s = st({}, { gy: ['URGULA', 'LUKIAS', 'MULULU'] });
@@ -397,5 +402,83 @@ describe('board value', () => {
     const e = sc.evaluate(s, true);
     expect(e.items).toEqual([['Mirrorjade: banish a monster on their turn', 0.9], ['The Fallen & The Virtuous (Set): destroy a face-up card on their turn', 0.6]]);
     expect(e.sets.map((i) => d.deck.ids[i])).toEqual(['FV']);
+  });
+});
+
+describe('fix round 1: rules the review found', () => {
+  it('Alba-Lenatus cannot be used as Fusion Material', () => {
+    const s = st({ ALBAZ: 1 }, { field: ['CART', 'LENATUS'] });
+    expect(keys(s).filter((k) => k.startsWith('cart-fuse')).length).toBeGreaterThan(0);
+    expect(keys(s).filter((k) => k.startsWith('cart-fuse') && k.includes('LENATUS'))).toEqual([]);
+    expect(has(st({ BFUS: 1 }, { field: ['LENATUS'] }), 'bfus:LENATUS')).toBe(false);
+  });
+  it('Arthalion does not bring itself back when it is one of the materials that went to the GY', () => {
+    const s = st({ ALBAZ: 1 }, { field: ['CART', 'ARTH'] });
+    const x = run(s, 'cart-fuse:ARTH+h.ALBAZ:MIRROR');
+    expect(pend(x)).not.toContain('arth-revive');
+    // One monster to the GY (not 2): no revive either.
+    const one = st({}, { field: ['ECCL'], gy: ['ARTH'] });
+    expect(pend(run(one, 'eccl-tribute:ALBAZ'))).not.toContain('arth-revive');
+  });
+  it('a revived Arthalion that leaves the field is not counted as a Fusion sent to the GY (it is banished)', () => {
+    const s2 = st({ FAIMENA: 1 }, { field: ['ALBAZ', 'MULULU'], gy: ['ARTH'] });
+    const back = run(resolve(run(s2, 'mululu-fuse:MULULU+h.FAIMENA:ARTH'), 'arth-revive'), 'arth-revive');
+    expect(flag(back, 'arthRevived')).toBe(true);
+    const sc = createScore(d.deck);
+    expect(sc.evaluate(back, true).items!.some(([t]) => t.startsWith('Arthalion in GY'))).toBe(false);
+  });
+  it('Arthalion returns up to 3 when 3 materials came from the hand', () => {
+    const s = st({ FAIMENA: 1, MULULU: 1, LUKIAS: 1, URGULA: 1 }, { opp: [FOE, FOE2] });
+    const k = keys(s).find((q) => q.startsWith('faimena-fuse:') && q.split(':')[1].split('+').length === 3 && q.endsWith(':ARTH'))!;
+    expect(k).toBeDefined();
+    const x = run(s, k);
+    expect(pend(x).filter((p) => p.startsWith('arth-'))).toEqual(['arth-1', 'arth-2', 'arth-3']);
+    const y = resolve(x, 'arth-3');
+    const k3 = keys(y).find((q) => q.startsWith('arth-3:') && q.includes('om1') && q.includes('om2'))!;
+    const z = run(y, k3);
+    expect([z.opp!.mons.length, z.removed, used(z, 'arth-bounce')]).toEqual([0, 2, true]);
+  });
+  it('Arthalion arth-2 returns two cards', () => {
+    const s = st({ FAIMENA: 1, MULULU: 1, LUKIAS: 1 }, { opp: [FOE] });
+    const x = resolve(run(s, 'faimena-fuse:h.LUKIAS+h.MULULU:ARTH'), 'arth-2');
+    const y = run(x, 'arth-2:om1+LUKIAS');
+    expect([y.opp!.mons.length, n(y, 'hand', 'LUKIAS'), used(y, 'arth-bounce')]).toEqual([0, 1, true]);
+  });
+  it('Khaos Starsource khaos-2 destroys two; going first neither Khaos effect has a target', () => {
+    const x = run(d.summonForTest(st({ ALBAZ: 1, TTT: 1 }, { opp: [FOE, RUG, LID] }), 'ALBAZ'), 'albaz-fuse:TTT:ALBAZ+om1:KHAOS');
+    const y = run(resolve(x, 'khaos-2'), 'khaos-2:os2+os1');
+    expect([y.opp!.st.length, y.removed, used(y, 'khaos')]).toEqual([0, 3, true]);
+    const g = st({});
+    field(g, 'KHAOS', 2);
+    d.deck.onPlace(g, g.mons[0], true, 'extra');
+    expect(pend(g)).toEqual(['khaos-1', 'khaos-2']);
+    expect(keys(g)).toEqual(['dec:khaos-1']);
+  });
+  it('Hyperinvoked Aeon aeon-1 banishes one; going first it has no target', () => {
+    const s = st({}, { opp: [FOE] });
+    field(s, 'AEON', 2);
+    d.deck.onPlace(s, s.mons[0], true, 'extra');
+    const y = run(s, 'aeon-1:om1');
+    expect([y.opp!.mons.length, used(y, 'aeon')]).toEqual([0, true]);
+    const g = st({});
+    field(g, 'AEON', 2);
+    d.deck.onPlace(g, g.mons[0], true, 'extra');
+    expect(keys(g)).toEqual(['dec:aeon-1']);
+  });
+  it('Granguignol has nothing to send without a Level 6 or higher LIGHT or DARK monster', () => {
+    const g = st({}, { deck: { MULULU: 1 }, extra: { ARTH: 1 } });
+    field(g, 'GRAN');
+    d.deck.onPlace(g, g.mons[0], true, 'extra');
+    expect(keys(g)).toEqual(['dec:gran-send']);
+  });
+  it('the material Sets do not start with every Spell/Trap Zone full', () => {
+    for (const [hand, key, fk] of [[{ FAIMENA: 1, LUKIAS: 1, MULULU: 1 }, 'lukias-set', 'faimena-fuse:h.LUKIAS+h.MULULU:ARTH'], [{ FAIMENA: 1, URGULA: 1, MULULU: 1 }, 'urgula-set', 'faimena-fuse:h.MULULU+h.URGULA:ARTH']] as const) {
+      const s = st(hand as Record<string, number>);
+      for (let i = 0; i < 5; i++) s.st.push({ id: ix.TTT, up: false, now: false });
+      expect(pend(run(s, fk))).not.toContain(key);
+    }
+    const f = st({ FAIMENA: 1 }, { field: ['MULULU'] });
+    for (let i = 0; i < 5; i++) f.st.push({ id: ix.TTT, up: false, now: false });
+    expect(pend(run(f, 'mululu-fuse:MULULU+h.FAIMENA:ARTH'))).toEqual(['arth-1']);
   });
 });

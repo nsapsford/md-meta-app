@@ -32,13 +32,16 @@ note is for whoever writes the next one. The two existing files are the worked e
      disruption, 0.1-0.3 minor value. An effect that is once per turn by name counts one copy
      (`extraCopies`, or an `any` around a zone count);
    - `endOfTurn.setOrder` for the Traps and Quick-Play Spells worth Setting, `heldValue` for hand
-     traps, `discardValue` for what you would rather discard.
+     traps, `discardValue` for what you would rather discard, `notFusionMaterial` for "Cannot be used as
+   Fusion Material", and `generic` for cards many decks play (hand traps, generic Spells).
    After each group, write `files/<id>.effects.test.ts` cases: for every effect, the smallest state
    where it applies, the move run and the zones checked against the text (what moved where, what was
    summoned, which once-per-turn is spent), and one case where its condition fails and the move is
    absent.
-5. **Register it.** Add a row to `client/src/finder/deck/manifest.ts` (id, name, every Main Deck
-   passcode of the file and its shared files; `match.test.ts` checks the row against the files).
+5. **Register it.** Add a row to `client/src/finder/deck/manifest.ts`: id, name, `main` (every Main
+   Deck passcode of the file and its shared files) and `own` (the passcodes of the file's own,
+   non-generic Main Deck cards: a saved list must hold one of them to match, so a deck of shared hand
+   traps is not claimed). `match.test.ts` checks both against the files.
    `registry.ts` finds the file by name and needs no change.
 6. **Run the ledger check.** A `__harness__/<id>.ledger.parity.test.ts` like
    `dracotail.ledger.parity.test.ts`: a few hundred seeded hands, going first and going second

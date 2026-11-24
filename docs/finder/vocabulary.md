@@ -71,7 +71,7 @@ to steps with one of those marks, `covers.monsterOnly` to interruptions by a mon
 `destroysSource: true` destroys the interrupting card when it is on their field. `stepNote` is the
 note an exported step carries while the protection is ready (its `where` and `marks` hold).
 
-Card fields beside the words: `fieldName` is the name a monster has on your field and `gyName`
+Card fields beside the words: `notFusionMaterial: true` keeps the card out of every Fusion pick ("Cannot be used as Fusion Material"); `generic: true` marks a card many decks play (a hand trap, a generic Spell), which does not identify the deck when a saved list is matched (a list must hold one of the file's own, non-generic Main Deck cards). `fieldName` is the name a monster has on your field and `gyName`
 the name a card has in your GY (what `named`, `summonedNamed` and `namesPresent` see there).
 `listOrder` (a number, lower first; cards without one come after, by id) is the order in which a
 pick that walks a zone (`fromZone`, `otherHandCard`) lists its cards: it decides what `first`
@@ -159,4 +159,4 @@ the cards of a shared file it uses there.
 | `sentToGy` | trigger | none, or `{ from?: zone }` | This card is sent to the GY. |
 | `oppMonsterToGy` | trigger | none | A monster the opponent controls is sent to the GY. |
 | `usedAsMaterial` | trigger | none, or `{ method?: fusion }` | This card is sent to the GY as material for a Fusion Summon. |
-| `monstersToGyTogether` | trigger | none, or a number ≥ 2 | Two (or that many) or more monsters are sent to the GY at the same time (a summon's materials). |
+| `monstersToGyTogether` | trigger | none, or a number ≥ 2 | Two (or that many) or more monsters are sent to the GY at the same time (a summon's materials). A GY effect listening for it needs its card in the GY before: a copy that went there in the same batch does not count. |

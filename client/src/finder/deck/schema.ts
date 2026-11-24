@@ -31,6 +31,10 @@ export interface CardDef { id: CardId; passcodes: number[]; short: string; disca
   hints?: { normalSummon?: boolean };
   /** `'any'`: one of your monsters that counts as any Attribute when it is used as material (`materialAttribute` condition, Fusion `sameAttr`). */
   materialAttribute?: 'any';
+  /** The card cannot be used as Fusion Material: no Fusion pick offers it. */
+  notFusionMaterial?: boolean;
+  /** A card many decks play (a hand trap, a generic Spell): it does not identify the deck when matching a saved list. */
+  generic?: boolean;
   /** Where the card comes when a pick lists several cards (lower first; cards without one come after, by id). */
   listOrder?: number; fieldName?: CardId | { if: Word[]; name: CardId }[]; gyName?: CardId; effects?: EffectDef[] }
 export type Loc = 'hand' | 'field' | 'setNotThisTurn' | 'faceDown' | 'faceUp' | 'gy' | 'ban' | 'extra';
@@ -97,7 +101,7 @@ const CARD: Fields = {
   discardValue: opt(A.number), heldValue: opt(A.number), immuneToRemoval: opt(A.boolean),
   hints: opt(A.object({ normalSummon: opt(A.boolean) })), listOrder: opt(A.number),
   fieldName: opt(A.oneOf(A.card, A.list(A.object({ if: A.condList, name: A.card })))),
-  gyName: opt(A.card), materialAttribute: opt(A.enum('any')),
+  gyName: opt(A.card), materialAttribute: opt(A.enum('any')), notFusionMaterial: opt(A.boolean), generic: opt(A.boolean),
 };
 
 const EFFECT: Fields = {

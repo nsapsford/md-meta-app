@@ -767,7 +767,7 @@ definePick('fusionMaterials', {
     if (a.pool === undefined) {
       if (a.count !== undefined || a.max !== undefined || a.withSelf || a.notSelf) ctx.fail('count, max, withSelf and notSelf need a pool');
       return (s) => {
-        const pool = fieldPool(s, props, rt.UNK).filter((v) => either || v.side === 'me');
+        const pool = fieldPool(s, props, rt.UNK).filter((v) => (either || v.side === 'me') && !props[v.id].notFusionMat);
         const out: Choice[] = [];
         let last: unknown = null, fus: number[] = [];
         for (const o of fusionOptions(s, pool, rt.extraRules)) {
@@ -790,15 +790,16 @@ definePick('fusionMaterials', {
       return { side: 'me', zone, id, nm: zone === 'gy' ? p.gyName : id, race: p.race ?? '?', attr: p.attr ?? '?', sub: p.sub, ext: p.ext };
     };
     return (s, r) => {
-      const field = fieldPool(s, props, rt.UNK);
+      const field = fieldPool(s, props, rt.UNK).filter((v) => !props[v.id].notFusionMat);
       const pool: MatView[] = [];
       let selfAt: number | undefined;
       let selfZone: 'hand' | 'deck' | 'gy' | null = null;
       if (want.has('self')) {
         if (r.at.zone === 'mon') {
           const i = s.mons.findIndex((m) => m.uid === r.at.uid);
-          if (i >= 0) { selfAt = pool.length; pool.push(field[i]); }
-        } else if (r.at.zone === 'hand' || r.at.zone === 'deck' || r.at.zone === 'gy') {
+          const v = field.find((x) => x.side === 'me' && x.idx === i);
+          if (v) { selfAt = pool.length; pool.push(v); }
+        } else if ((r.at.zone === 'hand' || r.at.zone === 'deck' || r.at.zone === 'gy') && !props[r.self].notFusionMat) {
           selfZone = r.at.zone; selfAt = pool.length; pool.push(view(r.self, r.at.zone));
         }
         if (selfAt === undefined && a.withSelf) return [];
@@ -812,7 +813,7 @@ definePick('fusionMaterials', {
         const zz = s[z];
         for (const i of rt.order) {
           let k = zz[i];
-          if (!k || props[i].kind !== 'M') continue;
+          if (!k || props[i].kind !== 'M' || props[i].notFusionMat) continue;
           if ((selfZone === z || (notSelf && r.at.zone === z)) && i === r.self) k--;
           for (let c = Math.min(k, POOL_COPIES); c > 0; c--) pool.push(view(i, z));
         }
@@ -903,7 +904,7 @@ defineAct('summon', {
       const ids: number[] = [];
       let fromGy = false;
       if (mslot >= 0) rt.each(r, mslot, (c) => { ids.push(c.id); if (c.zone === 'gy') fromGy = true; rt.moveCard(n, c, matsTo, true); });
-      if (matsTo === 'gy' && ids.length >= 2) rt.batchToGy(n, ids.length);
+      if (matsTo === 'gy' && ids.length >= 2) rt.batchToGy(n, ids);
       const extra = ids.length && (fromGy || matsTo !== 'gy') ? { ...(fromGy ? { materialsFrom: 'gy' } : {}), ...(matsTo !== 'gy' ? { materialsTo: matsTo === 'ban' ? 'banished' : 'deck' } : {}) } : null;
       rt.each(r, slot, (c) => {
         const lz = rt.takeOut(n, fromZone(c, a.from, n));
@@ -1058,8 +1059,8 @@ defineAct('fusionSummon', {
         if (to === 'deck' && own.some((c) => !props[c.id].ext)) rt.ops.shuffle(n);
         for (const c of mats) if (c.zone === 'opp' && c.uid !== null) rt.ops.oppRemove(n, c.uid, 'material');
       });
-      const toGy = (to === 'gy' ? own.length : 0) + mats.filter((c) => c.zone === 'opp').length;
-      if (toGy >= 2) rt.batchToGy(n, toGy);
+      const toGy = [...(to === 'gy' ? own.map((c) => c.id) : []), ...mats.filter((c) => c.zone === 'opp').map(() => rt.UNK)];
+      if (toGy.length >= 2) rt.batchToGy(n, toGy);
       L.sum(n, card, 'fusion', 'extra', ids, extra!);
       rt.state.W(n, 'extra')[card]--;
       rt.ops.place(n, card, { special: true, from: 'extra', uses });

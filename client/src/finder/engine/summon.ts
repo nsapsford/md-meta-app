@@ -109,7 +109,7 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
       const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }));
       const mats: number[] = [];
       for (let j = 0; j < down.length; j++) mats.push(ops.monToGy(n, down[j], false).id);
-      if (mats.length >= 2) deck.onBatchToGy(n, mats.length);
+      if (mats.length >= 2) deck.onBatchToGy(n, mats);
       L.sum(n, r.card, method, 'extra', mats);
       so.W(n, 'extra')[r.card]--;
       const m = ops.place(n, r.card, { special: true, emz, from: 'extra' });

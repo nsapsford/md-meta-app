@@ -124,6 +124,25 @@ describe('fusionMaterials with a pool, and fusionSummon from several places', ()
     // Big and Seeker are both DARK: only Big + Tuner (LIGHT).
     expect(a.mainKeys(a.state({ PROBE: 1 }))).toEqual(['p:d.BIG+d.TUNER:SYNC']);
   });
+  it('a card with notFusionMaterial is never offered as Fusion Material, from any place', () => {
+    const rule: Partial<DeckFile> = { extraDeck: [{ card: 'SYNC', method: 'fusion', slots: [{ named: 'PROBE' }, { race: ['Spellcaster'] }] }] };
+    const fuser = (pick: Word, flag: boolean) => probe([eff({
+      key: 'f', from: 'gy',
+      choose: [{ as: 'mats', pick: { fusionMaterials: pick } }, { as: 'fus', pick: { fusionMonster: { of: 'mats' } } }],
+      do: [{ fusionSummon: { what: 'fus', mats: 'mats' } }], text: '{mats}',
+    })], rule, flag ? { notFusionMaterial: true } : {});
+    const keysOf = (flag: boolean, pick: Word) => {
+      const d = fuser(pick, flag);
+      const s = d.state({ PROBE: 1, SEEKER: 1 });
+      onField(d, s, 'PROBE'); onField(d, s, 'TUNER'); s.gy[d.deck.ix.PROBE] = 1;
+      return d.mainKeys(s);
+    };
+    expect(keysOf(false, { pool: ['field', 'hand', 'deck', 'gy'] }).length).toBeGreaterThan(0);
+    expect(keysOf(true, { pool: ['field', 'hand', 'deck', 'gy'] })).toEqual([]);
+    // The field-only pick (Super Polymerization's) too.
+    expect(keysOf(false, { either: true })).toEqual(['f:PROBE+TUNER:SYNC']);
+    expect(keysOf(true, { either: true })).toEqual([]);
+  });
   it('notSelf leaves this card out of the materials (a cost sends it)', () => {
     const rule: Partial<DeckFile> = { extraDeck: [{ card: 'SYNC', method: 'fusion', slots: [{ named: 'BIG' }, { race: ['Fiend', 'Spellcaster'] }] }] };
     const mk = (notSelf: boolean) => fuse({ pool: ['hand'], ...(notSelf ? { notSelf } : {}) }, rule);
@@ -150,7 +169,10 @@ describe('fusionMaterials with a pool, and fusionSummon from several places', ()
     const s = d.state({});
     onField(d, s, 'BIG'); onField(d, s, 'PROBE');
     const n = d.run(s, 'p:BIG+PROBE:SYNC');
-    expect(n.pend.map((p) => d.deck.effects[p.e].key)).toEqual(['mat', 'two']);
+    // The GY trigger waits for a card that was already in the GY: this Probe went there in the batch itself.
+    expect(n.pend.map((p) => d.deck.effects[p.e].key)).toEqual(['mat']);
+    s.gy[d.deck.ix.PROBE] = 1;
+    expect(d.run(s, 'p:BIG+PROBE:SYNC').pend.map((p) => d.deck.effects[p.e].key)).toEqual(['mat', 'two']);
     // Discarded, not material: neither.
     const k = probe([eff({ key: 'dis', choose: [{ as: 'c', pick: { otherHandCard: true } }], cost: [{ discard: { what: 'c' } }], text: 'd' }), eff({ key: 'mat', from: 'gy', trigger: { usedAsMaterial: { method: 'fusion' } }, text: 'm' }), eff({ key: 'zz', from: 'hand', text: 'x' })], {}, {});
     const s2 = k.state({ PROBE: 2, BIG: 1 });
