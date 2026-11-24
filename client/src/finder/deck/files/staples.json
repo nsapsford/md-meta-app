@@ -1,0 +1,35 @@
+{
+  "vocab": 1,
+  "cards": [
+    { "id": "ASH", "passcodes": [14558128, 14558127], "short": "Ash", "heldValue": 1.0, "discardValue": 5 },
+    { "id": "DROLL", "passcodes": [94145021, 94145022], "short": "Droll", "heldValue": 0.9, "discardValue": 5, "hints": { "normalSummon": false } },
+    { "id": "FUWA", "passcodes": [42141493], "short": "Fuwalos", "heldValue": 0.8, "discardValue": 5, "hints": { "normalSummon": false } },
+    { "id": "MAXX", "passcodes": [23434538], "short": "Maxx \"C\"", "heldValue": 0.8, "discardValue": 5, "hints": { "normalSummon": false } },
+    {
+      "id": "SPOLY", "passcodes": [48130397], "short": "Super Poly", "discardValue": 1.5,
+      "effects": [
+        {
+          "key": "spoly", "phase": "main", "from": "hand", "activates": "spell", "negatable": false,
+          "choose": [
+            { "as": "card", "pick": { "cheapest": { "of": { "otherHandCard": true }, "n": 2 } } },
+            { "as": "mats", "pick": { "fusionMaterials": { "either": true, "oppPrefix": "their " } } },
+            { "as": "fus", "pick": { "fusionMonster": { "of": "mats" } } }
+          ],
+          "cost": [{ "discard": { "what": "card" } }], "do": [{ "fusionSummon": { "what": "fus", "mats": "mats" } }],
+          "tags": { "noResp": true, "spell": true }, "stepTags": { "removal": { "not": { "chosen": { "as": "mats", "zone": "field" } } } },
+          "text": "Super Polymerization (discard {card}): {mats} into {fus}."
+        }
+      ]
+    }
+  ],
+  "boardValue": [
+    {
+      "id": "super-poly-set", "when": "oppTurn", "on": { "control": { "card": "SPOLY", "kind": "st", "faceUp": false } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand" } }], "value": 0.6, "label": "Super Poly (Set): fuse their monster on their turn" },
+        { "value": 0.1, "label": "Super Poly (Set): fuse their monster on their turn" }
+      ]
+    }
+  ]
+}
+

@@ -11,7 +11,7 @@ import { config } from '../config.js';
 import { loadDeckContext } from '../services/lineGen/deckContext.js';
 import { buildPastePrompt, buildRepairPrompt, extractJson, parseGeneratedLine } from '../services/lineGen/prompts.js';
 import { checkLineLedger } from '../services/lineGen/ledgerChecker.js';
-import { toTrainerLine, type StoredChecks } from '../services/lineGen/convert.js';
+import { importSource, toTrainerLine, type StoredChecks } from '../services/lineGen/convert.js';
 import { getLineModel } from '../services/lineGen/providers.js';
 import { generateLines } from '../services/lineGen/pipeline.js';
 import type { CheckIssue, GeneratedLine } from '../services/lineGen/types.js';
@@ -270,6 +270,7 @@ router.get('/generate-prompt/:deckId', async (req: Request, res: Response) => {
 /** Save generated lines as drafts with their check reports. Same-named drafts are replaced. */
 async function saveGenerated(
   deckId: number, items: Array<{ line: GeneratedLine; issues: CheckIssue[]; verifiers: string[]; repairs: number }>, generator: string,
+  source: 'ai-draft' | 'solver' = 'ai-draft',
 ) {
   const pool = getPool();
   const { ctx } = await loadDeckContext(pool, deckId);
@@ -283,13 +284,13 @@ async function saveGenerated(
       issues: item.issues, verifiers: item.verifiers, generator, checkedAt: NOW(), repairs: item.repairs,
     };
     const replace = existing.find((l) => l.name === item.line.name.slice(0, 120) && l.status === 'draft');
-    const trainer = toTrainerLine(item.line, ctx, replace ? replace.rank : (rank += 10));
+    const trainer = toTrainerLine(item.line, ctx, replace ? replace.rank : (rank += 10), undefined, source);
     if (replace) {
       const row = await queryOne(pool,
-        `UPDATE combo_lines SET starters_json=$1, steps_json=$2, end_board=$3, plan_json=$4, check_json=$5, source='ai-draft', updated_at=$6
-         WHERE id=$7 RETURNING *`,
+        `UPDATE combo_lines SET starters_json=$1, steps_json=$2, end_board=$3, plan_json=$4, check_json=$5, source=$6, updated_at=$7
+         WHERE id=$8 RETURNING *`,
         [JSON.stringify(trainer.starters), JSON.stringify(trainer.steps), trainer.end_board,
-          JSON.stringify(item.line), JSON.stringify(checks), NOW(), replace.id]);
+          JSON.stringify(item.line), JSON.stringify(checks), trainer.source, NOW(), replace.id]);
       await run(pool, 'DELETE FROM drill_reviews WHERE item_key = $1 OR item_key LIKE $2',
         [`line:${replace.id}`, `branch:${replace.id}:%`]);
       saved.push(toLine(row));
@@ -320,7 +321,8 @@ router.post('/import-generated/:deckId', async (req: Request, res: Response) => 
       if (!r.ok) { rejected.push({ name: (raw as any)?.name ?? '(unnamed)', error: r.error }); continue; }
       good.push({ line: r.line, issues: checkLineLedger(r.line, ctx), verifiers: ['ledger'], repairs: 0 });
     }
-    const created = await saveGenerated(deckId, good, typeof req.body?.generator === 'string' ? req.body.generator.slice(0, 60) : 'pasted');
+    const created = await saveGenerated(deckId, good, typeof req.body?.generator === 'string' ? req.body.generator.slice(0, 60) : 'pasted',
+      importSource(req.body));
     const failing = good.filter((g) => g.issues.some((i) => i.severity === 'error'));
     const repairPrompt = failing.length
       ? failing.map((f) => buildRepairPrompt(ctx, f.line, f.issues.filter((i) => i.severity === 'error'))).join('\n\n---\n\n')

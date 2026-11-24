@@ -1,0 +1,29 @@
+{
+  "vocab": 1,
+  "traps": [
+    { "id": "ash", "name": "Ash Blossom & Joyous Spring", "label": "Ash Blossom", "short": "Ash", "mechanism": "negDeckTouch", "monster": true, "passcodes": [14558127, 14558128] },
+    { "id": "imperm", "name": "Infinite Impermanence", "label": "Infinite Impermanence", "short": "Imperm", "mechanism": "negFieldMon", "monster": false, "passcodes": [10045474] },
+    { "id": "veiler", "name": "Effect Veiler", "label": "Effect Veiler", "short": "Veiler", "mechanism": "negFieldMon", "monster": true, "passcodes": [97268402] },
+    { "id": "droll", "name": "Droll & Lock Bird", "label": "Droll & Lock Bird", "short": "Droll", "mechanism": "lockDeckAdds", "monster": true, "passcodes": [94145021, 94145022] },
+    { "id": "nibiru", "name": "Nibiru, the Primal Being", "label": "Nibiru", "short": "Nibiru", "mechanism": "wipeAtSummons", "monster": true, "param": 5, "passcodes": [27204311] },
+    { "id": "belle", "name": "Ghost Belle & Haunted Mansion", "label": "Ghost Belle", "short": "Belle", "mechanism": "negGy", "monster": true, "passcodes": [73642296, 73642297] },
+    { "id": "fuwalos", "name": "Mulcharmy Fuwalos", "label": "Mulcharmy Fuwalos", "short": "Fuwalos", "mechanism": "drawDeckExtraSummon", "monster": true, "passcodes": [42141493] },
+    { "id": "purulia", "name": "Mulcharmy Purulia", "label": "Mulcharmy Purulia", "short": "Purulia", "mechanism": "drawHandSummon", "monster": true, "passcodes": [84192580] },
+    { "id": "maxxc", "name": "Maxx \"C\"", "label": "Maxx \"C\"", "short": "Maxx \"C\"", "mechanism": "drawSpecialSummon", "monster": true, "passcodes": [23434538] }
+  ],
+  "boardOptions": [
+    { "kind": "", "label": "Does nothing on your turn" },
+    { "kind": "negAny", "label": "Negates a card or effect" },
+    { "kind": "negMon", "label": "Negates a monster effect" },
+    { "kind": "negST", "label": "Negates a Spell/Trap" },
+    { "kind": "negFieldMon", "label": "Negates a monster effect on the field" },
+    { "kind": "negSummon", "label": "Negates a summon" },
+    { "kind": "negSummon+negST", "label": "Negates a summon or a Spell/Trap" },
+    { "kind": "negSummon+negMon", "label": "Negates a summon or a monster effect" },
+    { "kind": "negSummon+negAny", "label": "Negates a summon or any effect" },
+    { "kind": "pop", "label": "Removes a monster you summon" },
+    { "kind": "floodExtra", "label": "Floodgate: no Extra Deck summons" },
+    { "kind": "floodSpell", "label": "Floodgate: no Spells" },
+    { "kind": "floodMon", "label": "Floodgate: monster effects negated" }
+  ]
+}

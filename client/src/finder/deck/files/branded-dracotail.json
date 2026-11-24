@@ -1,0 +1,3759 @@
+{
+  "vocab": 1,
+  "id": "branded-dracotail",
+  "name": "Branded Dracotail",
+  "uses": [
+    "staples"
+  ],
+  "flags": [
+    "lockFusion",
+    "lockL8",
+    "lockAll",
+    "fusionToGy",
+    "eddAway",
+    "arthRevived"
+  ],
+  "cards": [
+    {
+      "id": "MULULU",
+      "passcodes": [7375867],
+      "short": "Mululu",
+      "discardValue": 4,
+      "effects": [
+        {
+          "key": "mululu-fuse",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "field"
+                  ],
+                  "of": {
+                    "inGroup": "dracotailFusion"
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            },
+            {
+              "setFlag": "lockFusion"
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Mululu: Fusion Summon {fus} with {mats} (only Fusion Monsters from the Extra Deck for the rest of the turn)."
+        },
+        {
+          "key": "mululu-set",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "usedAsMaterial": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "stZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailST"
+                }
+              }
+            },
+            {
+              "as": "o",
+              "pick": {
+                "oppCard": {
+                  "kind": "mon",
+                  "faceUp": true
+                }
+              },
+              "optional": true
+            }
+          ],
+          "do": [
+            {
+              "setFromDeck": {
+                "what": "c"
+              }
+            },
+            {
+              "oppNegate": {
+                "what": "o"
+              }
+            }
+          ],
+          "tags": {
+            "deckTouch": true,
+            "gy": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Mululu (material): Set {c} from the Deck{o?, negate $|}."
+        }
+      ]
+    },
+    {
+      "id": "ALBAZ",
+      "passcodes": [68468459],
+      "short": "Albaz",
+      "effects": [
+        {
+          "key": "albaz-fuse",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "summoned": true
+          },
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "d",
+              "pick": {
+                "cheapest": {
+                  "of": {
+                    "otherHandCard": true
+                  }
+                }
+              }
+            },
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "self",
+                    "oppField"
+                  ],
+                  "oppPrefix": "their ",
+                  "withSelf": true
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "discard": {
+                "what": "d"
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Albaz (discard {d}): Fusion Summon {fus} with {mats}."
+        }
+      ]
+    },
+    {
+      "id": "ECCL",
+      "passcodes": [55273560],
+      "short": "Ecclesia",
+      "effects": [
+        {
+          "key": "eccl-proc",
+          "phase": "main",
+          "from": "hand",
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "oppHasMoreMonsters": true
+            },
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self"
+              }
+            }
+          ],
+          "tags": {
+            "inherent": true
+          },
+          "negatable": false,
+          "text": "Special Summon Ecclesia from hand (they control more monsters)."
+        },
+        {
+          "key": "eccl-tribute",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "union": [
+                  {
+                    "fromZone": {
+                      "zone": "hand",
+                      "group": "albazName"
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "deck",
+                      "group": "albazName"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "self",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true,
+            "deckTouch": {
+              "chosen": {
+                "as": "c",
+                "zone": "deck"
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Ecclesia: Tribute it, Special Summon {c} from {zone}."
+        }
+      ]
+    },
+    {
+      "id": "CART",
+      "passcodes": [95515789],
+      "short": "Cartesia",
+      "effects": [
+        {
+          "key": "cart-ss",
+          "phase": "main",
+          "from": "hand",
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "namesPresent": {
+                "names": [
+                  "ALBAZ"
+                ]
+              }
+            },
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self"
+              }
+            }
+          ],
+          "tags": {
+            "handMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Cartesia: Special Summon it from hand (Albaz is on the field or in the GY)."
+        },
+        {
+          "key": "cart-fuse",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "field"
+                  ],
+                  "of": {
+                    "level": {
+                      "atLeast": 8
+                    }
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Cartesia: Fusion Summon {fus} with {mats}."
+        }
+      ]
+    },
+    {
+      "id": "PURU",
+      "passcodes": [84192580],
+      "short": "Purulia",
+      "generic": true,
+      "heldValue": 0.2,
+      "discardValue": 2,
+      "hints": {
+        "normalSummon": false
+      }
+    },
+    {
+      "id": "GHOST",
+      "passcodes": [59438930, 59438931],
+      "short": "Ghost Ogre",
+      "generic": true,
+      "heldValue": 0.6,
+      "discardValue": 5,
+      "hints": {
+        "normalSummon": false
+      }
+    },
+    {
+      "id": "TTT",
+      "passcodes": [25311006],
+      "short": "Triple Tactics",
+      "generic": true,
+      "discardValue": 1
+    },
+    {
+      "id": "LUKIAS",
+      "passcodes": [75003700],
+      "short": "Lukias",
+      "effects": [
+        {
+          "key": "lukias-search",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "summoned": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "addLockOff": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailNotLukias"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "c",
+                "to": "hand"
+              }
+            }
+          ],
+          "tags": {
+            "deckTouch": true,
+            "deckAdd": true,
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Lukias: add {c}."
+        },
+        {
+          "key": "lukias-set",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "usedAsMaterial": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "stZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailST"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "setFromDeck": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "deckTouch": true,
+            "gy": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Lukias (material): Set {c} from the Deck."
+        }
+      ]
+    },
+    {
+      "id": "WHITE",
+      "passcodes": [73819701],
+      "short": "White Dragon",
+      "fieldName": "ALBAZ",
+      "gyName": "ALBAZ",
+      "effects": [
+        {
+          "key": "white-ss",
+          "phase": "main",
+          "from": "hand",
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "extra",
+                  "group": "mentionsAlbazExtra"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self"
+              }
+            },
+            {
+              "setFlag": "lockL8"
+            }
+          ],
+          "tags": {
+            "handMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "White Dragon: send {c} from the Extra Deck, Special Summon it (only Level 8 Fusion or Synchro Monsters from the Extra Deck for the rest of the turn)."
+        },
+        {
+          "key": "white-ecclesia",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "summoned": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "union": [
+                  {
+                    "fromZone": {
+                      "zone": "hand",
+                      "group": "ecclesiaMain"
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "deck",
+                      "group": "ecclesiaMain"
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "gy",
+                      "group": "ecclesiaMain"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true,
+            "deckTouch": {
+              "chosen": {
+                "as": "c",
+                "zone": "deck"
+              }
+            }
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "White Dragon: Special Summon {c} from {zone}."
+        }
+      ]
+    },
+    {
+      "id": "FAIMENA",
+      "passcodes": [1498449],
+      "short": "Faimena",
+      "discardValue": 4,
+      "effects": [
+        {
+          "key": "faimena-fuse",
+          "phase": "main",
+          "from": "hand",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "field"
+                  ],
+                  "of": {
+                    "race": [
+                      "Dragon",
+                      "Spellcaster"
+                    ]
+                  },
+                  "oppPrefix": "their ",
+                  "notSelf": true
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "discard": {
+                "what": "self"
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            }
+          ],
+          "tags": {
+            "handMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Faimena (discard it): Fusion Summon {fus} with {mats}."
+        },
+        {
+          "key": "faimena-set",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "usedAsMaterial": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "stZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailST"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "setFromDeck": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "deckTouch": true,
+            "gy": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Faimena (material): Set {c} from the Deck."
+        }
+      ]
+    },
+    {
+      "id": "URGULA",
+      "passcodes": [70871153],
+      "short": "Urgula",
+      "discardValue": 2.5,
+      "effects": [
+        {
+          "key": "urgula-set",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "usedAsMaterial": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "stZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailST"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "setFromDeck": {
+                "what": "c"
+              }
+            },
+            {
+              "queue": "urgula-destroy"
+            }
+          ],
+          "tags": {
+            "deckTouch": true,
+            "gy": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Urgula (material): Set {c} from the Deck."
+        },
+        {
+          "key": "urgula-destroy",
+          "phase": "main",
+          "from": "gy",
+          "followUp": true,
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "union": [
+                  {
+                    "oppCard": {
+                      "kind": "st"
+                    }
+                  },
+                  {
+                    "oppCard": {
+                      "kind": "st",
+                      "targetable": false
+                    }
+                  },
+                  {
+                    "fromField": {
+                      "kind": "st"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "destroy": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "inherent": true
+          },
+          "negatable": false,
+          "stepTags": {
+            "removal": {
+              "chosen": {
+                "as": "t",
+                "filter": {
+                  "not": {
+                    "inZone": [
+                      "hand",
+                      "deck",
+                      "extra",
+                      "gy",
+                      "ban",
+                      "field"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "text": "Urgula: then destroy {t}."
+        },
+        {
+          "key": "urgula-gy",
+          "phase": "main",
+          "from": "gy",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "gy",
+                  "filter": {
+                    "all": [
+                      {
+                        "inGroup": "dracotailMon"
+                      },
+                      {
+                        "race": [
+                          "Spellcaster"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "self",
+                "to": "deck"
+              }
+            },
+            {
+              "move": {
+                "what": "c",
+                "to": "hand"
+              }
+            }
+          ],
+          "tags": {
+            "gy": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Urgula: put it on the bottom of the Deck, add {c} from the GY."
+        }
+      ]
+    },
+    {
+      "id": "ALBION",
+      "passcodes": [25451383],
+      "short": "Albion",
+      "fieldName": "ALBAZ",
+      "gyName": "ALBAZ",
+      "discardValue": 1,
+      "hints": {
+        "normalSummon": false
+      },
+      "effects": [
+        {
+          "key": "albion-ss",
+          "phase": "main",
+          "from": [
+            "hand",
+            "gy"
+          ],
+          "limit": {
+            "shared": "albion"
+          },
+          "cond": [
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "otherHandCard": {
+                  "group": "albazOrBranded"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self"
+              }
+            }
+          ],
+          "tags": {
+            "handMon": {
+              "inZone": [
+                "hand"
+              ]
+            },
+            "gy": {
+              "inZone": [
+                "gy"
+              ]
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Albion: send {c} from hand, Special Summon Albion from {zone}."
+        },
+        {
+          "key": "albion-cycle",
+          "phase": "main",
+          "from": "hand",
+          "limit": {
+            "shared": "albion"
+          },
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "albazOrBranded"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "self",
+                "to": "deck"
+              }
+            },
+            {
+              "draw": 1
+            }
+          ],
+          "tags": {
+            "handMon": true,
+            "deckTouch": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Albion: send {c} from the Deck, put Albion on the bottom of the Deck, draw 1."
+        },
+        {
+          "key": "albion-recycle",
+          "phase": "main",
+          "from": "gy",
+          "limit": {
+            "shared": "albion"
+          },
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "albazOrBranded"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "self",
+                "to": "deck"
+              }
+            }
+          ],
+          "tags": {
+            "gy": true,
+            "deckTouch": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Albion: send {c} from the Deck, put Albion from the GY on the bottom of the Deck."
+        }
+      ]
+    },
+    {
+      "id": "BFUS",
+      "passcodes": [44362883],
+      "short": "Branded Fusion",
+      "effects": [
+        {
+          "key": "bfus",
+          "phase": "main",
+          "from": "hand",
+          "limit": "oncePerTurn",
+          "activates": "spell",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "deck",
+                    "field"
+                  ],
+                  "of": {
+                    "inGroup": "albazFusions"
+                  },
+                  "oppPrefix": "their ",
+                  "count": 2
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            },
+            {
+              "setFlag": "lockFusion"
+            }
+          ],
+          "tags": {
+            "spell": true,
+            "deckTouch": {
+              "not": {
+                "chosen": {
+                  "as": "mats",
+                  "filter": {
+                    "not": {
+                      "inZone": [
+                        "deck"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Branded Fusion: Fusion Summon {fus} with {mats} (only Fusion Monsters from the Extra Deck this turn)."
+        }
+      ]
+    },
+    {
+      "id": "KETU",
+      "passcodes": [6153210],
+      "short": "Ketu",
+      "effects": [
+        {
+          "key": "ketu",
+          "phase": "main",
+          "from": [
+            "hand",
+            "faceDown"
+          ],
+          "limit": "oncePerTurn",
+          "activates": "spell",
+          "cond": [
+            {
+              "addLockOff": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "dracotailMon"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "c",
+                "to": "hand"
+              }
+            },
+            {
+              "queue": "ketu-fuse"
+            }
+          ],
+          "tags": {
+            "spell": true,
+            "deckTouch": true,
+            "deckAdd": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Ketu Dracotail: add {c}."
+        },
+        {
+          "key": "ketu-fuse",
+          "phase": "main",
+          "from": "gy",
+          "followUp": true,
+          "cond": [
+            {
+              "any": [
+                {
+                  "oppHasTarget": {
+                    "kind": "mon"
+                  }
+                },
+                {
+                  "oppHasTarget": {
+                    "kind": "mon",
+                    "targetable": false
+                  }
+                }
+              ]
+            }
+          ],
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "field"
+                  ],
+                  "of": {
+                    "race": [
+                      "Dragon",
+                      "Spellcaster"
+                    ]
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            }
+          ],
+          "tags": {
+            "inherent": true
+          },
+          "negatable": false,
+          "text": "Ketu Dracotail: then Fusion Summon {fus} with {mats}."
+        }
+      ]
+    },
+    {
+      "id": "RAHU",
+      "passcodes": [32548318],
+      "short": "Rahu",
+      "effects": [
+        {
+          "key": "rahu",
+          "phase": "main",
+          "from": [
+            "hand",
+            "faceDown"
+          ],
+          "limit": "oncePerTurn",
+          "activates": "spell",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "deck",
+                    "field"
+                  ],
+                  "of": {
+                    "inGroup": "dracotailFusion"
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            },
+            {
+              "setFlag": "lockFusion"
+            }
+          ],
+          "tags": {
+            "spell": true,
+            "deckTouch": {
+              "not": {
+                "chosen": {
+                  "as": "mats",
+                  "filter": {
+                    "not": {
+                      "inZone": [
+                        "deck"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Rahu Dracotail: Fusion Summon {fus} with {mats} (only Fusion Monsters from the Extra Deck for the rest of the turn)."
+        }
+      ]
+    },
+    {
+      "id": "HIGHSP",
+      "passcodes": [29948294],
+      "short": "High Spirits",
+      "effects": [
+        {
+          "key": "highsp",
+          "phase": "main",
+          "from": [
+            "hand",
+            "faceDown"
+          ],
+          "limit": {
+            "shared": "highsp"
+          },
+          "activates": "spell",
+          "cond": [
+            {
+              "addLockOff": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "r",
+              "pick": {
+                "otherHandCard": {
+                  "filter": {
+                    "cardKind": [
+                      "monster"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "as": "f",
+              "pick": {
+                "fromZone": {
+                  "zone": "extra",
+                  "filter": {
+                    "all": [
+                      {
+                        "frame": [
+                          "Fusion"
+                        ]
+                      },
+                      {
+                        "level": {
+                          "atLeast": 8,
+                          "atMost": 8
+                        }
+                      },
+                      {
+                        "sameRaceAs": "r"
+                      },
+                      {
+                        "any": [
+                          {
+                            "atk": {
+                              "atLeast": 2500,
+                              "atMost": 2500
+                            }
+                          },
+                          {
+                            "def": {
+                              "atLeast": 2500,
+                              "atMost": 2500
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "as": "a",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "group": "mentionsAlbazMain"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "f",
+                "to": "gy"
+              }
+            },
+            {
+              "discard": {
+                "what": "r"
+              }
+            },
+            {
+              "move": {
+                "what": "a",
+                "to": "hand"
+              }
+            }
+          ],
+          "tags": {
+            "spell": true,
+            "deckTouch": true,
+            "deckAdd": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Branded in High Spirits: reveal {r}, send {f} from the Extra Deck; discard {r}, add {a}."
+        }
+      ]
+    },
+    {
+      "id": "FV",
+      "passcodes": [30271097],
+      "short": "Fallen & Virtuous",
+      "effects": [
+        {
+          "key": "fv-destroy",
+          "phase": "main",
+          "from": [
+            "hand",
+            "faceDown"
+          ],
+          "limit": {
+            "shared": "fv"
+          },
+          "activates": "spell",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "extra",
+                  "group": "mentionsAlbazExtra"
+                }
+              }
+            },
+            {
+              "as": "t",
+              "pick": {
+                "union": [
+                  {
+                    "oppCard": {
+                      "faceUp": true
+                    }
+                  },
+                  {
+                    "fromField": {
+                      "faceUp": true
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            },
+            {
+              "destroy": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "spell": true
+          },
+          "stepTags": {
+            "removal": {
+              "chosen": {
+                "as": "t",
+                "filter": {
+                  "not": {
+                    "inZone": [
+                      "hand",
+                      "deck",
+                      "extra",
+                      "gy",
+                      "ban",
+                      "field"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "The Fallen & The Virtuous: send {c} from the Extra Deck, destroy {t}."
+        },
+        {
+          "key": "fv-revive",
+          "phase": "main",
+          "from": [
+            "hand",
+            "faceDown"
+          ],
+          "limit": {
+            "shared": "fv"
+          },
+          "activates": "spell",
+          "cond": [
+            {
+              "any": [
+                {
+                  "control": {
+                    "kind": "mon",
+                    "filter": {
+                      "inGroup": "ecclesia"
+                    }
+                  }
+                },
+                {
+                  "has": {
+                    "zone": "gy",
+                    "group": "ecclesia"
+                  }
+                }
+              ]
+            },
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "gy",
+                  "filter": {
+                    "all": [
+                      {
+                        "cardKind": [
+                          "monster"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "extraDeckMonster": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "spell": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "The Fallen & The Virtuous: Special Summon {c} from the GY."
+        }
+      ]
+    },
+    {
+      "id": "FLAME",
+      "passcodes": [5431722],
+      "short": "Dracotail Flame",
+      "discardValue": 1.5
+    },
+    {
+      "id": "TITAN",
+      "passcodes": [41373230],
+      "short": "Titaniklad",
+      "effects": [
+        {
+          "key": "titan-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        }
+      ]
+    },
+    {
+      "id": "ALBRAND",
+      "passcodes": [87746184],
+      "short": "Branded Dragon",
+      "effects": [
+        {
+          "key": "albrand-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "albrand-fuse",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "field",
+                    "gy"
+                  ],
+                  "of": {
+                    "all": [
+                      {
+                        "level": {
+                          "atMost": 8
+                        }
+                      },
+                      {
+                        "not": {
+                          "named": "ALBRAND"
+                        }
+                      }
+                    ]
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats",
+                "to": "ban"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Albion the Branded Dragon: banish {mats}, Fusion Summon {fus}."
+        }
+      ]
+    },
+    {
+      "id": "MIRROR",
+      "passcodes": [44146295],
+      "short": "Mirrorjade",
+      "effects": [
+        {
+          "key": "mirror-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "mirror-banish",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "fromZone": {
+                  "zone": "extra",
+                  "group": "albazFusions"
+                }
+              }
+            },
+            {
+              "as": "t",
+              "pick": {
+                "oppCard": {
+                  "kind": "mon"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "oppRemove": {
+                "what": "t",
+                "how": "banish"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Mirrorjade: send {c} from the Extra Deck, banish {t}."
+        }
+      ]
+    },
+    {
+      "id": "LENATUS",
+      "passcodes": [3410461],
+      "short": "Lenatus",
+      "notFusionMaterial": true,
+      "effects": [
+        {
+          "key": "lenatus-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "lenatus-contact",
+          "phase": "main",
+          "from": "extra",
+          "choose": [
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "field"
+                  ],
+                  "of": {
+                    "named": "LENATUS"
+                  },
+                  "oppPrefix": "their "
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self",
+                "mats": "mats"
+              }
+            }
+          ],
+          "tags": {
+            "inherent": true
+          },
+          "negatable": false,
+          "text": "Special Summon Alba-Lenatus by sending {mats} to the GY."
+        }
+      ]
+    },
+    {
+      "id": "GRAN",
+      "passcodes": [24915933],
+      "short": "Granguignol",
+      "effects": [
+        {
+          "key": "gran-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "gran-send",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "union": [
+                  {
+                    "fromZone": {
+                      "zone": "deck",
+                      "filter": {
+                        "all": [
+                          {
+                            "cardKind": [
+                              "monster"
+                            ]
+                          },
+                          {
+                            "level": {
+                              "atLeast": 6
+                            }
+                          },
+                          {
+                            "attribute": [
+                              "LIGHT",
+                              "DARK"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "extra",
+                      "filter": {
+                        "all": [
+                          {
+                            "level": {
+                              "atLeast": 6
+                            }
+                          },
+                          {
+                            "attribute": [
+                              "LIGHT",
+                              "DARK"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "c",
+                "to": "gy"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true,
+            "deckTouch": {
+              "chosen": {
+                "as": "c",
+                "zone": "deck"
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Granguignol: send {c} from {zone} to the GY."
+        }
+      ]
+    },
+    {
+      "id": "RIND",
+      "passcodes": [51409648],
+      "short": "Rindbrumm",
+      "effects": [
+        {
+          "key": "rind-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        }
+      ]
+    },
+    {
+      "id": "KHAOS",
+      "passcodes": [72578374],
+      "short": "Khaos Starsource",
+      "effects": [
+        {
+          "key": "khaos-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "khaos-1",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "khaos"
+          },
+          "cond": [
+            {
+              "usesLeft": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "oppCard": true
+              }
+            }
+          ],
+          "do": [
+            {
+              "oppRemove": {
+                "what": "t",
+                "how": "destroy"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Khaos Starsource: destroy {t}."
+        },
+        {
+          "key": "khaos-2",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "khaos"
+          },
+          "cond": [
+            {
+              "usesLeft": 2
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "subsets": {
+                  "of": {
+                    "oppCard": true
+                  },
+                  "min": 2,
+                  "max": 2
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "oppRemove": {
+                "what": "t",
+                "how": "destroy"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Khaos Starsource: destroy {t}."
+        }
+      ]
+    },
+    {
+      "id": "ARTH",
+      "passcodes": [33760966],
+      "short": "Arthalion",
+      "effects": [
+        {
+          "key": "arth-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": "",
+          "cond": [
+            {
+              "not": {
+                "flag": "arthRevived"
+              }
+            }
+          ]
+        },
+        {
+          "key": "arth-1",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "arth-bounce"
+          },
+          "cond": [
+            {
+              "usesLeft": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "union": [
+                  {
+                    "oppCard": {
+                      "kind": "mon"
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "gy",
+                      "filter": {
+                        "cardKind": [
+                          "monster"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "returnToHand": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": {
+              "chosen": {
+                "as": "t",
+                "filter": {
+                  "not": {
+                    "inZone": [
+                      "hand",
+                      "deck",
+                      "extra",
+                      "gy",
+                      "ban",
+                      "field"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Arthalion: return {t} to the hand."
+        },
+        {
+          "key": "arth-2",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "arth-bounce"
+          },
+          "cond": [
+            {
+              "usesLeft": 2
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "subsets": {
+                  "of": {
+                    "union": [
+                      {
+                        "oppCard": {
+                          "kind": "mon"
+                        }
+                      },
+                      {
+                        "fromZone": {
+                          "zone": "gy",
+                          "filter": {
+                            "cardKind": [
+                              "monster"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "min": 2,
+                  "max": 2
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "returnToHand": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Arthalion: return {t} to the hand."
+        },
+        {
+          "key": "arth-3",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "arth-bounce"
+          },
+          "cond": [
+            {
+              "usesLeft": 3
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "subsets": {
+                  "of": {
+                    "union": [
+                      {
+                        "oppCard": {
+                          "kind": "mon"
+                        }
+                      },
+                      {
+                        "fromZone": {
+                          "zone": "gy",
+                          "filter": {
+                            "cardKind": [
+                              "monster"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "min": 3,
+                  "max": 3
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "returnToHand": {
+                "what": "t"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Arthalion: return {t} to the hand."
+        },
+        {
+          "key": "arth-revive",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "monstersToGyTogether": true
+          },
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "self"
+              }
+            },
+            {
+              "setFlag": "arthRevived"
+            }
+          ],
+          "tags": {
+            "gy": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "lineNote": "Arthalion is banished when it leaves the field.",
+          "text": "Arthalion: Special Summon it from the GY (2 or more monsters went to the GY)."
+        }
+      ]
+    },
+    {
+      "id": "SECRET",
+      "passcodes": [89851827],
+      "short": "Secreterion",
+      "effects": [
+        {
+          "key": "secret-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "secret-revive",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "monsterZoneFree": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "u",
+              "pick": {
+                "fromZone": {
+                  "zone": "gy",
+                  "filter": {
+                    "all": [
+                      {
+                        "cardKind": [
+                          "monster"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "extraDeckMonster": true
+                        }
+                      },
+                      {
+                        "race": [
+                          "Dragon",
+                          "Spellcaster"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "as": "d",
+              "pick": {
+                "fromZone": {
+                  "zone": "gy",
+                  "filter": {
+                    "any": [
+                      {
+                        "all": [
+                          {
+                            "race": [
+                              "Spellcaster"
+                            ]
+                          },
+                          {
+                            "chosen": {
+                              "as": "u",
+                              "filter": {
+                                "race": [
+                                  "Dragon"
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "all": [
+                          {
+                            "race": [
+                              "Dragon"
+                            ]
+                          },
+                          {
+                            "chosen": {
+                              "as": "u",
+                              "filter": {
+                                "race": [
+                                  "Spellcaster"
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "summon": {
+                "what": "u"
+              }
+            },
+            {
+              "move": {
+                "what": "d",
+                "to": "deck"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Secreterion: Special Summon {u} from the GY, put {d} on the bottom of the Deck."
+        }
+      ]
+    },
+    {
+      "id": "DOGMA",
+      "passcodes": [76666602],
+      "short": "Dogma Dragon",
+      "effects": [
+        {
+          "key": "dogma-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        }
+      ]
+    },
+    {
+      "id": "MIXOU",
+      "passcodes": [80843006],
+      "short": "Mixousia",
+      "effects": [
+        {
+          "key": "mixou-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        }
+      ]
+    },
+    {
+      "id": "AEON",
+      "passcodes": [33166263],
+      "short": "Aeon",
+      "effects": [
+        {
+          "key": "aeon-to-gy",
+          "phase": "main",
+          "from": "gy",
+          "trigger": {
+            "sentToGy": true
+          },
+          "immediate": true,
+          "do": [
+            {
+              "setFlag": "fusionToGy"
+            }
+          ],
+          "tags": {},
+          "text": ""
+        },
+        {
+          "key": "aeon-1",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "aeon"
+          },
+          "cond": [
+            {
+              "usesLeft": true
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "oppCard": true
+              }
+            }
+          ],
+          "do": [
+            {
+              "oppRemove": {
+                "what": "t",
+                "how": "banish"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Hyperinvoked Aeon: banish {t}."
+        },
+        {
+          "key": "aeon-2",
+          "phase": "main",
+          "from": "field",
+          "trigger": {
+            "specialSummoned": {
+              "from": "extra"
+            }
+          },
+          "limit": {
+            "shared": "aeon"
+          },
+          "cond": [
+            {
+              "usesLeft": 2
+            }
+          ],
+          "choose": [
+            {
+              "as": "t",
+              "pick": {
+                "subsets": {
+                  "of": {
+                    "oppCard": true
+                  },
+                  "min": 2,
+                  "max": 2
+                }
+              }
+            }
+          ],
+          "do": [
+            {
+              "oppRemove": {
+                "what": "t",
+                "how": "banish"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true
+          },
+          "stepTags": {
+            "removal": true
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "text": "Hyperinvoked Aeon: banish {t}."
+        }
+      ]
+    },
+    {
+      "id": "EDD",
+      "passcodes": [78397661],
+      "short": "Dark Dragon",
+      "effects": [
+        {
+          "key": "edd-ss",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "choose": [
+            {
+              "as": "c",
+              "pick": {
+                "union": [
+                  {
+                    "fromZone": {
+                      "zone": "deck",
+                      "group": "eddTargets"
+                    }
+                  },
+                  {
+                    "fromZone": {
+                      "zone": "gy",
+                      "group": "eddTargets"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "do": [
+            {
+              "move": {
+                "what": "self",
+                "to": "ban"
+              }
+            },
+            {
+              "setFlag": "eddAway"
+            },
+            {
+              "summon": {
+                "what": "c"
+              }
+            }
+          ],
+          "tags": {
+            "fieldMon": true,
+            "deckTouch": {
+              "chosen": {
+                "as": "c",
+                "zone": "deck"
+              }
+            }
+          },
+          "ledger": {
+            "effect": 1
+          },
+          "lineNote": "Ecclesia and the Dark Dragon comes back in the End Phase.",
+          "text": "Ecclesia and the Dark Dragon: banish it until the End Phase, Special Summon {c} from {zone}."
+        }
+      ]
+    },
+    {
+      "id": "VERTE",
+      "passcodes": [70369116],
+      "short": "Verte",
+      "effects": [
+        {
+          "key": "verte-copy",
+          "phase": "main",
+          "from": "field",
+          "limit": "oncePerTurn",
+          "cond": [
+            {
+              "lpAbove": 2000
+            }
+          ],
+          "choose": [
+            {
+              "as": "s",
+              "pick": {
+                "fromZone": {
+                  "zone": "deck",
+                  "cards": [
+                    "BFUS"
+                  ]
+                }
+              }
+            },
+            {
+              "as": "mats",
+              "pick": {
+                "fusionMaterials": {
+                  "pool": [
+                    "hand",
+                    "deck",
+                    "field"
+                  ],
+                  "of": {
+                    "inGroup": "albazFusions"
+                  },
+                  "oppPrefix": "their ",
+                  "count": 2
+                }
+              }
+            },
+            {
+              "as": "fus",
+              "pick": {
+                "fusionMonster": {
+                  "of": "mats"
+                }
+              }
+            }
+          ],
+          "cost": [
+            {
+              "payLp": 2000
+            },
+            {
+              "move": {
+                "what": "s",
+                "to": "gy"
+              }
+            }
+          ],
+          "do": [
+            {
+              "fusionSummon": {
+                "what": "fus",
+                "mats": "mats"
+              }
+            },
+            {
+              "setFlag": "lockAll"
+            }
+          ],
+          "tags": {
+            "fieldMon": true,
+            "deckTouch": true
+          },
+          "ledger": {
+            "effect": 2
+          },
+          "text": "Verte Anaconda: pay 2000 LP, send {s}; as its effect, Fusion Summon {fus} with {mats} (no more Special Summons this turn)."
+        }
+      ]
+    }
+  ],
+  "groups": {
+    "dracotailMon": [
+      "MULULU",
+      "LUKIAS",
+      "FAIMENA",
+      "URGULA"
+    ],
+    "dracotailNotLukias": [
+      "MULULU",
+      "FAIMENA",
+      "URGULA"
+    ],
+    "dracotailST": [
+      "KETU",
+      "RAHU",
+      "FLAME"
+    ],
+    "dracotailFusion": [
+      "ARTH"
+    ],
+    "albazName": [
+      "ALBAZ",
+      "WHITE"
+    ],
+    "albazFusions": [
+      "TITAN",
+      "ALBRAND",
+      "MIRROR",
+      "LENATUS",
+      "RIND",
+      "DOGMA"
+    ],
+    "mentionsAlbazExtra": [
+      "TITAN",
+      "ALBRAND",
+      "MIRROR",
+      "LENATUS",
+      "RIND",
+      "DOGMA",
+      "EDD"
+    ],
+    "mentionsAlbazMain": [
+      "ALBAZ",
+      "WHITE",
+      "ECCL",
+      "CART",
+      "ALBION"
+    ],
+    "albazOrBranded": [
+      "ALBAZ",
+      "WHITE",
+      "BFUS",
+      "HIGHSP",
+      "FV"
+    ],
+    "brandedST": [
+      "BFUS",
+      "HIGHSP",
+      "FV"
+    ],
+    "ecclesia": [
+      "ECCL",
+      "EDD"
+    ],
+    "eddTargets": [
+      "ALBAZ",
+      "WHITE",
+      "ECCL",
+      "CART"
+    ],
+    "ecclesiaMain": [
+      "ECCL"
+    ]
+  },
+  "summonLocks": [
+    {
+      "flag": "lockFusion",
+      "allow": {
+        "frame": [
+          "Fusion"
+        ]
+      }
+    },
+    {
+      "flag": "lockL8",
+      "allow": {
+        "all": [
+          {
+            "frame": [
+              "Fusion",
+              "Synchro"
+            ]
+          },
+          {
+            "level": {
+              "atLeast": 8,
+              "atMost": 8
+            }
+          }
+        ]
+      }
+    },
+    {
+      "flag": "lockAll",
+      "all": true
+    }
+  ],
+  "extraDeck": [
+    {
+      "card": "TITAN",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "atk": {
+            "atLeast": 2500
+          }
+        }
+      ]
+    },
+    {
+      "card": "ALBRAND",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "attribute": [
+            "LIGHT"
+          ]
+        }
+      ]
+    },
+    {
+      "card": "MIRROR",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "extraDeckMonster": true
+        }
+      ]
+    },
+    {
+      "card": "LENATUS",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "race": [
+            "Dragon"
+          ]
+        }
+      ],
+      "more": {
+        "race": [
+          "Dragon"
+        ]
+      }
+    },
+    {
+      "card": "GRAN",
+      "method": "fusion",
+      "slots": [
+        {
+          "named": "CART"
+        },
+        {
+          "attribute": [
+            "LIGHT",
+            "DARK"
+          ]
+        }
+      ]
+    },
+    {
+      "card": "RIND",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "race": [
+            "Beast",
+            "Beast-Warrior",
+            "Winged Beast"
+          ]
+        }
+      ]
+    },
+    {
+      "card": "KHAOS",
+      "method": "fusion",
+      "slots": [
+        {
+          "all": [
+            {
+              "race": [
+                "Dragon"
+              ]
+            },
+            {
+              "attribute": [
+                "LIGHT",
+                "DARK"
+              ]
+            }
+          ]
+        },
+        {
+          "race": [
+            "Dragon"
+          ]
+        }
+      ],
+      "uses": {
+        "attribute": [
+          "LIGHT",
+          "DARK"
+        ]
+      }
+    },
+    {
+      "card": "ARTH",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "dracotailMon"
+        },
+        {
+          "inZone": [
+            "hand"
+          ]
+        }
+      ],
+      "more": {
+        "inZone": [
+          "hand"
+        ]
+      },
+      "uses": {
+        "inZone": [
+          "hand"
+        ]
+      }
+    },
+    {
+      "card": "SECRET",
+      "method": "fusion",
+      "slots": [
+        {
+          "race": [
+            "Dragon"
+          ]
+        },
+        {
+          "race": [
+            "Spellcaster"
+          ]
+        }
+      ]
+    },
+    {
+      "card": "DOGMA",
+      "method": "fusion",
+      "slots": [
+        {
+          "inGroup": "albazName"
+        },
+        {
+          "attribute": [
+            "LIGHT",
+            "DARK"
+          ]
+        },
+        {
+          "not": {
+            "frame": [
+              "Normal"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "card": "MIXOU",
+      "method": "fusion",
+      "slots": [
+        {
+          "race": [
+            "Spellcaster"
+          ]
+        },
+        {
+          "not": {
+            "race": [
+              "Spellcaster"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "card": "AEON",
+      "method": "fusion",
+      "slots": [
+        {
+          "frame": [
+            "Fusion"
+          ]
+        },
+        {
+          "frame": [
+            "Fusion"
+          ]
+        }
+      ],
+      "more": {
+        "frame": [
+          "Fusion"
+        ]
+      },
+      "relations": [
+        "differentAttr"
+      ],
+      "uses": {
+        "frame": [
+          "Fusion"
+        ]
+      }
+    },
+    {
+      "card": "EDD",
+      "method": "synchro",
+      "level": 8,
+      "min": 2,
+      "max": 4,
+      "tuners": "exactlyOne"
+    },
+    {
+      "card": "VERTE",
+      "method": "link",
+      "rating": 2,
+      "min": 2,
+      "max": 2,
+      "mats": {
+        "not": {
+          "frame": [
+            "Normal"
+          ]
+        }
+      }
+    }
+  ],
+  "endOfTurn": {
+    "setOrder": [
+      "FV",
+      "HIGHSP",
+      "FLAME"
+    ]
+  },
+  "boardValue": [
+    {
+      "id": "eccl-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "ECCL",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "eccl-tribute"
+            },
+            {
+              "any": [
+                {
+                  "has": {
+                    "zone": "deck",
+                    "group": "albazName"
+                  }
+                },
+                {
+                  "has": {
+                    "zone": "hand",
+                    "group": "albazName"
+                  }
+                }
+              ]
+            }
+          ],
+          "value": 0.5,
+          "label": "Ecclesia: Special Summon Albaz on their turn (it fuses with their monster)"
+        },
+        {
+          "value": 0.1,
+          "label": "Ecclesia"
+        }
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Ecclesia (its effect is once per turn)"
+      }
+    },
+    {
+      "id": "cart-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "CART",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "cart-fuse"
+            }
+          ],
+          "value": 0.4,
+          "label": "Cartesia: Fusion Summon on their turn"
+        },
+        {
+          "value": 0.1,
+          "label": "Cartesia"
+        }
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Cartesia (its effect is once per turn)"
+      }
+    },
+    {
+      "id": "mululu-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "MULULU",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "mululu-fuse"
+            },
+            {
+              "has": {
+                "zone": "extra",
+                "group": "dracotailFusion"
+              }
+            }
+          ],
+          "value": 0.3,
+          "label": "Mululu: Fusion Summon on their turn"
+        },
+        {
+          "value": 0.1,
+          "label": "Mululu"
+        }
+      ],
+      "extraCopies": {
+        "value": 0.1,
+        "label": "Mululu (its effect is once per turn)"
+      }
+    },
+    {
+      "id": "faimena-hand",
+      "when": "oppTurn",
+      "on": {
+        "any": [
+          {
+            "has": {
+              "zone": "hand",
+              "card": "FAIMENA"
+            }
+          }
+        ]
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "faimena-fuse"
+            }
+          ],
+          "value": 0.4,
+          "label": "Faimena in hand: Fusion Summon on their turn"
+        }
+      ]
+    },
+    {
+      "id": "mirror-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "MIRROR",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "mirror-banish"
+            },
+            {
+              "has": {
+                "zone": "extra",
+                "group": "albazFusions"
+              }
+            }
+          ],
+          "value": 0.9,
+          "label": "Mirrorjade: banish a monster on their turn"
+        },
+        {
+          "value": 0.2,
+          "label": "Mirrorjade (its effect is spent)"
+        }
+      ]
+    },
+    {
+      "id": "rind-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "RIND",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "value": 0.6,
+          "label": "Rindbrumm: negate an Extra Deck monster's effect"
+        }
+      ]
+    },
+    {
+      "id": "rind-gy",
+      "when": "oppTurn",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "RIND"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "gy",
+                "group": "albazName"
+              }
+            }
+          ],
+          "value": 0.2,
+          "label": "Rindbrumm in GY: Special Summon on their turn"
+        }
+      ]
+    },
+    {
+      "id": "mixou-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "MIXOU",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "value": 0.5,
+          "label": "Mixousia: Fusion Summon on their turn"
+        }
+      ]
+    },
+    {
+      "id": "secret-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "SECRET",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "value": 0.4,
+          "label": "Secreterion: they can't use Special Summoned Dragons' and Spellcasters' effects"
+        }
+      ]
+    },
+    {
+      "id": "dogma-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "DOGMA",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "any": [
+                {
+                  "control": {
+                    "kind": "mon",
+                    "filter": {
+                      "inGroup": "ecclesia"
+                    }
+                  }
+                },
+                {
+                  "has": {
+                    "zone": "gy",
+                    "group": "ecclesia"
+                  }
+                }
+              ]
+            }
+          ],
+          "value": 0.3,
+          "label": "Dogma Dragon: unaffected by other cards' effects"
+        },
+        {
+          "value": 0.2,
+          "label": "Dogma Dragon"
+        }
+      ]
+    },
+    {
+      "id": "edd-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "EDD",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "edd-ss"
+            }
+          ],
+          "value": 0.6,
+          "label": "Ecclesia and the Dark Dragon: Special Summon Albaz on their turn"
+        },
+        {
+          "value": 0.2,
+          "label": "Ecclesia and the Dark Dragon"
+        }
+      ]
+    },
+    {
+      "id": "titan-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "TITAN",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "value": 0.2,
+          "label": "Titaniklad"
+        }
+      ]
+    },
+    {
+      "id": "aeon-field",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "AEON",
+          "kind": "mon"
+        }
+      },
+      "base": [
+        {
+          "value": 0.3,
+          "label": "Hyperinvoked Aeon"
+        }
+      ]
+    },
+    {
+      "id": "arth-gy",
+      "when": "oppTurn",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "ARTH"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "notUsed": "arth-revive"
+            },
+            {
+              "not": {
+                "flag": "arthRevived"
+              }
+            }
+          ],
+          "value": 0.2,
+          "label": "Arthalion in GY: comes back when 2 or more monsters go to the GY"
+        }
+      ]
+    },
+    {
+      "id": "fv-set",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "FV",
+          "kind": "st",
+          "faceUp": false
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "extra",
+                "group": "mentionsAlbazExtra"
+              }
+            }
+          ],
+          "value": 0.6,
+          "label": "The Fallen & The Virtuous (Set): destroy a face-up card on their turn"
+        },
+        {
+          "value": 0.1,
+          "label": "The Fallen & The Virtuous (Set)"
+        }
+      ]
+    },
+    {
+      "id": "highsp-set",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "HIGHSP",
+          "kind": "st",
+          "faceUp": false
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "deck",
+                "group": "mentionsAlbazMain"
+              }
+            }
+          ],
+          "value": 0.3,
+          "label": "High Spirits (Set): search on their turn"
+        },
+        {
+          "value": 0.1,
+          "label": "High Spirits (Set)"
+        }
+      ]
+    },
+    {
+      "id": "flame-set",
+      "when": "oppTurn",
+      "on": {
+        "control": {
+          "card": "FLAME",
+          "kind": "st",
+          "faceUp": false
+        }
+      },
+      "base": [
+        {
+          "value": 0.3,
+          "label": "Dracotail Flame (Set): negate a face-up Spell, draw 1"
+        }
+      ]
+    },
+    {
+      "id": "titan-end",
+      "when": "endPhase",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "TITAN"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "deck",
+                "group": "albazName"
+              }
+            }
+          ],
+          "value": 0.5,
+          "label": "Titaniklad: add or Special Summon Albaz from the Deck"
+        }
+      ]
+    },
+    {
+      "id": "albrand-end",
+      "when": "endPhase",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "ALBRAND"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "deck",
+                "group": "brandedST"
+              }
+            }
+          ],
+          "value": 0.5,
+          "label": "Albion the Branded Dragon: add or Set a Branded Spell/Trap"
+        }
+      ]
+    },
+    {
+      "id": "lenatus-end",
+      "when": "endPhase",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "LENATUS"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "has": {
+                "zone": "deck",
+                "card": "BFUS"
+              }
+            }
+          ],
+          "value": 0.4,
+          "label": "Alba-Lenatus: add Branded Fusion"
+        }
+      ]
+    },
+    {
+      "id": "eccl-end",
+      "when": "endPhase",
+      "on": {
+        "any": [
+          {
+            "has": {
+              "zone": "gy",
+              "card": "ECCL"
+            }
+          }
+        ]
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "flag": "fusionToGy"
+            }
+          ],
+          "value": 0.3,
+          "label": "Ecclesia returns to the hand"
+        }
+      ]
+    },
+    {
+      "id": "cart-end",
+      "when": "endPhase",
+      "on": {
+        "any": [
+          {
+            "has": {
+              "zone": "gy",
+              "card": "CART"
+            }
+          }
+        ]
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "flag": "fusionToGy"
+            }
+          ],
+          "value": 0.3,
+          "label": "Cartesia returns to the hand"
+        }
+      ]
+    },
+    {
+      "id": "highsp-end",
+      "when": "endPhase",
+      "on": {
+        "has": {
+          "zone": "gy",
+          "card": "HIGHSP"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "flag": "fusionToGy"
+            },
+            {
+              "notUsed": "highsp"
+            }
+          ],
+          "value": 0.3,
+          "label": "High Spirits returns to the hand"
+        }
+      ]
+    },
+    {
+      "id": "edd-end",
+      "when": "endPhase",
+      "on": {
+        "has": {
+          "zone": "ban",
+          "card": "EDD"
+        }
+      },
+      "base": [
+        {
+          "if": [
+            {
+              "flag": "eddAway"
+            }
+          ],
+          "value": 0.5,
+          "label": "Ecclesia and the Dark Dragon returns to the field (its effect ready for their turn)"
+        }
+      ]
+    }
+  ]
+}

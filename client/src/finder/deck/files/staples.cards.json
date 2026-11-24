@@ -1,0 +1,62 @@
+[
+  {
+    "passcode": 14558128,
+    "name": "Ash Blossom & Joyous Spring",
+    "type": "Tuner Monster",
+    "race": "Zombie",
+    "attr": "FIRE",
+    "level": 3,
+    "link": null,
+    "atk": 0,
+    "def": 1800,
+    "text": "When a card or effect is activated that includes any of these effects (Quick Effect): You can discard this card; negate that effect.\r\n● Add a card from the Deck to the hand.\r\n● Special Summon from the Deck.\r\n● Send a card from the Deck to the GY.\r\nYou can only use this effect of \"Ash Blossom & Joyous Spring\" once per turn."
+  },
+  {
+    "passcode": 94145021,
+    "name": "Droll & Lock Bird",
+    "type": "Effect Monster",
+    "race": "Spellcaster",
+    "attr": "WIND",
+    "level": 1,
+    "link": null,
+    "atk": 0,
+    "def": 0,
+    "text": "If a card(s) is added from the Main Deck to your opponent's hand, except during the Draw Phase (Quick Effect): You can send this card from your hand to the GY; for the rest of this turn, cards cannot be added from either player's Main Deck to the hand."
+  },
+  {
+    "passcode": 42141493,
+    "name": "Mulcharmy Fuwalos",
+    "type": "Effect Monster",
+    "race": "Winged Beast",
+    "attr": "WIND",
+    "level": 4,
+    "link": null,
+    "atk": 100,
+    "def": 600,
+    "text": "If you control no cards (Quick Effect): You can discard this card; apply these effects this turn.\r\n● Each time your opponent Special Summons a monster(s) from the Deck and/or Extra Deck, immediately draw 1 card.\r\n● Once, during this End Phase, if the number of cards in your hand is more than the number of cards your opponent controls +6, you must randomly shuffle cards from your hand into the Deck so the number in your hand equals the number your opponent controls +6.\r\nYou can only activate 1 other \"Mulcharmy\" monster effect, the turn you activate this effect."
+  },
+  {
+    "passcode": 23434538,
+    "name": "Maxx \"C\"",
+    "type": "Effect Monster",
+    "race": "Insect",
+    "attr": "EARTH",
+    "level": 2,
+    "link": null,
+    "atk": 500,
+    "def": 200,
+    "text": "During either player's turn: You can send this card from your hand to the Graveyard; this turn, each time your opponent Special Summons a monster(s), immediately draw 1 card. You can only use 1 \"Maxx \"C\"\" per turn."
+  },
+  {
+    "passcode": 48130397,
+    "name": "Super Polymerization",
+    "type": "Spell Card",
+    "race": "Quick-Play",
+    "attr": null,
+    "level": null,
+    "link": null,
+    "atk": null,
+    "def": null,
+    "text": "Discard 1 card; Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from either field as Fusion Material. Neither player can activate cards or effects in response to this card's activation."
+  }
+]

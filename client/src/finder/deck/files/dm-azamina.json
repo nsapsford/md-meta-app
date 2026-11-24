@@ -1,0 +1,671 @@
+{
+  "vocab": 1,
+  "id": "dm-azamina",
+  "name": "Dark Magician Azamina",
+  "uses": ["staples"],
+  "marks": ["dm"],
+  "flags": ["deceReset"],
+  "cards": [
+    { "id": "DM", "passcodes": [36996508, 46986414, 46986415, 46986416, 46986417, 46986418, 46986419, 46986420, 46986421], "short": "Dark Magician", "listOrder": 0 },
+    {
+      "id": "ROD", "passcodes": [7084129], "short": "Rod", "listOrder": 4,
+      "effects": [
+        {
+          "key": "rod", "phase": "main", "from": "field", "trigger": { "normalSummoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "DM_ST" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Rod: add {card}.", "negText": "Rod's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "CIRC", "passcodes": [47222536], "short": "Circle", "listOrder": 15, "discardValue": 1.2,
+      "effects": [
+        {
+          "key": "circ1", "phase": "main", "from": ["hand", "faceDown"], "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "add", "optional": true, "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromTop": { "n": 3, "group": "CIRC_ADD" } } } } }],
+          "do": [{ "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "add" } }, "deckAdd": { "chosen": { "as": "add" } } }, "marks": ["dm"],
+          "stepTags": { "spell": true, "dig": { "not": { "chosen": { "as": "add" } } } },
+          "ledger": { "effect": 1 },
+          "text": "{add?Activate Dark Magical Circle: add $ from the top 3.|Activate Dark Magical Circle: look at the top 3 (add Dark Magician or a DM Spell/Trap if one shows).}",
+          "negText": "Dark Magical Circle: activation effect negated (Circle stays)."
+        },
+        {
+          "key": "circ2", "phase": "main", "from": "faceUp", "trigger": { "summonedNamed": { "name": "DM" } }, "limit": "oncePerTurn", "mandatory": true, "activates": "spell",
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "target", "pick": { "oppCard": true } }],
+          "do": [{ "oppRemove": { "what": "target", "how": "banish" } }],
+          "tags": { "removal": true }, "stepTags": { "spell": true }, "ledger": { "effect": 2 },
+          "text": "Circle: banish their {target}.", "negText": "Circle's banish: negated."
+        }
+      ]
+    },
+    {
+      "id": "CURT", "passcodes": [41350417], "short": "Curtain", "listOrder": 23,
+      "effects": [
+        {
+          "key": "curt", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": "oncePerTurn", "activates": "spell",
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "mon", "pick": { "union": [{ "fromZone": { "zone": "hand", "group": "CURT_SS" } }, { "fromZone": { "zone": "deck", "group": "CURT_SS" } }] } },
+            { "as": "add", "optional": true, "pick": { "onlyIf": { "if": [{ "addLockOff": true }, { "chosen": { "as": "mon", "filter": { "named": "DM" } } }], "of": { "fromZone": { "zone": "deck", "group": "CURT_ADD" } } } } }
+          ],
+          "do": [{ "summon": { "what": "mon", "noEff": true } }, { "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": { "any": [{ "chosen": { "as": "mon", "zone": "deck" } }, { "chosen": { "as": "add" } }] }, "deckAdd": { "chosen": { "as": "add" } } }, "marks": ["dm"],
+          "stepTags": { "spell": true },
+          "text": "Dark Magical Curtain: Special Summon {mon} from {zone}{add?, add $}.", "negText": "Dark Magical Curtain: negated.",
+          "lineNote": "They may also Special Summon a DARK Spellcaster from hand or Deck."
+        }
+      ]
+    },
+    {
+      "id": "TALI", "passcodes": [71440209], "short": "Talisman", "listOrder": 24,
+      "effects": [
+        {
+          "key": "tali3", "phase": "main", "from": "gy", "trigger": { "summonedNamed": { "name": "DM", "special": true } }, "limit": "oncePerTurn", "negatable": false,
+          "cond": [{ "lpAbove": 2500 }, { "stZoneFree": true }],
+          "do": [{ "payLp": 2500 }, { "setOnField": { "what": "self" } }],
+          "tags": {}, "stepTags": { "trap": true },
+          "text": "Dark Magic Talisman (GY): pay 2500 LP, Set it."
+        }
+      ]
+    },
+    {
+      "id": "SSRV", "passcodes": [23020408], "short": "Soul Servant", "listOrder": 19, "discardValue": 1.3,
+      "effects": [
+        {
+          "key": "ssrv-deck", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from deck on top of the Deck."
+        },
+        {
+          "key": "ssrv-hand", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "hand", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from hand on top of the Deck."
+        },
+        {
+          "key": "ssrv-gy", "phase": "main", "from": "hand", "activates": "spell", "cond": [{ "knownTop": { "atMost": 0 } }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "gy", "cards": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "DMG"] } } }],
+          "do": [{ "placeOnTop": { "what": "card" } }],
+          "tags": { "spell": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Soul Servant: put {card} from GY on top of the Deck."
+        },
+        {
+          "key": "ssrv2-one", "phase": "main", "from": "gy", "limit": { "shared": "ssrv2" }, "activates": "spell", "negatable": false,
+          "cond": [{ "namesPresent": { "names": ["DM", "DMG"], "inGy": ["DM"], "atMost": 1 } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "draw": 1 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "Soul Servant (GY): banish it, draw 1."
+        },
+        {
+          "key": "ssrv2-two", "phase": "main", "from": "gy", "limit": { "shared": "ssrv2" }, "activates": "spell", "negatable": false,
+          "cond": [{ "namesPresent": { "names": ["DM", "DMG"], "inGy": ["DM"], "atLeast": 2 } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "draw": 2 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "Soul Servant (GY): banish it, draw 2."
+        }
+      ]
+    },
+    {
+      "id": "SOULS", "passcodes": [97631303], "short": "Magicians' Souls", "listOrder": 2,
+      "effects": [
+        {
+          "key": "souls-a", "phase": "main", "from": "hand", "limit": { "shared": "souls2" }, "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "fromZone": { "zone": "deck", "group": "SOULS_SEND" } } }],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "summon": { "what": "self" } }],
+          "tags": { "deckTouch": true, "handMon": true }, "marks": ["dm"], "ledger": { "effect": 2 },
+          "text": "Magicians' Souls: send {sent} from Deck to GY, Special Summon Souls.", "negText": "Magicians' Souls (hand effect): negated."
+        },
+        {
+          "key": "souls-b", "phase": "main", "from": "hand", "limit": { "shared": "souls2" },
+          "choose": [
+            { "as": "sent", "pick": { "fromZone": { "zone": "deck", "group": "SOULS_SEND" } } },
+            { "as": "mon", "optional": true, "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "named": "DM" }, { "not": { "extraDeckMonster": true } }] }, "plus": "sent" } } } } }
+          ],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "move": { "what": "self", "to": "gy" } }, { "summon": { "what": "mon" } }],
+          "tags": { "deckTouch": true, "handMon": true }, "marks": ["dm"], "stepTags": { "gy": { "chosen": { "as": "mon" } } }, "ledger": { "effect": 2 },
+          "text": "Magicians' Souls: send {sent} from Deck to GY, send Souls to GY{mon?, Special Summon $ from GY}.", "negText": "Magicians' Souls (hand effect): negated."
+        },
+        {
+          "key": "souls1-one", "phase": "main", "from": "field", "limit": { "shared": "souls1" },
+          "choose": [{ "as": "sent", "pick": { "subsets": { "min": 1, "max": 1, "join": " + ", "of": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell", "trap"] }, "eachCopy": true } }, { "fromField": { "kind": "st" } }] } } } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "draw": 1 }],
+          "tags": { "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Magicians' Souls: send {sent} to draw 1.", "negText": "Magicians' Souls: send {sent} to draw 1 (draw negated)."
+        },
+        {
+          "key": "souls1-two", "phase": "main", "from": "field", "limit": { "shared": "souls1" },
+          "choose": [{ "as": "sent", "pick": { "subsets": { "min": 2, "max": 2, "join": " + ", "of": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell", "trap"] }, "eachCopy": true } }, { "fromField": { "kind": "st" } }] } } } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "draw": 2 }],
+          "tags": { "fieldMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Magicians' Souls: send {sent} to draw 2.", "negText": "Magicians' Souls: send {sent} to draw 2 (draw negated)."
+        }
+      ]
+    },
+    {
+      "id": "SERV", "passcodes": [88570003], "short": "Pharaoh's Servant", "listOrder": 10, "fieldName": "DM", "gyName": "DM",
+      "effects": [
+        {
+          "key": "serv", "phase": "main", "from": "hand", "limit": { "shared": "serv" }, "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "reveal", "pick": { "first": { "of": { "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell"] } } } } } },
+            { "as": "set", "optional": true, "pick": { "onlyIf": { "if": [{ "stZoneFree": true }], "of": { "fromZone": { "zone": "deck", "group": "DM_ST" } } } } }
+          ],
+          "do": [{ "summon": { "what": "self" } }, { "setFromDeck": { "what": "set" } }],
+          "tags": {}, "stepTags": { "handMon": true }, "stepMarks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Pharaoh's Servant: reveal {reveal}, Special Summon it{set?, Set $ from Deck}.", "negText": "Pharaoh's Servant (reveal {reveal}): negated."
+        },
+        {
+          "key": "servwipe", "phase": "main", "from": "field", "limit": { "shared": "serv" },
+          "cond": [{ "any": [{ "oppHasTarget": { "kind": "st", "destroyable": true } }, { "oppHasTarget": { "kind": "st", "destroyable": true, "targetable": false } }] }],
+          "choose": [{ "as": "card", "pick": { "cheapest": { "of": { "fromZone": { "zone": "hand", "filter": { "cardKind": ["spell"] } } } } } }],
+          "cost": [{ "discard": { "what": "card" } }], "do": [{ "oppRemoveAll": { "how": "destroy", "kind": "st", "destroyable": true } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 2 },
+          "text": "Pharaoh's Servant: discard {card}, destroy all their Spells/Traps.", "negText": "Pharaoh's Servant wipe: negated."
+        }
+      ]
+    },
+    {
+      "id": "IOC", "passcodes": [12266229], "short": "Illusion of Chaos", "listOrder": 12,
+      "effects": [
+        {
+          "key": "ioc", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "choose": [
+            { "as": "add", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "IOC_ADD" } } } } },
+            { "as": "back", "pick": { "fromZone": { "zone": "hand", "plus": "add" } } }
+          ],
+          "do": [{ "move": { "what": "add", "to": "hand" } }, { "placeOnTop": { "what": "back" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "handMon": true }, "marks": ["dm"], "ledger": { "effect": 1 },
+          "text": "Illusion of Chaos (reveal): add {add}, put {back} on top of the Deck.", "negText": "Illusion of Chaos (reveal): negated."
+        }
+      ]
+    },
+    {
+      "id": "PREP", "passcodes": [96729612], "short": "Preparation of Rites", "listOrder": 13, "discardValue": 1,
+      "effects": [
+        {
+          "key": "prep", "phase": "main", "from": "hand", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "filter": { "named": "IOC" } } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true },
+          "text": "Preparation of Rites: add Illusion of Chaos.", "negText": "Preparation of Rites: negated."
+        }
+      ]
+    },
+    {
+      "id": "SARC", "passcodes": [79791878], "short": "Sarcophagus", "listOrder": 16,
+      "effects": [
+        {
+          "key": "sarc", "phase": "main", "from": ["faceDown", "hand"], "activates": "spell", "negatable": false,
+          "do": [], "tags": { "spell": true },
+          "text": "Activate Shining Sarcophagus."
+        },
+        {
+          "key": "sarc1", "phase": "main", "from": "faceUp", "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SARC_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Shining Sarcophagus: add {card}.", "negText": "Sarcophagus search: negated."
+        }
+      ]
+    },
+    {
+      "id": "FSIL", "passcodes": [78679226], "short": "Future Silence", "listOrder": 21, "discardValue": 1,
+      "effects": [
+        {
+          "key": "fsil", "phase": "main", "from": "hand", "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SARC_MON" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true },
+          "text": "Future Silence: add {card}.", "negText": "Future Silence: negated."
+        }
+      ]
+    },
+    {
+      "id": "DMG", "passcodes": [2501624], "short": "DMG Apprentice", "listOrder": 7,
+      "effects": [
+        {
+          "key": "dmg", "phase": "main", "from": "hand", "limit": "oncePerTurn", "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "card", "pick": { "otherHandCard": true } }],
+          "cost": [{ "discard": { "what": "card" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "DMG Apprentice: discard {card} to Special Summon it (its name becomes Dark Magician Girl)."
+        },
+        {
+          "key": "dmg1", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "has": { "zone": "deck", "card": "SARC" } }, { "addLockOff": true }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "filter": { "named": "SARC" } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "DMG Apprentice: add Shining Sarcophagus.", "negText": "DMG Apprentice's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "DMBM", "passcodes": [342673], "short": "DM of Black Magic", "listOrder": 9, "fieldName": "DM",
+      "effects": [
+        {
+          "key": "dmbm", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "control": { "card": "SARC", "kind": "st", "faceUp": true } }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "DM the Magician of Black Magic: Special Summon it from hand (Sarcophagus is on the field).", "negText": "DM of Black Magic: negated."
+        }
+      ]
+    },
+    {
+      "id": "GAND", "passcodes": [2333466], "short": "Gandora-G", "listOrder": 11,
+      "effects": [
+        {
+          "key": "gand", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "control": { "card": "SARC", "kind": "st", "faceUp": true } }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Gandora-G: Special Summon it from hand (you control Sarcophagus).", "negText": "Gandora-G: negated."
+        },
+        {
+          "key": "gand2-wipe", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
+          "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "any": [{ "named": "SARC" }, { "named": "DRAG" }] }, "noTriggers": true } }],
+          "tags": { "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
+          "text": "Gandora-G: pay half LP, destroy and banish every other card on the field.", "negText": "Gandora-G wipe: negated (LP already paid)."
+        },
+        {
+          "key": "gand2-summon", "phase": "main", "from": "field", "limit": { "shared": "gand2" },
+          "cond": [{ "any": [{ "oppHasTarget": true }, { "oppHasTarget": { "targetable": false } }] }],
+          "choose": [{ "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "GAND_SS" } } }],
+          "cost": [{ "payLp": "half" }], "do": [{ "wipeField": { "banish": true, "spare": { "any": [{ "named": "SARC" }, { "named": "DRAG" }] }, "thenSummon": "mon", "noTriggers": true } }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "stepTags": { "removal": true }, "ledger": { "effect": 2 },
+          "text": "Gandora-G: pay half LP, destroy and banish every other card on the field, then Special Summon {mon} from Deck.", "negText": "Gandora-G wipe: negated (LP already paid)."
+        }
+      ]
+    },
+    {
+      "id": "DIA", "passcodes": [72270339], "short": "Diabellstar", "listOrder": 8,
+      "effects": [
+        {
+          "key": "dia-hand", "phase": "main", "from": "hand", "limit": { "shared": "dia" }, "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "otherHandCard": true } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "Diabellstar: send {sent} from hand to Special Summon it."
+        },
+        {
+          "key": "dia-field", "phase": "main", "from": "hand", "limit": { "shared": "dia" }, "negatable": false,
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "fromField": {} } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "summon": { "what": "self" } }],
+          "tags": { "inherent": true },
+          "text": "Diabellstar: send {sent} from the field to Special Summon it."
+        },
+        {
+          "key": "dia1", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "stZoneFree": true }], "of": { "fromZone": { "zone": "deck", "group": "SINFUL" } } } } }],
+          "do": [{ "setFromDeck": { "what": "card" } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Diabellstar: Set {card} from Deck.", "negText": "Diabellstar's Set: negated."
+        }
+      ]
+    },
+    {
+      "id": "WANT", "passcodes": [80845034], "short": "WANTED", "listOrder": 20, "discardValue": 1.4,
+      "effects": [
+        {
+          "key": "want", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": "oncePerTurn", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "union": [
+            { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "filter": { "named": "DIA" } } } } },
+            { "fromZone": { "zone": "gy", "filter": { "named": "DIA" } } }
+          ] } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "card", "zone": "deck" } }, "deckAdd": { "chosen": { "as": "card", "zone": "deck" } }, "spell": true },
+          "stepTags": { "gy": { "chosen": { "as": "card", "zone": "gy" } } }, "ledger": { "effect": 1 },
+          "text": "WANTED: add Diabellstar from {zone}.", "negText": "WANTED: negated."
+        },
+        {
+          "key": "want2", "phase": "main", "from": "gy", "limit": "oncePerTurn", "activates": "spell", "negatable": false,
+          "choose": [{ "as": "back", "pick": { "first": { "of": { "union": [
+            { "fromZone": { "zone": "gy", "filter": { "named": "DECE" } } },
+            { "fromZone": { "zone": "ban", "filter": { "named": "DECE" } } }
+          ] } } } }],
+          "do": [{ "move": { "what": "self", "to": "ban" } }, { "move": { "what": "back", "to": "deck" } }, { "draw": 1 }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "WANTED (GY): banish it, put Deception on the bottom of the Deck, draw 1."
+        }
+      ]
+    },
+    {
+      "id": "DECE", "passcodes": [66328392], "short": "Deception", "listOrder": 17, "discardValue": 2,
+      "effects": [
+        {
+          "key": "dece", "phase": "main", "from": ["faceDown", "hand"], "activates": "spell", "negatable": false,
+          "do": [], "tags": { "spell": true },
+          "text": "Activate Deception of the Sinful Spoils."
+        },
+        {
+          "key": "dece1", "phase": "main", "from": "faceUp", "limit": "oncePerTurn", "activates": "spell",
+          "cond": [{ "addLockOff": true }, { "has": { "zone": "deck", "card": "HALL" } }],
+          "choose": [
+            { "as": "tribute", "pick": { "union": [{ "fromZone": { "zone": "hand", "filter": { "cardKind": ["monster"] } } }, { "fromField": { "kind": "mon", "distinct": true } }] } },
+            { "as": "add", "pick": { "fromZone": { "zone": "deck", "filter": { "named": "HALL" } } } }
+          ],
+          "cost": [{ "move": { "what": "tribute", "to": "gy" } }], "do": [{ "move": { "what": "add", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Deception: Tribute {tribute} from {zone}, add The Hallowed Azamina.", "negText": "Deception: Tribute {tribute}; search negated."
+        },
+        {
+          "key": "dece2", "phase": "main", "from": "faceUp", "trigger": { "oppMonsterToGy": true }, "immediate": true, "limit": "oncePerTurn",
+          "cond": [{ "control": { "group": "AZAMINA", "kind": "mon" } }],
+          "do": [{ "burn": 1500 }, { "gainLp": 1500 }],
+          "tags": {}, "text": "Deception drains 1500."
+        },
+        {
+          "key": "dece-reset", "phase": "main", "from": "gy", "trigger": { "leftField": { "to": "gy", "faceUp": true } }, "immediate": true,
+          "do": [{ "setFlag": "deceReset" }],
+          "tags": {}, "text": ""
+        }
+      ]
+    },
+    {
+      "id": "HALL", "passcodes": [94845588], "short": "Hallowed Azamina", "listOrder": 14, "discardValue": 2.5,
+      "effects": [
+        {
+          "key": "hall", "phase": "main", "from": "hand", "activates": "spell",
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [
+            { "as": "sent", "pick": { "union": [{ "fromZone": { "zone": "hand", "group": "SINFUL" } }, { "fromField": { "kind": "st", "group": "SINFUL" } }] } },
+            { "as": "az", "pick": { "fromZone": { "zone": "extra", "group": "AZAMINA" } } }
+          ],
+          "do": [{ "move": { "what": "sent", "to": "gy" } }, { "summon": { "what": "az" } }],
+          "tags": { "spell": true },
+          "text": "The Hallowed Azamina: send {sent} from {zone}, Special Summon {az}.", "negText": "The Hallowed Azamina: negated."
+        },
+        {
+          "key": "hallG", "phase": "main", "from": "gy", "limit": "oncePerTurn", "negatable": false,
+          "choose": [{ "as": "az", "pick": { "union": [{ "fromField": { "kind": "mon", "group": "AZAMINA" } }, { "fromZone": { "zone": "gy", "group": "AZAMINA" } }] } }],
+          "do": [{ "move": { "what": "az", "to": "deck" } }, { "move": { "what": "self", "to": "hand" } }],
+          "tags": { "gy": true, "spell": true }, "ledger": { "effect": 2 },
+          "text": "The Hallowed Azamina (GY): shuffle {az} into the Extra Deck, add Hallowed Azamina to hand."
+        }
+      ]
+    },
+    { "id": "ILIA", "passcodes": [46396218], "short": "Ilia Silvia", "listOrder": 28 },
+    {
+      "id": "RCIE", "passcodes": [73391962], "short": "Rcielago", "listOrder": 29,
+      "effects": [
+        {
+          "key": "rcie", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "addLockOff": true }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "RCIE_ADD" } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Rcielago: add {card}.", "negText": "Rcielago's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "GAZE", "passcodes": [22283204], "short": "Gaze", "listOrder": 22,
+      "effects": [
+        {
+          "key": "gaze-drag1", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "gaze" }, "activates": "spell",
+          "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "named": "DM" }, { "frame": ["Normal"] }] } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "named": "DM" }, { "frame": ["Normal"] }] } } } } }] } }, { "as": "fus", "pick": { "fromZone": { "zone": "extra", "filter": { "named": "DRAG" } } } }],
+          "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
+          "tags": { "spell": true }, "marks": ["dm"],
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (1 destroy).", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
+        },
+        {
+          "key": "gaze-drag0", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "gaze" }, "activates": "spell",
+          "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "named": "DM" }, { "not": { "frame": ["Normal"] } }] } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "named": "DM" }, { "not": { "frame": ["Normal"] } }] } } } } }] } }, { "as": "fus", "pick": { "fromZone": { "zone": "extra", "filter": { "named": "DRAG" } } } }],
+          "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
+          "tags": { "spell": true }, "marks": ["dm"],
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon Dragoon (0 destroys).", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
+        },
+        {
+          "key": "gaze", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "gaze" }, "activates": "spell",
+          "choose": [{ "as": "mat", "pick": { "union": [{ "fromField": { "kind": "mon", "distinct": true, "filter": { "named": "DM" } } }, { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "named": "DM" } } } } }] } }, { "as": "fus", "pick": { "union": [{ "onlyIf": { "if": [{ "notUsed": "dmodSS" }], "of": { "fromZone": { "zone": "extra", "filter": { "named": "DMOD" } } } } }, { "fromZone": { "zone": "extra", "filter": { "named": "MOC" } } }] } }],
+          "do": [{ "fusionSummon": { "what": "fus", "mats": "mat", "to": "deck" } }],
+          "tags": { "spell": true }, "marks": ["dm"],
+          "text": "The Gaze of Timaeus on {mat}{mat@gy? in GY}: Fusion Summon {fus}.", "negText": "The Gaze of Timaeus: negated.",
+          "lineNote": "This Fusion is banished at the end of their next turn."
+        }
+      ]
+    },
+    {
+      "id": "DRAG", "passcodes": [37818794], "short": "Dragoon", "listOrder": 30, "immuneToRemoval": true,
+      "effects": [
+        {
+          "key": "drag", "phase": "main", "from": "field", "cond": [{ "usesLeft": true }],
+          "choose": [{ "as": "target", "pick": { "union": [{ "oppCard": { "kind": "mon", "destroyable": true } }, { "oppCard": { "kind": "mon", "destroyable": true, "targetable": false } }] } }],
+          "cost": [{ "spendUse": { "what": "self" } }], "do": [{ "burn": { "atkOf": "target" } }, { "oppRemove": { "what": "target", "how": "destroy" } }],
+          "tags": { "fieldMon": true, "removal": true },
+          "text": "Dragoon: destroy their {target}, burn {target.atk}.", "negText": "Dragoon destroy: negated."
+        }
+      ]
+    },
+    {
+      "id": "MOC", "passcodes": [85059922], "short": "Master of Chaos", "listOrder": 31,
+      "effects": [
+        {
+          "key": "moc1", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": "oncePerTurn", "queueFirst": true,
+          "choose": [{ "as": "mon", "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "cardKind": ["monster"] }, { "not": { "extraDeckMonster": true } }, { "not": { "frame": ["Ritual"] } }, { "attribute": ["LIGHT", "DARK"] }] } } } } } }],
+          "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "fieldMon": true }, "stepTags": { "gy": true }, "ledger": { "effect": 1 },
+          "text": "Master of Chaos: Special Summon {mon} from GY.", "negText": "Master of Chaos's revive: negated."
+        },
+        {
+          "key": "moc2", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "cond": [{ "any": [{ "oppHasTarget": { "kind": "mon" } }, { "oppHasTarget": { "kind": "mon", "targetable": false } }] }],
+          "choose": [
+            { "as": "a", "pick": { "first": { "of": { "fromField": { "kind": "mon", "filter": { "materialAttribute": ["LIGHT"] } } } } } },
+            { "as": "b", "pick": { "first": { "of": { "fromField": { "kind": "mon", "filter": { "attribute": ["DARK"] } } } } } }
+          ],
+          "cost": [{ "move": { "what": "a", "to": "gy" } }, { "move": { "what": "b", "to": "gy" } }], "do": [{ "oppRemoveAll": { "how": "banish", "kind": "mon" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 2 },
+          "text": "Master of Chaos: Tribute {a} and {b}, banish all their monsters.", "negText": "Master of Chaos: negated."
+        }
+      ]
+    },
+    {
+      "id": "DMOD", "passcodes": [59400890], "short": "DM of Destruction", "listOrder": 32, "fieldName": "DM", "gyName": "DM",
+      "effects": [
+        {
+          "key": "dmod", "phase": "main", "from": "extra", "limit": { "shared": "dmodSS" }, "negatable": false,
+          "cond": [{ "spellActivatedThisTurn": true }],
+          "choose": [{ "as": "m", "pick": { "fromField": { "kind": "mon", "distinct": true, "filter": { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["DARK"] }, { "level": { "atLeast": 6 } }] } } } }],
+          "do": [{ "summon": { "what": "self", "from": "extra", "mats": "m", "matsTo": "ban" } }],
+          "tags": { "inherent": true },
+          "text": "Dark Magician of Destruction: banish {m} from the field (a Spell was activated this turn)."
+        },
+        {
+          "key": "dmod-ss", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "immediate": true, "limit": { "shared": "dmodSS" },
+          "do": [], "tags": {}, "text": ""
+        },
+        {
+          "key": "dmodS", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "addLockOff": true }],
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "DMOD_SEARCH" } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "marks": ["dm"],
+          "text": "DM of Destruction: add {card}.", "negText": "DM of Destruction's search: negated."
+        }
+      ]
+    },
+    { "id": "MUD", "passcodes": [54757758], "short": "Mudragon", "listOrder": 25, "materialAttribute": "any" },
+    { "id": "CHOR", "passcodes": [66532962], "short": "Chorozo", "listOrder": 26 },
+    {
+      "id": "GAR", "passcodes": [11765832], "short": "Garura", "listOrder": 27,
+      "effects": [
+        {
+          "key": "gar", "phase": "main", "from": "gy", "trigger": { "leftField": { "to": "gy" } }, "limit": "oncePerTurn", "mandatory": true, "negatable": false,
+          "do": [{ "draw": 1 }], "tags": {}, "ledger": { "effect": 1 },
+          "text": "Garura (sent to GY): draw 1."
+        }
+      ]
+    },
+    { "id": "BAR", "passcodes": [84815190], "short": "Baronne", "listOrder": 33 },
+    {
+      "id": "CANG", "passcodes": [22850702], "short": "Chaos Angel", "listOrder": 34,
+      "effects": [
+        {
+          "key": "cang", "phase": "end", "from": "field", "mandatory": true,
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "t", "pick": { "oppCard": true } }],
+          "do": [{ "oppRemove": { "what": "t", "how": "banish" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 0 },
+          "text": "Chaos Angel: banish their {t}.", "negText": "Chaos Angel's banish: negated."
+        }
+      ]
+    },
+    { "id": "MASQ", "passcodes": [65741787, 65741786], "short": "Masquerena", "listOrder": 35 },
+    { "id": "SHEEP", "passcodes": [50277355], "short": "Cross-Sheep", "listOrder": 36 },
+    {
+      "id": "SPLK", "passcodes": [29301450], "short": "Little Knight", "listOrder": 37,
+      "effects": [
+        {
+          "key": "splk", "phase": "end", "from": "field", "limit": "oncePerTurn", "mandatory": true,
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "t", "pick": { "oppCard": true } }],
+          "cost": [{ "noDirectAttacks": true }], "do": [{ "oppRemove": { "what": "t", "how": "banish" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 1 },
+          "text": "Little Knight: banish their {t} (your monsters cannot attack directly this turn).", "negText": "Little Knight's banish: negated."
+        }
+      ]
+    },
+    { "id": "FANCY", "passcodes": [4993187], "short": "Fancy Ball", "listOrder": 38 },
+    { "id": "CHARM", "passcodes": [27519978], "short": "Charmer Quartet", "listOrder": 39 }
+  ],
+  "groups": {
+    "DM_ST": ["CIRC", "CURT", "GAZE", "TALI", "SSRV"],
+    "CIRC_ADD": ["DM", "CURT", "GAZE", "TALI", "SSRV"],
+    "CURT_ADD": ["CIRC", "GAZE", "TALI", "SSRV"],
+    "CURT_SS": ["DM", "SERV", "DMBM", "DIA", "DMG", "ROD", "SOULS"],
+    "SOULS_SEND": ["DM", "DMG", "DIA", "DMBM", "SERV", "IOC"],
+    "IOC_ADD": ["DM", "ROD", "SOULS", "SERV", "DMBM"],
+    "SARC_ADD": ["DMG", "DMBM", "GAND", "FSIL"],
+    "SARC_MON": ["DMG", "DMBM", "GAND"],
+    "GAND_SS": ["DMG", "DMBM"],
+    "SINFUL": ["DECE", "WANT"],
+    "AZAMINA": ["ILIA", "RCIE"],
+    "RCIE_ADD": ["HALL", "DECE", "WANT"],
+    "DMOD_SEARCH": ["DM", "ROD", "SOULS", "SERV", "DMBM", "IOC", "CIRC", "CURT", "GAZE", "TALI", "SSRV"],
+    "GAZE_FUS": ["DRAG", "DMOD", "MOC"],
+    "SPELLCASTER_IN_HAND": ["DM", "DROLL", "SOULS", "ROD", "DMG", "DIA", "DMBM", "SERV", "IOC"]
+  },
+  "protections": [
+    { "id": "talisman", "label": "Talisman", "order": 1, "card": "TALI",
+      "where": [{ "control": { "card": "TALI", "kind": "st", "faceUp": false } }, { "has": { "zone": "hand", "group": "SPELLCASTER_IN_HAND" } }],
+      "covers": { "marks": ["dm"], "monsterOnly": true, "inResponseOnly": true },
+      "consume": [{ "move": { "what": "self", "to": "gy" } }], "stepNote": "talisman" },
+    { "id": "baronne", "label": "Baronne", "order": 2, "card": "BAR",
+      "where": [{ "control": { "card": "BAR", "kind": "mon" } }], "limit": "barNeg", "consume": [] },
+    { "id": "dragoon", "label": "Dragoon (discard 1)", "order": 3, "card": "DRAG",
+      "where": [{ "control": { "card": "DRAG", "kind": "mon" } }, { "has": { "zone": "hand" } }], "limit": "dragNeg",
+      "consume": [{ "discardCheapest": true }], "destroysSource": true, "stepNote": "dragoon" },
+    { "id": "ilia", "label": "Ilia Silvia (Tribute)", "order": 4, "card": "ILIA",
+      "where": [{ "control": { "card": "ILIA", "kind": "mon" } }], "limit": "iliaNeg",
+      "consume": [{ "move": { "what": "self", "to": "gy" } }], "stepNote": "ilia" }
+  ],
+  "listOrder": { "DROLL": 1, "MAXX": 3, "ASH": 5, "FUWA": 6, "SPOLY": 18 },
+  "endOfTurn": {
+    "setOrder": ["TALI", "CURT", "GAZE", "SPOLY", "SSRV", "WANT", "FSIL"],
+    "keepOneInHandIf": [{ "control": { "card": "SERV", "kind": "mon" } }, { "control": { "card": "DRAG", "kind": "mon" } }],
+    "setOnlyIf": { "GAZE": [{ "has": { "zone": "extra", "group": "GAZE_FUS" } }, { "any": [{ "control": { "kind": "mon", "filter": { "named": "DM" } } }, { "has": { "zone": "gy", "filter": { "named": "DM" } } }, { "all": [{ "has": { "zone": "deck", "card": "DM" } }, { "control": { "card": "CURT", "kind": "st" } }] }] }] }
+  },
+  "extraDeck": [
+    { "card": "DMOD", "method": "fusion", "order": 1, "slots": [{ "all": [{ "named": "DM" }, { "notUsed": "dmodSS" }] }, { "materialAttribute": ["LIGHT", "DARK"] }] },
+    { "card": "DRAG", "method": "fusion", "order": 2, "slots": [{ "named": "DM" }, { "all": [{ "race": ["Dragon"] }, { "not": { "frame": ["Normal"] } }] }], "uses": { "frame": ["Normal"] } },
+    { "card": "GAR", "method": "fusion", "order": 3, "slots": [{ "cardKind": ["monster"] }, { "cardKind": ["monster"] }], "relations": ["sameRace", "sameAttr", "differentNames"] },
+    { "card": "MUD", "method": "fusion", "order": 4, "slots": [{ "cardKind": ["monster"] }, { "cardKind": ["monster"] }], "relations": ["sameAttr", "differentRace"] },
+    { "card": "CHOR", "method": "fusion", "order": 5, "slots": [{ "extraDeckMonster": true }, { "race": ["Spellcaster"] }] },
+    { "card": "ILIA", "method": "fusion", "order": 6, "slots": [{ "race": ["Illusion"] }, { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["LIGHT"] }] }] },
+    { "card": "RCIE", "method": "fusion", "order": 7, "slots": [{ "race": ["Illusion"] }, { "all": [{ "race": ["Spellcaster"] }, { "attribute": ["LIGHT"] }] }] },
+    { "card": "CANG", "method": "synchro", "order": 1, "level": 10, "min": 2, "max": 3, "tuners": "atMostOne", "mats": { "attribute": ["LIGHT", "DARK"] }, "then": "cang" },
+    { "card": "BAR", "method": "synchro", "order": 2, "level": 10, "min": 2, "max": 3, "tuners": "exactlyOne" },
+    { "card": "MASQ", "method": "link", "order": 1, "rating": 2, "min": 2, "max": 2, "mats": { "not": { "frame": ["Link"] } }, "bottomArrows": true },
+    { "card": "SHEEP", "method": "link", "order": 2, "rating": 2, "min": 2, "max": 2, "mats": { "uniqueName": true }, "bottomArrows": true },
+    { "card": "SPLK", "method": "link", "order": 3, "rating": 2, "min": 2, "max": 2, "mats": { "not": { "frame": ["Normal"] } }, "then": "splk", "thenIf": { "extraDeckMonster": true } },
+    { "card": "FANCY", "method": "link", "order": 4, "rating": 3, "min": 2, "max": 3, "mats": { "not": { "frame": ["Normal"] } }, "bottomArrows": true },
+    { "card": "CHARM", "method": "link", "order": 5, "rating": 4, "min": 2, "max": 4, "bottomArrows": true }
+  ],
+  "boardValue": [
+    { "id": "baronne", "when": "oppTurn", "on": { "control": { "card": "BAR", "kind": "mon" } }, "base": [{ "value": 1.0, "label": "Baronne: negate" }] },
+    { "id": "little-knight", "when": "oppTurn", "on": { "control": { "card": "SPLK", "kind": "mon" } }, "base": [{ "value": 0.9, "label": "Little Knight: banish 2 until End Phase" }] },
+    { "id": "masquerena", "when": "oppTurn", "on": { "control": { "card": "MASQ", "kind": "mon" } }, "base": [{ "value": 0.4, "label": "Masquerena: Link Summon on their turn" }] },
+    { "id": "charmer", "when": "oppTurn", "on": { "control": { "card": "CHARM", "kind": "mon" } }, "base": [{ "value": 0.4, "label": "Charmer Quartet: revive 2 on their turn" }] },
+    { "id": "chaos-angel", "when": "oppTurn", "on": { "control": { "card": "CANG", "kind": "mon" } }, "base": [{ "value": 0.3, "label": "Chaos Angel: your monsters cannot be destroyed by battle" }] },
+    {
+      "id": "dragoon", "when": "oppTurn", "on": { "control": { "card": "DRAG", "kind": "mon" } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand", "filter": { "not": { "any": [{ "named": "ASH" }, { "named": "DROLL" }, { "named": "FUWA" }, { "named": "MAXX" }] } } } }], "value": 1.0, "label": "Dragoon: discard 1 to negate" },
+        { "if": [{ "has": { "zone": "hand" } }], "value": 0.4, "label": "Dragoon: negate (costs a hand trap as the discard)" },
+        { "value": 0.25, "label": "Dragoon (no card left to discard)" }
+      ]
+    },
+    { "id": "mudragon", "when": "oppTurn", "on": { "control": { "card": "MUD", "kind": "mon" } }, "base": [{ "value": 0.5, "label": "Mudragon: protects same-Attribute monsters from targeting" }] },
+    { "id": "chorozo", "when": "oppTurn", "on": { "control": { "card": "CHOR", "kind": "mon" } }, "base": [{ "value": 0.3, "label": "Chorozo: negate an attack" }] },
+    {
+      "id": "gaze-set", "when": "oppTurn", "on": { "control": { "card": "GAZE", "kind": "st", "faceUp": false } },
+      "base": [{ "if": [{ "has": { "zone": "extra", "group": "GAZE_FUS" } }, { "any": [{ "control": { "kind": "mon", "filter": { "named": "DM" } } }, { "has": { "zone": "gy", "filter": { "named": "DM" } } }, { "all": [{ "has": { "zone": "deck", "card": "DM" } }, { "control": { "card": "CURT", "kind": "st" } }] }] }], "value": 0.6, "label": "Gaze (Set): Fusion Summon on their turn" }, { "value": 0.1, "label": "Gaze (Set, no target yet)" }],
+      "extraCopies": { "value": 0.05, "label": "Gaze (second copy: only 1 Gaze per turn)" }
+    },
+    {
+      "id": "ilia", "when": "oppTurn", "on": { "control": { "card": "ILIA", "kind": "mon" } },
+      "base": [{ "value": 1.0, "label": "Ilia Silvia: Tribute to negate" }]
+    },
+    {
+      "id": "diabellstar", "when": "oppTurn", "on": { "control": { "card": "DIA", "kind": "mon" } },
+      "base": [{ "value": 0.2, "label": "Diabellstar: comes back if sent to GY on their turn" }]
+    },
+    {
+      "id": "deception", "when": "oppTurn", "on": { "control": { "card": "DECE", "kind": "st" } },
+      "base": [{ "value": 0.1, "label": "Deception" }]
+    },
+    {
+      "id": "wanted-set", "when": "oppTurn", "on": { "control": { "card": "WANT", "kind": "st", "faceUp": false } },
+      "base": [{ "value": 0.1, "label": "WANTED (Set)" }]
+    },
+    {
+      "id": "deception-reset", "when": "oppTurn", "on": { "flag": "deceReset" },
+      "base": [{ "value": 0.1, "label": "Deception re-Sets in the End Phase" }]
+    },
+    {
+      "id": "sarcophagus", "when": "oppTurn", "on": { "control": { "card": "SARC", "kind": "st", "faceUp": true } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand", "filter": { "cardKind": ["spell"] } } }], "value": 0.3, "label": "Sarcophagus: answers a monster revived from their GY" },
+        { "value": 0.1, "label": "Sarcophagus: answers a monster revived from their GY" }
+      ]
+    },
+    {
+      "id": "talisman-set", "when": "oppTurn", "on": { "control": { "card": "TALI", "kind": "st", "faceUp": false } },
+      "base": [{ "value": 0.5, "label": "Talisman (Set): negates a monster effect chained to a DM card" }]
+    },
+    {
+      "id": "curtain-set", "when": "oppTurn", "on": { "control": { "card": "CURT", "kind": "st", "faceUp": false } },
+      "base": [
+        { "if": [{ "has": { "zone": "deck", "card": "DM" } }], "value": 0.4, "label": "Curtain (Set): Dark Magician from Deck + search on their turn" },
+        { "value": 0.1, "label": "Curtain (Set): Dark Magician from Deck + search on their turn" }
+      ],
+      "adds": [
+        { "if": [{ "control": { "card": "CIRC", "kind": "st", "faceUp": true } }, { "has": { "zone": "deck", "card": "DM" } }], "value": 0.6, "label": "Circle banishes 1" },
+        { "if": [{ "has": { "zone": "gy", "card": "TALI" } }, { "has": { "zone": "deck", "card": "DM" } }], "value": 0.2, "label": "re-Set Talisman" }
+      ],
+      "extraCopies": { "value": 0.05, "label": "Curtain (second copy: only 1 Curtain per turn)" }
+    },
+    {
+      "id": "servant", "when": "oppTurn", "on": { "control": { "card": "SERV", "kind": "mon" } },
+      "base": [
+        { "if": [{ "has": { "zone": "hand", "filter": { "cardKind": ["spell"] } } }], "value": 0.6, "label": "Pharaoh's Servant: discard a Spell, destroy their Spells/Traps" },
+        { "value": 0.1, "label": "Pharaoh's Servant (no Spell to discard)" }
+      ]
+    }
+  ]
+}
