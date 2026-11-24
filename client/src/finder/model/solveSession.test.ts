@@ -231,7 +231,29 @@ describe('the solve session', () => {
     await until(() => s.view().phase === 'done');
     s.record({ t: 'gain', id: 'DM' }, 0);
     await until(() => s.view().phase === 'done' && s.view().base.events.length === 0);
-    expect(s.view().message).toBe("That can't have happened at that point: replay: b. Last record removed.");
+    expect(s.view().message).toBe("That can't have happened at that point: b. Last record removed.");
+  });
+
+  it('a replayed event that cannot have happened drops the record, giving its reason', async () => {
+    let n = 0;
+    const { s } = session((t) => (t.type === 'solve' && t.cfg.base && ++n === 1 ? Promise.reject(new Error('replay: No X left in the Deck at that point')) : result(LINES)));
+    s.start(SNAP, LIST);
+    await until(() => s.view().phase === 'done');
+    s.record({ t: 'gain', id: 'DM' }, 0);
+    await until(() => s.view().phase === 'done' && s.view().base.events.length === 0);
+    expect(s.view().message).toBe("That can't have happened at that point: No X left in the Deck at that point. Last record removed.");
+  });
+
+  it('any other failure with a record shows as an error and keeps the records', async () => {
+    let n = 0;
+    const { s, calls } = session((t) => (t.type === 'solve' && t.cfg.base && ++n === 1 ? Promise.reject(new Error('the deck file did not load')) : result(LINES)));
+    s.start(SNAP, LIST);
+    await until(() => s.view().phase === 'done');
+    s.record({ t: 'gain', id: 'DM' }, 0);
+    await until(() => s.view().phase === 'error');
+    expect(s.view().message).toBe('the deck file did not load');
+    expect(s.view().base.events).toEqual([{ t: 'gain', id: 'DM' }]);
+    expect(solves(calls).filter((t) => t.cfg.base).length).toBe(1);   // no search again without the record
   });
 
   it('a hit by a hand trap uses it up, and undo or a dropped record puts it back', async () => {

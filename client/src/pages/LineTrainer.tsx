@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +20,7 @@ import type { CardMap } from '../components/trainer/shared';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { matchDeckFile } from '../finder/deck/match';
 import { createFinderStorage } from '../finder/model/storage';
-import { finderSource, initialTab, type TrainerTab } from '../finder/model/trainerTab';
+import { deckPicker, decksStatus, finderSource, initialTab, type TrainerTab } from '../finder/model/trainerTab';
 
 // The Finder (deck files, worker pool, solver) loads only when its tab opens.
 const FinderTab = lazy(() => import('../components/finder/FinderTab'));
@@ -64,9 +64,15 @@ export default function LineTrainer() {
   const finderAvailable = useMemo(() => deckList != null && matchDeckFile(deckList) != null, [deckList]);
 
   const [tab, setTab] = useState<Tab>(() => initialTab(location.search));
+  const finderStorage = useMemo(() => createFinderStorage(), []);
+  // No saved decks yet (the server asleep or unreachable): the list remembered on this device for
+  // the stored deck, if any. A failed request opens the Finder from it; a slow one offers it.
+  const status = decksStatus(decksQ);
+  const remembered = useMemo(() => (deckId != null && status !== 'ok' ? finderStorage.recall(deckId) : null), [deckId, status, finderStorage]);
+  const picker = deckPicker(status, remembered != null);
+  useEffect(() => { if (picker.openFinder) setTab('finder'); }, [picker.openFinder]);
   // The server asleep or unreachable: the Finder still opens, from the list remembered on this device.
   const offline = !deck && tab === 'finder' && deckId != null && !decksQ.data;
-  const finderStorage = useMemo(() => createFinderStorage(), []);
   const recalled = useMemo(() => (offline && deckId != null ? finderStorage.recall(deckId) : null), [offline, deckId, finderStorage]);
   const finder = useMemo(() => (deck ? finderSource(deck, null) : finderSource(null, recalled)), [deck, recalled]);
   const [drillMode, setDrillMode] = useState<'hands' | 'review'>('hands');
@@ -198,8 +204,17 @@ export default function LineTrainer() {
       <div className="space-y-4">
         <h1 className="page-title">Line Trainer</h1>
         <p className="text-sm text-md-textSecondary">Pick the deck whose lines you want to learn.</p>
-        {decksQ.isPending ? (
+        {picker.offerFinder && remembered && (
+          <button type="button" onClick={() => setTab('finder')}
+            className="press w-full text-left p-4 rounded-xl bg-md-blue/10 border border-md-blue/30 hover:border-md-blue/50 transition-colors">
+            <p className="font-bold text-md-blue">Open the Finder (saved on this device)</p>
+            <p className="text-xs text-md-textMuted">{remembered.name}: works without the server</p>
+          </button>
+        )}
+        {picker.show === 'loading' ? (
           <p className="text-sm text-md-textMuted">Loading…</p>
+        ) : picker.show === 'cantReach' ? (
+          <ErrorBanner message="Can't reach the server, so your saved decks can't be shown right now." onRetry={() => void decksQ.refetch()} />
         ) : decks.length === 0 ? (
           <p className="text-sm text-md-textMuted">No saved decks yet. <Link to="/build-deck" className="text-md-blue underline">Save one</Link> first.</p>
         ) : (

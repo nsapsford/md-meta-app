@@ -6,7 +6,7 @@
 
 import type { HandTrapFile } from '../deck/schema';
 import { drawBit } from '../engine/opponent';
-import type { BranchTask } from '../engine/replay';
+import { isReplayError, replayReason, type BranchTask } from '../engine/replay';
 import { robust, type Applied, type RobustResult } from '../engine/robust';
 import type { SerializedLine, SerializedResult } from '../engine/serialize';
 import type { CardId, Cfg, Interruption, TurnEvent } from '../engine/types';
@@ -289,9 +289,12 @@ export function createSolveSession(d: { pool: Pool; traps: HandTrapFile; onChang
     } catch (e) {
       if (!alive() || e === CANCEL) return;
       const msg = (e as Error)?.message || '';
-      if (base.path.length) {   // the recorded events no longer fit (their field or the last event changed things)
+      // The recorded events no longer fit (their field or the last event changed things). Any other
+      // failure is not the record's fault: it shows as an error and the records stay.
+      if (base.path.length && isReplayError(msg)) {
         if (!popBase()) clearBase();
-        notice = `That can't have happened at that point${msg ? ': ' + msg : ''}. Last record removed.`;
+        const why = replayReason(msg);
+        notice = `That can't have happened at that point${why ? ': ' + why : ''}. Last record removed.`;
         void solve(false);
         return;
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadCardIndex, parseCardIndex, searchIndex } from './cardIndex';
+import { createIndexLoader, loadCardIndex, parseCardIndex, searchIndex } from './cardIndex';
 
 describe('card index', () => {
   it('parses the shipped file', async () => {
@@ -11,6 +11,17 @@ describe('card index', () => {
 
   it('is loaded once', async () => {
     expect(await loadCardIndex()).toBe(await loadCardIndex());
+  });
+
+  it('does not keep a failed load: the next call tries again', async () => {
+    const text = ['{"attrs":[],"races":[],"intrs":[]}', '===', ['X', 1, 2, 0, 0, 0, 0].join('\t'), '===', ''].join('\n');
+    let calls = 0;
+    const load = createIndexLoader(() => (++calls === 1 ? Promise.reject(new Error('offline')) : Promise.resolve(text)));
+    await expect(load()).rejects.toThrow('offline');
+    const ix = await load();
+    expect(ix.all.map((c) => c.name)).toEqual(['X']);
+    expect(await load()).toBe(ix);
+    expect(calls).toBe(2);
   });
 
   it('searches by name', async () => {

@@ -79,10 +79,11 @@ export default function FinderTab(p: FinderTabProps) {
   }, []);
   useEffect(() => () => { if (toastT.current) clearTimeout(toastT.current); }, []);
 
-  // Remember the list on this device each time it is loaded from the server.
+  // Remember the list on this device each time it is loaded from the server (not when it came from
+  // this device: rewriting it would only make an old copy look new).
   useEffect(() => {
-    if (p.list) storage.remember(deckId, { name: deckName, list: p.list, savedAt: Date.now() });
-  }, [listKey, deckId, deckName, storage]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (p.list && !p.fromDevice) storage.remember(deckId, { name: deckName, list: p.list, savedAt: Date.now() });
+  }, [listKey, deckId, deckName, storage, p.fromDevice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Match and load the deck file.
   useEffect(() => {

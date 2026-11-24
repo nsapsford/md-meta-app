@@ -3,7 +3,7 @@ import { compileDeck } from '../deck/compile';
 import { createEngine, DEFAULT_WIPE_AT, wipeAtOf, type Engine } from './index';
 import handTraps from '../deck/files/hand-traps.json';
 import type { HandTrapEntry } from '../deck/schema';
-import type { BranchTask } from './replay';
+import { isReplayError, replayReason, type BranchTask } from './replay';
 import { robust } from './robust';
 import type { SerializedLine, SerializedStep } from './serialize';
 import type { Interruption, State } from './types';
@@ -46,6 +46,15 @@ describe('replay', () => {
     const cfg = toyCfg({ SEEKER: 1 });
     expect(() => e.replay(cfg, ['ns:SEEKER', 'nope'])).toThrow('replay: nope');
     expect(() => e.replay(cfg, ['!' + JSON.stringify({ k: 'gone', it: IT('force') })])).toThrow('replay: gone');
+  });
+
+  it('marks a recorded event that cannot have happened as a replay error, keeping its reason', () => {
+    const cfg = toyCfg({ SEEKER: 1 });
+    let msg = '';
+    try { e.replay(cfg, ['@' + JSON.stringify({ t: 'lose', id: 'SEEKER', to: 'gy' })]); } catch (err) { msg = (err as Error).message; }
+    expect(isReplayError(msg)).toBe(true);
+    expect(replayReason(msg)).toMatch(/is not on your field at that point$/);
+    expect(isReplayError('the deck file did not load')).toBe(false);
   });
 });
 

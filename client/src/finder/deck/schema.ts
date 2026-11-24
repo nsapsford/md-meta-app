@@ -176,8 +176,11 @@ const join = (path: string, key: string) => (path ? `${path}.${key}` : key);
 const at = (path: string, i: number) => `${path}[${i}]`;
 const show = (v: unknown) => (v === undefined ? 'nothing' : JSON.stringify(v));
 
+// Top-level fields of a shared file carry its key as a prefix; a card's fields are relative to the
+// card, so a card error from a shared file names the file in its message instead.
 function err(c: Ctx, field: string, message: string): void {
-  c.errors.push({ card: c.card, field: c.card === null ? c.prefix + field : field, message });
+  if (c.card === null) c.errors.push({ card: null, field: c.prefix + field, message });
+  else c.errors.push({ card: c.card, field, message: c.prefix ? `${message} (in shared file "${c.prefix.slice(0, -1)}")` : message });
 }
 
 const NAME_LABEL: Record<NameKind, string> = { card: 'card', group: 'group', flag: 'flag', mark: 'mark', tag: 'tag', effect: 'effect', limit: 'effect or limit', choice: 'choice' };
@@ -356,6 +359,7 @@ interface Source { key: string | null; f: Record<string, unknown> }
 function collectSymbols(sources: Source[], c: Ctx): void {
   const cardFrom = new Map<string, string | null>();
   const groupFrom = new Map<string, string | null>();
+  const onlyFrom = new Map<string, string | null>();
   const also = (from: string | null | undefined, here: string | null) => (from && from !== here ? ` (also in shared file "${from}")` : '');
   for (const { key, f } of sources) {
     c.prefix = key ? `${key}:` : '';
@@ -370,6 +374,12 @@ function collectSymbols(sources: Source[], c: Ctx): void {
     if (isObj(f.groups)) for (const g of Object.keys(f.groups)) {
       if (groupFrom.has(g)) err(c, join('groups', g), `duplicate group "${g}"${also(groupFrom.get(g), key)}`);
       else { groupFrom.set(g, key); c.sym.group.add(g); }
+    }
+    // One Set rule per card: a deck file cannot quietly replace a shared file's.
+    const only = isObj(f.endOfTurn) && isObj(f.endOfTurn.setOnlyIf) ? f.endOfTurn.setOnlyIf : {};
+    for (const id of Object.keys(only)) {
+      if (onlyFrom.has(id)) err(c, join('endOfTurn.setOnlyIf', id), `duplicate setOnlyIf rule for "${id}"${also(onlyFrom.get(id), key)}`);
+      else onlyFrom.set(id, key);
     }
     for (const k of ['flag', 'mark'] as const) {
       const list = f[`${k}s`];

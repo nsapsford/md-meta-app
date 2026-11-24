@@ -38,13 +38,24 @@ export function parseCardIndex(text: string): CardIndex {
   return { all, by };
 }
 
-let loading: Promise<CardIndex> | null = null;
-
-/** The shipped index, fetched and parsed once. */
-export function loadCardIndex(): Promise<CardIndex> {
-  if (!loading) loading = import('./card-index.txt?raw').then((m) => parseCardIndex(m.default));
-  return loading;
+/**
+ * A loader that fetches and parses the index once and shares the result. A failed load (offline,
+ * a missing chunk) is not kept: the next call tries again.
+ */
+export function createIndexLoader(fetchText: () => Promise<string>): () => Promise<CardIndex> {
+  let loading: Promise<CardIndex> | null = null;
+  return () => {
+    if (!loading) {
+      const p = fetchText().then(parseCardIndex);
+      loading = p;
+      p.catch(() => { if (loading === p) loading = null; });
+    }
+    return loading;
+  };
 }
+
+/** The shipped index, fetched and parsed once (retried after a failure). */
+export const loadCardIndex = createIndexLoader(() => import('./card-index.txt?raw').then((m) => m.default));
 
 /**
  * Cards whose name contains `q` (case ignored): names starting with it first, then a word

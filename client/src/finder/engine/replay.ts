@@ -34,6 +34,15 @@ export interface Replayer {
   branchTask(t: BranchTask): BranchResult;
 }
 
+/**
+ * Every error replaying a path starts with this: the path no longer fits (a move it names is not
+ * there, or a recorded event cannot have happened). The page tells these apart from other failures.
+ */
+export const REPLAY_ERROR = 'replay: ';
+export const isReplayError = (message: string) => message.startsWith(REPLAY_ERROR);
+/** A replay error's reason, without the marker. */
+export const replayReason = (message: string) => (isReplayError(message) ? message.slice(REPLAY_ERROR.length) : message);
+
 export function createReplay(e: ReplayCore, ser: Pick<Serializer, 'serializeLine'>): Replayer {
   const { gen, exec } = e;
 
@@ -48,19 +57,24 @@ export function createReplay(e: ReplayCore, ser: Pick<Serializer, 'serializeLine
   function replay(cfg: Cfg, path: string[]): State {
     let s = e.newState(cfg);
     for (const k of path) {
-      if (k[0] === '@') s = e.applyEvent(s, JSON.parse(k.slice(1)));
-      else if (k[0] === '^') s = e.startDraw(s, JSON.parse(k.slice(1)));
-      else if (k[0] === '!') {
-        const o = JSON.parse(k.slice(1)) as { k: string; it: Interruption };
-        const a = gen(s).find((x) => x.k === o.k);
-        if (!a) throw new Error('replay: ' + o.k);
-        s = e.interrupt(s, a, o.it);
-      } else {
-        const neg = k[0] === '~';
-        const key = neg ? k.slice(1) : k;
-        const a = gen(s).find((x) => x.k === key);
-        if (!a) throw new Error('replay: ' + key);
-        s = run(s, a, neg);
+      try {
+        if (k[0] === '@') s = e.applyEvent(s, JSON.parse(k.slice(1)));
+        else if (k[0] === '^') s = e.startDraw(s, JSON.parse(k.slice(1)));
+        else if (k[0] === '!') {
+          const o = JSON.parse(k.slice(1)) as { k: string; it: Interruption };
+          const a = gen(s).find((x) => x.k === o.k);
+          if (!a) throw new Error(REPLAY_ERROR + o.k);
+          s = e.interrupt(s, a, o.it);
+        } else {
+          const neg = k[0] === '~';
+          const key = neg ? k.slice(1) : k;
+          const a = gen(s).find((x) => x.k === key);
+          if (!a) throw new Error(REPLAY_ERROR + key);
+          s = run(s, a, neg);
+        }
+      } catch (err) {
+        const m = String((err as Error)?.message ?? err);
+        throw isReplayError(m) ? err : new Error(REPLAY_ERROR + m);
       }
     }
     return s;

@@ -115,6 +115,23 @@ describe('validateDeckFile', () => {
     ]);
   });
 
+  it('rejects a setOnlyIf rule for a card a shared file already has one for', () => {
+    const staples = { vocab: 1, cards: [{ id: 'S', passcodes: [9], short: 'Staple' }], endOfTurn: { setOrder: ['S'], setOnlyIf: { S: [] } } };
+    expect(errorsOf({ ...MINIMAL, uses: ['staples'], endOfTurn: { setOrder: [], setOnlyIf: { S: [] } } }, { staples })).toEqual([
+      { card: null, field: 'endOfTurn.setOnlyIf.S', message: 'duplicate setOnlyIf rule for "S" (also in shared file "staples")' },
+    ]);
+    // Different cards merge.
+    const r = validateDeckFile({ ...MINIMAL, uses: ['staples'], endOfTurn: { setOrder: [], setOnlyIf: { A: [] } } }, { staples });
+    expect(r.ok && Object.keys(r.file.endOfTurn.setOnlyIf ?? {}).sort()).toEqual(['A', 'S']);
+  });
+
+  it('names the shared file in a card error from it', () => {
+    const staples = { vocab: 1, cards: [{ id: 'S', passcodes: [9], short: 'Staple', effects: [{ ...EFFECT, key: 's-eff', do: [{ mvoe: {} }] }] }] };
+    expect(errorsOf({ ...MINIMAL, uses: ['staples'] }, { staples })).toEqual([
+      { card: 'S', field: 'effects[0].do[0]', message: 'unknown action "mvoe" (in shared file "staples")' },
+    ]);
+  });
+
   it('rejects an unknown shared file', () => {
     expect(errorsOf({ ...MINIMAL, uses: ['nope'] })).toEqual([{ card: null, field: 'uses[0]', message: 'unknown shared file "nope"' }]);
   });
