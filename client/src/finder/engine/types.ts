@@ -28,7 +28,14 @@ export interface Cfg {
   base?: string[];
 }
 
-export interface Mon { id: number; nm: number; emz: boolean; noEff: boolean; uses: number; lvl: number; marks: number; uid: number }
+export interface Mon { id: number; nm: number; emz: boolean; noEff: boolean; uses: number; lvl: number; marks: number; uid: number;
+  /** Where it goes when it leaves the field: absent or 0 as the move says, FATE_BANISH banished, FATE_TOKEN nowhere (a Token). */
+  fate?: number }
+
+/** `Mon.fate`: "banish it when it leaves the field". */
+export const FATE_BANISH = 1;
+/** `Mon.fate`: a Token, which ceases to exist when it leaves the field. */
+export const FATE_TOKEN = 2;
 export interface ST { id: number; up: boolean; now: boolean; endSet?: boolean }
 
 export interface Tags {
@@ -85,7 +92,8 @@ export interface OppState {
   k2: number;
 }
 
-export interface Pend { e: number; a?: number }
+/** A queued trigger: its effect, the monster it belongs to (`a`, a uid) and the card whose move set it off (`c`, for a trigger that binds one). */
+export interface Pend { e: number; a?: number; c?: number }
 
 export interface State {
   mode: 'first' | 'second';

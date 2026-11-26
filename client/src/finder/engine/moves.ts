@@ -9,7 +9,7 @@ import type { CompiledDeck } from '../deck/compile';
 import type { StateOps } from './state';
 import type { Ops, PlaceOpts } from './ops';
 import { step, done, L } from './record';
-import { MOVE_SPELL, MOVE_EXTRA, type EnginePush, type Move, type State, type Tags } from './types';
+import { FATE_BANISH, MOVE_SPELL, MOVE_EXTRA, type EnginePush, type Mon, type Move, type State, type Tags } from './types';
 import { createSummons } from './summon';
 
 export type { PlaceOpts };
@@ -130,8 +130,10 @@ export function createMoves(deck: CompiledDeck, so: StateOps = deck.state): Move
     const n = so.clone(s0);
     step(n, `Tribute ${props[n.mons[i].id].short} to Tribute Summon ${props[id].short}.`, INHERENT);
     so.W(n, 'hand')[id]--; n.ns = true;
-    const m = ops.monToGy(n, i, false);
-    L.sum(n, id, 'tribute', 'hand', [m.id]);
+    let t!: Mon;
+    deck.asMaterial('tribute', () => { t = ops.monToGy(n, i, false); }, id);
+    L.sum(n, id, 'tribute', 'hand', [t.id]);
+    if (t.fate === FATE_BANISH) L.mv(n, t.id, 'gy', 'banished');
     ops.place(n, id, { special: false, from: 'hand' });
     return done(n);
   }

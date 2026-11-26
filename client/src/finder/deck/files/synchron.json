@@ -1,0 +1,634 @@
+{
+  "vocab": 1,
+  "id": "synchron",
+  "name": "Synchron",
+  "uses": ["staples"],
+  "flags": ["synchroOnly", "noSummons", "fellowNs"],
+  "cards": [
+    {
+      "id": "JET", "passcodes": [9742784], "short": "Jet", "listOrder": 3, "discardValue": 2,
+      "effects": [
+        {
+          "key": "jet1", "phase": "main", "from": "gy", "trigger": { "usedAsMaterial": { "method": "synchro" } }, "limit": { "shared": "jet" }, "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "JUNK_MON" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true }, "stepTags": { "gy": true }, "ledger": { "effect": 1 },
+          "text": "Jet Synchron (sent as Synchro Material): add {card}.", "negText": "Jet Synchron's search: negated."
+        },
+        {
+          "key": "jet2", "phase": "main", "from": "gy", "limit": { "shared": "jet" },
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "sent", "pick": { "otherHandCard": true } }],
+          "cost": [{ "move": { "what": "sent", "to": "gy" } }], "do": [{ "summon": { "what": "self", "banishOnLeave": true } }],
+          "tags": { "gy": true }, "ledger": { "effect": 2 },
+          "text": "Jet Synchron (GY): send {sent} from hand to the GY, Special Summon Jet (banished when it leaves the field).", "negText": "Jet Synchron (GY, sent {sent}): negated."
+        }
+      ]
+    },
+    {
+      "id": "PSI", "passcodes": [74644400], "short": "Psi-Reflector", "listOrder": 12, "discardValue": 2,
+      "effects": [
+        {
+          "key": "psi1", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "PSI_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Psi-Reflector: add {card}.", "negText": "Psi-Reflector's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "SCRAP", "passcodes": [16449363], "short": "Scrap Synchron", "listOrder": 4, "discardValue": 2.5,
+      "synchroFromHand": { "for": "SCRAP_HAND_FOR", "limit": "scrapHand" }
+    },
+    {
+      "id": "JARM", "passcodes": [91215724], "short": "Junk Armor", "listOrder": 8, "discardValue": 2,
+      "effects": [
+        {
+          "key": "jarm1", "phase": "main", "from": "hand", "trigger": { "addedToHand": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "monsterZoneFree": true }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Junk Armor (added to hand): Special Summon it.", "negText": "Junk Armor's Special Summon: negated."
+        },
+        {
+          "key": "jarm2", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "choose": [{ "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "JARM_SS" } } }],
+          "cost": [{ "tribute": { "what": "self" } }], "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Junk Armor: Tribute it, Special Summon {mon} from the Deck.", "negText": "Junk Armor (Tributed): Special Summon negated."
+        }
+      ]
+    },
+    {
+      "id": "ASYN", "passcodes": [77202120], "short": "Assault Synchron", "listOrder": 6, "discardValue": 2,
+      "effects": [
+        {
+          "key": "asyn1", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }],
+          "do": [{ "summon": { "what": "self" } }, { "payLp": 700 }, { "setFlag": "synchroOnly" }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Assault Synchron: Special Summon it from hand, take 700 damage (Extra Deck: Synchro Monsters only while it is face-up).", "negText": "Assault Synchron: negated."
+        },
+        {
+          "key": "asyn2", "phase": "main", "from": "gy", "trigger": { "tributed": { "group": "DRAGON_SYNCHRO" } }, "limit": "oncePerTurn", "mandatory": true,
+          "choose": [{ "as": "mon", "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "triggerCard": { "zone": "gy" } } } } }],
+          "cost": [{ "move": { "what": "self", "to": "ban" } }], "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "gy": true }, "ledger": { "effect": 2 },
+          "text": "Assault Synchron (GY): banish it, Special Summon the Tributed {mon}.", "negText": "Assault Synchron (GY, banished): negated."
+        }
+      ]
+    },
+    {
+      "id": "FSW", "passcodes": [17201951], "short": "Full-Speed Warrior", "listOrder": 9, "discardValue": 2,
+      "effects": [
+        {
+          "key": "fsw", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "FSW_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Full-Speed Warrior: add {card}.", "negText": "Full-Speed Warrior's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "ASW", "passcodes": [18711696], "short": "Assault Sonic Warrior", "listOrder": 10, "discardValue": 2,
+      "effects": [
+        {
+          "key": "asw1", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "control": { "group": "ASW_ENABLER", "faceUp": true } }],
+          "do": [{ "summon": { "what": "self" } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Assault Sonic Warrior: Special Summon it from hand.", "negText": "Assault Sonic Warrior: negated."
+        },
+        {
+          "key": "asw2", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SYNCHRON" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Assault Sonic Warrior: add {card}.", "negText": "Assault Sonic Warrior's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "JUNK", "passcodes": [63977008], "short": "Junk Synchron", "listOrder": 1, "discardValue": 3,
+      "effects": [
+        {
+          "key": "junk", "phase": "main", "from": "field", "trigger": { "normalSummoned": true }, "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "mon", "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "cardKind": ["monster"] }, { "level": { "atMost": 2 } }] } } } } } }],
+          "do": [{ "summon": { "what": "mon", "noEff": true } }],
+          "tags": { "fieldMon": true, "gy": true }, "ledger": { "effect": 1 },
+          "text": "Junk Synchron: Special Summon {mon} from the GY (effects negated).", "negText": "Junk Synchron's revive: negated."
+        }
+      ]
+    },
+    {
+      "id": "SDSYN", "passcodes": [37799519], "short": "Stardust Synchron", "listOrder": 5, "discardValue": 2,
+      "effects": [
+        {
+          "key": "sdsyn1-hand", "phase": "main", "from": "hand", "limit": { "shared": "sdsyn1" },
+          "choose": [{ "as": "t", "pick": { "fromField": { "kind": "mon" } } }],
+          "cost": [{ "tribute": { "what": "t" } }], "do": [{ "summon": { "what": "self", "banishOnLeave": true } }, { "setFlag": "synchroOnly" }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Stardust Synchron: Tribute {t}, Special Summon it from hand (banished when it leaves the field).", "negText": "Stardust Synchron (Tributed {t}): negated."
+        },
+        {
+          "key": "sdsyn1-gy", "phase": "main", "from": "gy", "limit": { "shared": "sdsyn1" },
+          "choose": [{ "as": "t", "pick": { "fromField": { "kind": "mon" } } }],
+          "cost": [{ "tribute": { "what": "t" } }], "do": [{ "summon": { "what": "self", "banishOnLeave": true } }, { "setFlag": "synchroOnly" }],
+          "tags": { "gy": true }, "ledger": { "effect": 1 },
+          "text": "Stardust Synchron (GY): Tribute {t}, Special Summon it (banished when it leaves the field).", "negText": "Stardust Synchron (GY, Tributed {t}): negated."
+        },
+        {
+          "key": "sdsyn2", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "STARDUST_ST" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Stardust Synchron: add {card}.", "negText": "Stardust Synchron's search: negated."
+        }
+      ]
+    },
+    {
+      "id": "SJS", "passcodes": [13021682], "short": "Starjunk Synchron", "listOrder": 2, "discardValue": 2.5,
+      "effects": [
+        {
+          "key": "sjs1", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": 2 }],
+          "choose": [{ "as": "mon", "pick": { "fromZone": { "zone": "gy", "filter": { "all": [{ "cardKind": ["monster"] }, { "level": { "atMost": 2 } }] } } } }],
+          "do": [{ "summon": { "what": "self" } }, { "summon": { "what": "mon", "noEff": true } }, { "setFlag": "synchroOnly" }],
+          "tags": { "handMon": true }, "stepTags": { "gy": true }, "ledger": { "effect": 1 },
+          "text": "Starjunk Synchron: Special Summon it and {mon} from the GY (effects negated).", "negText": "Starjunk Synchron: negated."
+        }
+      ]
+    },
+    {
+      "id": "TRAIL", "passcodes": [63184227], "short": "Stardust Trail", "listOrder": 13, "discardValue": 1,
+      "effects": [
+        {
+          "key": "trail1-hand", "phase": "main", "from": "hand", "trigger": { "tributed": true }, "limit": { "shared": "trail1" }, "mandatory": true,
+          "cond": [{ "monsterZoneFree": true }],
+          "do": [{ "summon": { "what": "self", "banishOnLeave": true } }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Stardust Trail (a monster was Tributed): Special Summon it from hand (banished when it leaves the field).", "negText": "Stardust Trail: negated."
+        },
+        {
+          "key": "trail1-gy", "phase": "main", "from": "gy", "trigger": { "tributed": true }, "limit": { "shared": "trail1" }, "mandatory": true,
+          "cond": [{ "monsterZoneFree": true }],
+          "do": [{ "summon": { "what": "self", "banishOnLeave": true } }],
+          "tags": { "gy": true }, "ledger": { "effect": 1 },
+          "text": "Stardust Trail (GY, a monster was Tributed): Special Summon it (banished when it leaves the field).", "negText": "Stardust Trail (GY): negated."
+        },
+        {
+          "key": "trail2", "phase": "main", "from": ["gy", "ban"], "trigger": { "usedAsMaterial": { "method": "synchro", "for": "TRAIL_FOR", "anyZone": true } }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "monsterZoneFree": true }],
+          "do": [{ "createToken": { "card": "SDTOK" } }],
+          "tags": {}, "ledger": { "effect": 2 },
+          "text": "Stardust Trail (Synchro Material): Special Summon a Stardust Token.", "negText": "Stardust Trail's Token: negated."
+        }
+      ]
+    },
+    {
+      "id": "MEIST", "passcodes": [73218792], "short": "Junk Meister", "listOrder": 7, "discardValue": 2,
+      "effects": [
+        {
+          "key": "meist1", "phase": "main", "from": "hand", "limit": "oncePerTurn",
+          "cond": [{ "monsterZoneFree": true }, { "has": { "zone": "extra", "group": "MEIST_REVEAL" } }],
+          "do": [{ "summon": { "what": "self" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "handMon": true }, "ledger": { "effect": 1 },
+          "text": "Junk Meister: reveal a Warrior or Stardust Synchro Monster, Special Summon it from hand.", "negText": "Junk Meister: negated."
+        },
+        {
+          "key": "meist2", "phase": "main", "from": "field", "trigger": { "summoned": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "MEIST_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Junk Meister: add {card}.", "negText": "Junk Meister's search: negated."
+        },
+        {
+          "key": "meist3-one", "phase": "main", "from": "field", "limit": { "shared": "meist3" },
+          "choose": [{ "as": "t", "pick": { "fromField": { "kind": "mon", "filter": { "all": [{ "inGroup": "JUNK_MON_FIELD" }, { "level": { "atLeast": 2 } }] } } } }],
+          "do": [{ "changeLevel": { "what": "t", "by": -1 } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 3 },
+          "text": "Junk Meister: {t}'s Level becomes 1 lower.", "negText": "Junk Meister's Level change: negated."
+        },
+        {
+          "key": "meist3-two", "phase": "main", "from": "field", "limit": { "shared": "meist3" },
+          "choose": [{ "as": "t", "pick": { "fromField": { "kind": "mon", "filter": { "all": [{ "inGroup": "JUNK_MON_FIELD" }, { "level": { "atLeast": 3 } }] } } } }],
+          "do": [{ "changeLevel": { "what": "t", "by": -2 } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 3 },
+          "text": "Junk Meister: {t}'s Level becomes 2 lower.", "negText": "Junk Meister's Level change: negated."
+        }
+      ]
+    },
+    {
+      "id": "ASENT", "passcodes": [39015], "short": "Assault Sentinel", "listOrder": 11, "discardValue": 2,
+      "effects": [
+        {
+          "key": "asent1", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "choose": [{ "as": "mon", "pick": { "union": [{ "fromZone": { "zone": "hand", "group": "ASENT_SS" } }, { "fromZone": { "zone": "deck", "group": "ASENT_SS" } }] } }],
+          "cost": [{ "tribute": { "what": "self" } }], "do": [{ "summon": { "what": "mon" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": { "chosen": { "as": "mon", "zone": "deck" } }, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Assault Sentinel: Tribute it, Special Summon {mon} from {zone}.", "negText": "Assault Sentinel (Tributed): Special Summon negated."
+        }
+      ]
+    },
+    { "id": "FYD", "passcodes": [70088809], "short": "Fydraulis", "listOrder": 14, "heldValue": 0.5, "discardValue": 3, "hints": { "normalSummon": false } },
+    {
+      "id": "ETELE", "passcodes": [67723438], "short": "Emergency Teleport", "listOrder": 20, "discardValue": 2, "generic": true,
+      "effects": [
+        {
+          "key": "etele", "phase": "main", "from": "hand", "activates": "spell",
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "mon", "pick": { "union": [{ "fromZone": { "zone": "hand", "filter": { "all": [{ "cardKind": ["monster"] }, { "race": ["Psychic"] }, { "level": { "atMost": 3 } }] } } }, { "fromZone": { "zone": "deck", "filter": { "all": [{ "cardKind": ["monster"] }, { "race": ["Psychic"] }, { "level": { "atMost": 3 } }] } } }] } }],
+          "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "mon", "zone": "deck" } }, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Emergency Teleport: Special Summon {mon} from {zone}.", "negText": "Emergency Teleport: negated.",
+          "lineNote": "The monster is banished in the End Phase."
+        }
+      ]
+    },
+    {
+      "id": "FELLOW", "passcodes": [43834302], "short": "Synchro Fellowship", "listOrder": 21, "discardValue": 1.5,
+      "effects": [
+        {
+          "key": "fellow", "phase": "main", "from": "hand", "limit": { "shared": "fellowAct" }, "activates": "spell",
+          "cond": [{ "addLockOff": true }],
+          "choose": [
+            { "as": "a", "pick": { "fromZone": { "zone": "deck", "cards": ["JUNK"] } } },
+            { "as": "b", "pick": { "fromZone": { "zone": "deck", "group": "FELLOW_ADD" } } },
+            { "as": "d", "pick": { "otherHandCard": true } }
+          ],
+          "do": [{ "move": { "what": "a", "to": "hand" } }, { "move": { "what": "b", "to": "hand" } }, { "discard": { "what": "d" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Synchro Fellowship: add {a} and {b}, discard {d}.", "negText": "Synchro Fellowship: negated."
+        },
+        {
+          "key": "fellow-da", "phase": "main", "from": "hand", "limit": { "shared": "fellowAct" }, "activates": "spell",
+          "cond": [{ "addLockOff": true }],
+          "choose": [
+            { "as": "a", "pick": { "fromZone": { "zone": "deck", "cards": ["JUNK"] } } },
+            { "as": "b", "pick": { "fromZone": { "zone": "deck", "group": "FELLOW_ADD" } } }
+          ],
+          "do": [{ "move": { "what": "a", "to": "hand" } }, { "move": { "what": "b", "to": "hand" } }, { "discard": { "what": "a" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Synchro Fellowship: add {a} and {b}, discard {a}.", "negText": "Synchro Fellowship: negated."
+        },
+        {
+          "key": "fellow-db", "phase": "main", "from": "hand", "limit": { "shared": "fellowAct" }, "activates": "spell",
+          "cond": [{ "addLockOff": true }],
+          "choose": [
+            { "as": "a", "pick": { "fromZone": { "zone": "deck", "cards": ["JUNK"] } } },
+            { "as": "b", "pick": { "fromZone": { "zone": "deck", "group": "FELLOW_ADD" } } }
+          ],
+          "do": [{ "move": { "what": "a", "to": "hand" } }, { "move": { "what": "b", "to": "hand" } }, { "discard": { "what": "b" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Synchro Fellowship: add {a} and {b}, discard {b}.", "negText": "Synchro Fellowship: negated."
+        },
+        {
+          "key": "fellow2", "phase": "main", "from": "gy", "limit": "oncePerTurn",
+          "choose": [{ "as": "t", "pick": { "fromField": { "kind": "mon", "filter": { "all": [{ "frame": ["Synchro"] }, { "level": { "atLeast": 2 } }] } } } }],
+          "cost": [{ "move": { "what": "self", "to": "ban" } }], "do": [{ "changeLevel": { "what": "t", "by": -1 } }, { "setFlag": "fellowNs" }],
+          "tags": { "gy": true, "spell": true }, "ledger": { "effect": 2 },
+          "text": "Synchro Fellowship (GY): banish it, {t}'s Level becomes 1 lower; you may Normal Summon a Synchron monster in addition.", "negText": "Synchro Fellowship (GY, banished): negated."
+        },
+        {
+          "key": "fellow-ns", "phase": "main", "from": "ban", "limit": "oncePerTurn", "negatable": false,
+          "cond": [{ "flag": "fellowNs" }, { "monsterZoneFree": true }],
+          "choose": [{ "as": "c", "pick": { "fromZone": { "zone": "hand", "group": "SYNCHRON" } } }],
+          "do": [{ "normalSummon": { "what": "c" } }],
+          "tags": { "inherent": true },
+          "text": "Normal Summon {c} (Synchro Fellowship's additional Normal Summon)."
+        }
+      ]
+    },
+    {
+      "id": "AZONE", "passcodes": [91002901], "short": "Assault Zone", "listOrder": 22, "discardValue": 2,
+      "effects": [
+        {
+          "key": "azone", "phase": "main", "from": "hand", "limit": { "shared": "azoneAct" }, "activates": "spell",
+          "choose": [{ "as": "card", "optional": true, "pick": { "union": [
+            { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "AMA_MON" } } } },
+            { "fromZone": { "zone": "gy", "group": "AMA_MON" } }
+          ] } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": { "chosen": { "as": "card", "zone": "deck" } }, "deckAdd": { "chosen": { "as": "card", "zone": "deck" } }, "spell": true },
+          "stepTags": { "gy": { "chosen": { "as": "card", "zone": "gy" } } }, "ledger": { "effect": 1 },
+          "text": "{card?Activate Duel Evolution - Assault Zone: add $ from the {zone}.|Activate Duel Evolution - Assault Zone.}", "negText": "Duel Evolution - Assault Zone: activation effect negated (it stays)."
+        }
+      ]
+    },
+    {
+      "id": "ROTA", "passcodes": [32807846], "short": "Reinforcement", "listOrder": 23, "discardValue": 2, "generic": true,
+      "effects": [
+        {
+          "key": "rota", "phase": "main", "from": "hand", "activates": "spell",
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "ROTA_ADD" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "spell": true }, "ledger": { "effect": 1 },
+          "text": "Reinforcement of the Army: add {card}.", "negText": "Reinforcement of the Army: negated."
+        }
+      ]
+    },
+    {
+      "id": "JSIG", "passcodes": [26387390], "short": "Junk Signal", "listOrder": 24, "discardValue": 2,
+      "effects": [
+        {
+          "key": "jsig", "phase": "main", "from": ["hand", "setNotThisTurn"], "limit": { "shared": "jsigAct" }, "activates": "spell",
+          "choose": [
+            { "as": "t", "pick": { "fromField": { "kind": "mon" } } },
+            { "as": "mon", "pick": { "union": [
+              { "fromZone": { "zone": "hand", "filter": { "all": [{ "inGroup": "JSIG_SS" }, { "uniqueName": true }] } } },
+              { "fromZone": { "zone": "deck", "filter": { "all": [{ "inGroup": "JSIG_SS" }, { "uniqueName": true }] } } },
+              { "fromZone": { "zone": "gy", "filter": { "all": [{ "inGroup": "JSIG_SS" }, { "uniqueName": true }] } } }
+            ] } }
+          ],
+          "cost": [{ "tribute": { "what": "t" } }], "do": [{ "summon": { "what": "mon" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": { "chosen": { "as": "mon", "zone": "deck" } }, "spell": true }, "stepTags": { "gy": { "chosen": { "as": "mon", "zone": "gy" } } }, "ledger": { "effect": 1 },
+          "text": "Junk Signal: Tribute {t}, Special Summon {mon} from {mon@hand?the hand|}{mon@deck?the Deck|}{mon@gy?the GY|}.", "negText": "Junk Signal (Tributed {t}): negated."
+        }
+      ]
+    },
+    {
+      "id": "SEMER", "passcodes": [49415281], "short": "Synchro Emergency", "listOrder": 25, "discardValue": 1.2,
+      "effects": [
+        {
+          "key": "semer", "phase": "main", "from": "hand", "limit": { "shared": "semerAct" }, "activates": "trap",
+          "cond": [{ "not": { "control": { "kind": "mon" } } }, { "any": [{ "oppHasTarget": { "kind": "mon" } }, { "oppHasTarget": { "kind": "mon", "targetable": false } }] }],
+          "choose": [
+            { "as": "mon", "pick": { "fromZone": { "zone": "hand", "filter": { "cardKind": ["monster"] } } } },
+            { "as": "syn", "optional": true, "pick": { "onlyIf": { "if": [{ "any": [{ "oppHasTarget": { "kind": "mon", "ext": true } }, { "oppHasTarget": { "kind": "mon", "ext": true, "targetable": false } }] }], "of": { "fromZone": { "zone": "deck", "group": "SYNCHRON" } } } } }
+          ],
+          "do": [{ "summon": { "what": "mon", "noEff": true } }, { "summon": { "what": "syn" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": { "chosen": { "as": "syn" } }, "trap": true }, "ledger": { "effect": 1 },
+          "text": "Synchro Emergency (from hand): Special Summon {mon} from hand (effects negated){syn?, then $ from the Deck}.", "negText": "Synchro Emergency: negated."
+        }
+      ]
+    },
+    { "id": "KUD", "passcodes": [89194103], "short": "Kudabbi", "listOrder": 40 },
+    {
+      "id": "SCRAPW", "passcodes": [42711820], "short": "Scrap Warrior", "listOrder": 41,
+      "effects": [
+        {
+          "key": "scrapw-add", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": { "shared": "scrapw" }, "mandatory": true, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "onlyIf": { "if": [{ "addLockOff": true }], "of": { "fromZone": { "zone": "deck", "group": "SCRAPW_TAKE" } } } } }],
+          "do": [{ "move": { "what": "card", "to": "hand" } }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Scrap Warrior: add {card}.", "negText": "Scrap Warrior's effect: negated."
+        },
+        {
+          "key": "scrapw-gy", "phase": "main", "from": "field", "trigger": { "specialSummoned": { "from": "extra" } }, "limit": { "shared": "scrapw" }, "queueFirst": true,
+          "choose": [{ "as": "card", "pick": { "fromZone": { "zone": "deck", "group": "SCRAPW_TAKE" } } }],
+          "do": [{ "move": { "what": "card", "to": "gy" } }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Scrap Warrior: send {card} from the Deck to the GY.", "negText": "Scrap Warrior's effect: negated."
+        }
+      ]
+    },
+    {
+      "id": "TGHL", "passcodes": [90953320], "short": "Hyper Librarian", "listOrder": 42,
+      "effects": [
+        {
+          "key": "tghl", "phase": "main", "from": "field", "trigger": { "summonedBy": { "method": "synchro", "notSelf": true } }, "mandatory": true,
+          "do": [{ "draw": 1 }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "T.G. Hyper Librarian: draw 1.", "negText": "T.G. Hyper Librarian's draw: negated."
+        }
+      ]
+    },
+    {
+      "id": "JSPD", "passcodes": [77075360], "short": "Junk Speeder", "listOrder": 43,
+      "effects": [
+        {
+          "key": "jspd", "phase": "main", "from": "field", "followUp": true, "limit": "oncePerTurn", "mandatory": true,
+          "choose": [{ "as": "set", "pick": { "subsets": { "of": { "fromZone": { "zone": "deck", "group": "SYNCHRON" } }, "min": 1, "max": 4, "differentLevels": true, "zonesFree": true, "largest": true, "join": " + " } } }],
+          "do": [{ "summon": { "what": "set" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Junk Speeder: Special Summon {set} from the Deck.", "negText": "Junk Speeder's Special Summon: negated."
+        }
+      ]
+    },
+    {
+      "id": "MALONG", "passcodes": [93125329], "short": "Malong", "listOrder": 44,
+      "effects": [
+        {
+          "key": "malong-up", "phase": "main", "from": "field", "trigger": { "specialSummoned": true }, "limit": { "shared": "malongLv" },
+          "do": [{ "changeLevel": { "what": "self", "by": 1 } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Golden Cloud Beast - Malong: its Level becomes 1 higher.", "negText": "Malong's Level change: negated."
+        },
+        {
+          "key": "malong-down", "phase": "main", "from": "field", "trigger": { "specialSummoned": true }, "limit": { "shared": "malongLv" },
+          "do": [{ "changeLevel": { "what": "self", "by": -1 } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Golden Cloud Beast - Malong: its Level becomes 1 lower.", "negText": "Malong's Level change: negated."
+        },
+        {
+          "key": "malong2", "phase": "main", "from": "gy", "trigger": { "sentToGy": true }, "limit": "oncePerTurn", "mandatory": true, "queueFirst": true,
+          "cond": [{ "oppHasTarget": { "faceUp": true } }],
+          "choose": [{ "as": "t", "pick": { "oppCard": { "faceUp": true } } }],
+          "do": [{ "returnToHand": { "what": "t" } }],
+          "tags": { "removal": true, "gy": true }, "ledger": { "effect": 2 },
+          "text": "Malong (sent to the GY): return their {t} to the hand.", "negText": "Malong's bounce: negated."
+        }
+      ]
+    },
+    {
+      "id": "BRD", "passcodes": [73580471, 73580472], "short": "Black Rose", "listOrder": 45,
+      "effects": [
+        {
+          "key": "brd", "phase": "main", "from": "field", "followUp": true,
+          "cond": [{ "any": [{ "oppHasTarget": { "destroyable": true } }, { "oppHasTarget": { "destroyable": true, "targetable": false } }] }],
+          "do": [{ "wipeField": {} }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 1 },
+          "text": "Black Rose Dragon: destroy all other cards on the field.", "negText": "Black Rose Dragon's wipe: negated."
+        }
+      ]
+    },
+    { "id": "SD", "passcodes": [44508094, 44508095], "short": "Stardust Dragon", "listOrder": 46 },
+    {
+      "id": "ACCEL", "passcodes": [30983281], "short": "Accel Stardust", "listOrder": 47,
+      "effects": [
+        {
+          "key": "accel1", "phase": "main", "from": "field", "followUp": true, "limit": "oncePerTurn", "mandatory": true,
+          "choose": [{ "as": "mon", "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "gy", "filter": { "all": [{ "cardKind": ["monster"] }, { "tuner": true }, { "level": { "atMost": 2 } }] } } } } } }],
+          "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "fieldMon": true, "gy": true }, "ledger": { "effect": 1 },
+          "text": "Accel Synchro Stardust Dragon: Special Summon {mon} from the GY.", "negText": "Accel Synchro Stardust Dragon's revive: negated."
+        },
+        {
+          "key": "accel2", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "choose": [{ "as": "sd", "pick": { "fromZone": { "zone": "extra", "cards": ["SD"] } } }],
+          "cost": [{ "tribute": { "what": "self" } }], "do": [{ "summon": { "what": "sd", "from": "extra", "method": "synchro" } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Accel Synchro Stardust Dragon: Tribute it, Special Summon Stardust Dragon (treated as a Synchro Summon).", "negText": "Accel Synchro Stardust Dragon (Tributed): negated.",
+          "lineNote": "Then they may Synchro Summon at once using monsters they control; the monsters Synchro Summoned by this effect are unaffected by your activated effects this turn."
+        }
+      ]
+    },
+    { "id": "VOID", "passcodes": [81020646], "short": "Void Ogre", "listOrder": 48 },
+    { "id": "MAJ", "passcodes": [7841112], "short": "Majestic Star", "listOrder": 49 },
+    {
+      "id": "BAR", "passcodes": [84815190], "short": "Baronne", "listOrder": 50,
+      "effects": [
+        {
+          "key": "bar1", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "cond": [{ "oppHasTarget": true }],
+          "choose": [{ "as": "t", "pick": { "oppCard": true } }],
+          "do": [{ "oppRemove": { "what": "t", "how": "destroy" } }],
+          "tags": { "fieldMon": true, "removal": true }, "ledger": { "effect": 1 },
+          "text": "Baronne de Fleur: destroy their {t}.", "negText": "Baronne de Fleur's destroy: negated."
+        }
+      ]
+    },
+    {
+      "id": "DIS", "passcodes": [27572350], "short": "Dis Pater", "listOrder": 51,
+      "effects": [
+        {
+          "key": "dis1", "phase": "main", "from": "field", "limit": "oncePerTurn",
+          "choose": [{ "as": "mon", "pick": { "onlyIf": { "if": [{ "monsterZoneFree": true }], "of": { "fromZone": { "zone": "ban", "filter": { "all": [{ "cardKind": ["monster"] }, { "attribute": ["LIGHT", "DARK"] }] } } } } } }],
+          "do": [{ "summon": { "what": "mon" } }],
+          "tags": { "fieldMon": true }, "ledger": { "effect": 1 },
+          "text": "Bystial Dis Pater: Special Summon {mon} from banishment.", "negText": "Bystial Dis Pater's Special Summon: negated."
+        }
+      ]
+    },
+    {
+      "id": "CLERIC", "passcodes": [79519259], "short": "Nightwinged Cleric", "listOrder": 52,
+      "effects": [
+        {
+          "key": "cleric-add", "phase": "main", "from": "field", "limit": { "shared": "cleric2" },
+          "cond": [{ "addLockOff": true }],
+          "choose": [{ "as": "d", "pick": { "otherHandCard": true } }, { "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "AMA_MON" } } }],
+          "cost": [{ "discard": { "what": "d" } }], "do": [{ "move": { "what": "mon", "to": "hand" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": true, "deckAdd": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Nightwinged Cleric: discard {d}, add {mon}.", "negText": "Nightwinged Cleric (discarded {d}): negated."
+        },
+        {
+          "key": "cleric-ss", "phase": "main", "from": "field", "limit": { "shared": "cleric2" },
+          "cond": [{ "monsterZoneFree": true }],
+          "choose": [{ "as": "d", "pick": { "otherHandCard": true } }, { "as": "mon", "pick": { "fromZone": { "zone": "deck", "group": "AMA_MON" } } }],
+          "cost": [{ "discard": { "what": "d" } }], "do": [{ "summon": { "what": "mon" } }, { "setFlag": "synchroOnly" }],
+          "tags": { "deckTouch": true, "fieldMon": true }, "ledger": { "effect": 2 },
+          "text": "Nightwinged Cleric: discard {d}, Special Summon {mon} from the Deck.", "negText": "Nightwinged Cleric (discarded {d}): negated."
+        }
+      ]
+    },
+    { "id": "CRIM", "passcodes": [63436931], "short": "Crimson Dragon", "listOrder": 53 },
+    {
+      "id": "QUETZ", "passcodes": [29053656], "short": "Quetzalcoatl", "listOrder": 54,
+      "effects": [
+        {
+          "key": "quetz", "phase": "main", "from": "field", "followUp": true, "limit": "oncePerTurn",
+          "choose": [{ "as": "set", "pick": { "subsets": { "of": { "fromZone": { "zone": "gy", "group": "DRAGON_SYNCHRO", "eachCopy": true } }, "min": 1, "max": 5, "zonesFree": true, "largest": true, "join": " + " } } }],
+          "do": [{ "summon": { "what": "set" } }, { "setFlag": "noSummons" }],
+          "tags": { "fieldMon": true, "gy": true }, "ledger": { "effect": 2 },
+          "text": "Crimson Dragon Quetzalcoatl: Special Summon {set} from the GY (no more Special Summons this turn).", "negText": "Quetzalcoatl's revive: negated."
+        }
+      ]
+    }
+  ],
+  "tokens": [
+    { "id": "SDTOK", "name": "Stardust Token", "short": "Stardust Token", "race": "Dragon", "attr": "LIGHT", "level": 1, "atk": 0, "def": 0 }
+  ],
+  "groups": {
+    "SYNCHRON": ["JET", "SCRAP", "ASYN", "JUNK", "SDSYN", "SJS"],
+    "JUNK_MON": ["JUNK", "JARM", "MEIST"],
+    "JUNK_MON_FIELD": ["JUNK", "JARM", "MEIST", "JSPD"],
+    "MEIST_ADD": ["JUNK", "JARM", "JSIG"],
+    "JARM_SS": ["JUNK", "MEIST", "JET", "SCRAP", "ASYN", "SDSYN", "SJS"],
+    "FELLOW_ADD": ["FSW", "SCRAP", "SJS", "ASW", "SDSYN"],
+    "JSIG_SS": ["FSW", "SCRAP", "SJS", "ASW", "SDSYN", "SD", "SCRAPW", "ACCEL", "MAJ"],
+    "STARDUST_ST": ["FELLOW", "JSIG"],
+    "FSW_ADD": ["JUNK", "FELLOW", "JSIG"],
+    "PSI_ADD": ["ASW", "ASENT", "AZONE"],
+    "AMA_MON": ["PSI", "ASW", "ASENT"],
+    "ASENT_SS": ["PSI", "ASW"],
+    "ROTA_ADD": ["JARM", "FSW", "ASW", "JUNK", "SJS", "MEIST"],
+    "ASW_ENABLER": ["FSW", "SCRAP", "SJS", "ASW", "PSI", "ASENT", "SCRAPW", "CLERIC", "AZONE"],
+    "MEIST_REVEAL": ["SCRAPW", "SD", "ACCEL"],
+    "TRAIL_FOR": ["SCRAPW", "SD", "ACCEL"],
+    "SCRAP_HAND_FOR": ["JSPD", "SCRAPW"],
+    "SCRAPW_TAKE": ["JUNK", "FSW", "SCRAP", "SJS", "ASW", "FELLOW", "JSIG"],
+    "SCRAPW_TUNER": ["SCRAP", "SJS"],
+    "DRAGON_SYNCHRO": ["MALONG", "BRD", "SD", "ACCEL", "VOID", "MAJ", "DIS", "CRIM", "QUETZ"],
+    "NAMED_PROTECTED": ["SD", "ACCEL", "SCRAPW"]
+  },
+  "summonLocks": [
+    { "flag": "synchroOnly", "allow": { "frame": ["Synchro"] } },
+    { "flag": "noSummons", "all": true }
+  ],
+  "listOrder": { "DROLL": 30, "MAXX": 31, "ASH": 32, "FUWA": 33, "SPOLY": 34 },
+  "endOfTurn": {
+    "setOrder": ["JSIG", "ETELE"]
+  },
+  "extraDeck": [
+    { "card": "SCRAPW", "method": "synchro", "order": 1, "level": 3, "min": 2, "max": 3, "tuners": "exactlyOne", "tunerIs": { "inGroup": "SCRAPW_TUNER" } },
+    { "card": "JSPD", "method": "synchro", "order": 2, "level": 5, "min": 2, "max": 4, "tuners": "exactlyOne", "tunerIs": { "inGroup": "SYNCHRON" }, "then": "jspd" },
+    { "card": "TGHL", "method": "synchro", "order": 3, "level": 5, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "MALONG", "method": "synchro", "order": 4, "level": 6, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "BRD", "method": "synchro", "order": 5, "level": 7, "min": 2, "max": 4, "tuners": "exactlyOne", "then": "brd" },
+    { "card": "SD", "method": "synchro", "order": 6, "level": 8, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "ACCEL", "method": "synchro", "order": 7, "level": 8, "min": 2, "max": 4, "tuners": "exactlyOne", "then": "accel1" },
+    { "card": "VOID", "method": "synchro", "order": 8, "level": 8, "min": 2, "max": 4, "tuners": "exactlyOne", "tunerIs": { "attribute": ["DARK"] } },
+    { "card": "CLERIC", "method": "synchro", "order": 9, "level": 8, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "BAR", "method": "synchro", "order": 10, "level": 10, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "DIS", "method": "synchro", "order": 11, "level": 10, "min": 2, "max": 4, "tuners": "exactlyOne", "nonTunerIs": { "race": ["Dragon"] } },
+    { "card": "CRIM", "method": "synchro", "order": 12, "level": 12, "min": 2, "max": 4, "tuners": "exactlyOne" },
+    { "card": "QUETZ", "method": "synchro", "order": 13, "level": 12, "min": 2, "max": 4, "tuners": "exactlyOne", "then": "quetz" }
+  ],
+  "boardValue": [
+    { "id": "baronne", "when": "oppTurn", "on": { "control": { "card": "BAR", "kind": "mon" } }, "base": [{ "value": 1.0, "label": "Baronne de Fleur: negate and destroy" }] },
+    {
+      "id": "quetzalcoatl", "when": "oppTurn", "on": { "control": { "card": "QUETZ", "kind": "mon" } },
+      "base": [
+        { "if": [{ "count": { "zone": "field", "group": "DRAGON_SYNCHRO", "atLeast": 2 } }], "value": 1.0, "label": "Quetzalcoatl: return a Dragon Synchro to negate a monster effect" },
+        { "value": 0.2, "label": "Quetzalcoatl (no other Dragon Synchro to return)" }
+      ]
+    },
+    {
+      "id": "dis-pater", "when": "oppTurn", "on": { "control": { "card": "DIS", "kind": "mon" } },
+      "base": [
+        { "if": [{ "has": { "zone": "ban" } }], "value": 0.9, "label": "Bystial Dis Pater: shuffle a banished card to answer a monster effect" },
+        { "value": 0.5, "label": "Bystial Dis Pater (needs a banished card: theirs, or yours by then)" }
+      ]
+    },
+    { "id": "stardust", "when": "oppTurn", "on": { "control": { "card": "SD", "kind": "mon" } }, "base": [{ "value": 0.7, "label": "Stardust Dragon: negate a destroying effect, then comes back" }] },
+    {
+      "id": "accel", "when": "oppTurn", "on": { "control": { "card": "ACCEL", "kind": "mon" } },
+      "base": [
+        { "if": [{ "has": { "zone": "extra", "card": "SD" } }], "value": 0.6, "label": "Accel Synchro Stardust Dragon: becomes Stardust Dragon and Synchro Summons on their turn" },
+        { "value": 0.2, "label": "Accel Synchro Stardust Dragon (Stardust Dragon used)" }
+      ]
+    },
+    {
+      "id": "void-ogre", "when": "oppTurn", "on": { "control": { "card": "VOID", "kind": "mon" } },
+      "base": [
+        { "if": [{ "not": { "has": { "zone": "hand" } } }], "value": 0.8, "label": "Void Ogre Dragon: negate a Spell/Trap (no cards in hand)" },
+        { "value": 0.15, "label": "Void Ogre Dragon (needs an empty hand to negate)" }
+      ]
+    },
+    { "id": "crimson", "when": "oppTurn", "on": { "control": { "card": "CRIM", "kind": "mon" } }, "base": [{ "value": 0.4, "label": "Crimson Dragon: swaps into a Dragon Synchro of the same Level on their turn" }] },
+    { "id": "malong", "when": "oppTurn", "on": { "control": { "card": "MALONG", "kind": "mon" } }, "base": [{ "value": 0.3, "label": "Malong: bounces a card if it is sent to the GY" }] },
+    { "id": "scrap-warrior", "when": "oppTurn", "on": { "control": { "card": "SCRAPW", "kind": "mon" } }, "base": [{ "value": 0.2, "label": "Scrap Warrior: Warrior Synchros' effects cannot be negated" }] },
+    { "id": "cleric", "when": "oppTurn", "on": { "control": { "card": "CLERIC", "kind": "mon" } }, "base": [{ "value": 0.15, "label": "Nightwinged Cleric" }] },
+    {
+      "id": "junk-armor", "when": "oppTurn", "on": { "control": { "card": "JARM", "kind": "mon" } },
+      "base": [
+        { "if": [{ "control": { "group": "NAMED_PROTECTED", "kind": "mon" } }], "value": 0.3, "label": "Junk Armor: Warrior and Stardust Synchros cannot be targeted" },
+        { "value": 0.05, "label": "Junk Armor" }
+      ]
+    },
+    {
+      "id": "junk-signal-set", "when": "oppTurn", "on": { "control": { "card": "JSIG", "kind": "st", "faceUp": false } },
+      "base": [
+        { "if": [{ "control": { "kind": "mon", "filter": { "frame": ["Synchro"] } } }], "value": 0.4, "label": "Junk Signal (Set): negates a response to a Synchro's effect, or Tributes to Special Summon" },
+        { "value": 0.1, "label": "Junk Signal (Set)" }
+      ],
+      "extraCopies": { "value": 0.02, "label": "Junk Signal (second copy: 1 per turn)" }
+    },
+    {
+      "id": "scrap-gy", "when": "oppTurn", "on": { "all": [{ "has": { "zone": "gy", "card": "SCRAP" } }, { "control": { "card": "SCRAPW", "kind": "mon" } }] },
+      "base": [{ "value": 0.15, "label": "Scrap Synchron (GY): banish it to save Scrap Warrior" }]
+    }
+  ]
+}

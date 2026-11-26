@@ -6,7 +6,7 @@
 // Adding a word: one defineCond / definePick / defineAct / defineTrigger call below (doc,
 // argument spec, compile), plus a row in docs/finder/vocabulary.md. Nothing else changes.
 
-import type { CardId, FinalBoard, Mon, OppCardState, State } from '../engine/types';
+import { FATE_BANISH, FATE_TOKEN, type CardId, type FinalBoard, type Mon, type OppCardState, type State } from '../engine/types';
 import type { EffectDef } from './schema';
 import { L } from '../engine/record';
 import { fieldPool, fusionOptions, poolFusionOptions, type MatView } from '../engine/summon';
@@ -177,7 +177,7 @@ export const defineTrigger = define(triggers, 'triggers');
 const WHICH = { card: A.optional(A.card), group: A.optional(A.group), filter: A.optional(A.cond) };
 const WHICH_ONE = ['card', 'group', 'filter'];
 const KIND = A.optional(A.enum('mon', 'st'));
-const OPP = A.object({ kind: KIND, faceUp: A.optional(A.boolean), targetable: A.optional(A.boolean), destroyable: A.optional(A.boolean) });
+const OPP = A.object({ kind: KIND, faceUp: A.optional(A.boolean), targetable: A.optional(A.boolean), destroyable: A.optional(A.boolean), ext: A.optional(A.boolean) });
 const FREE = A.oneOf(A.none, A.int(1));
 
 type Zone = 'hand' | 'deck' | 'extra' | 'gy' | 'ban' | 'field';
@@ -293,21 +293,23 @@ function controlCounter(a: ControlArgs, ctx: CompileCtx, cap = Infinity): CountF
   return controlCounterOf(matcher(a, ctx), a.kind !== 'st' && a.faceUp !== false, a.kind !== 'mon', a.faceUp, cap);
 }
 
-interface OppArgs { kind?: 'mon' | 'st'; faceUp?: boolean; targetable?: boolean; destroyable?: boolean }
+interface OppArgs { kind?: 'mon' | 'st'; faceUp?: boolean; targetable?: boolean; destroyable?: boolean; ext?: boolean }
 /**
  * An opponent's card test; each given field must match. `targetable` defaults to true (as the
- * reference's oppTargets); the other absent fields do not matter.
+ * reference's oppTargets); the other absent fields do not matter. `ext`: an Extra Deck monster
+ * (their field's `ext`, what "Special Summoned from the Extra Deck" reads).
  */
-function oppTest(a: OppArgs | true): (x: { faceDown?: boolean; noTarget?: boolean; noDestroy?: boolean }) => boolean {
+function oppTest(a: OppArgs | true): (x: { faceDown?: boolean; noTarget?: boolean; noDestroy?: boolean; ext?: boolean }) => boolean {
   if (a === true) a = {};
-  const tg = a.targetable ?? true, up = a.faceUp, ds = a.destroyable;
+  const tg = a.targetable ?? true, up = a.faceUp, ds = a.destroyable, ex = a.ext;
   return (x) => !x.noTarget === tg
     && (up === undefined || !x.faceDown === up)
-    && (ds === undefined || !x.noDestroy === ds);
+    && (ds === undefined || !x.noDestroy === ds)
+    && (ex === undefined || !!x.ext === ex);
 }
 
 const free = (a: true | Record<string, never> | number): number => (typeof a === 'number' ? a : 1);
-const trig = (on: TrigEvent['t'], f: (ev: any, self: number) => boolean): TriggerFn => Object.assign(f, { on });
+const trig = (on: TrigEvent['t'], f: (ev: any, self: number) => boolean, binds = false): TriggerFn => Object.assign(f, binds ? { on, binds } : { on });
 
 // Conditions
 defineCond('has', {
@@ -696,14 +698,16 @@ definePick('first', {
   },
 });
 definePick('subsets', {
-  doc: 'Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and ").',
-  args: A.object({ of: A.pick, min: A.int(0), max: A.int(1), join: A.optional(A.string) }),
-  compile: (a: { of: Word; min: number; max: number; join?: string }, ctx): PickFn => {
-    const of = ctx.pick(a.of, 'of') as PickFn, sep = a.join ?? ' and ';
+  doc: 'Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and "). `differentLevels`: no two members with the same printed Level; `zonesFree`: at most as many members as there are free Main Monster Zones; `largest`: only the largest sets ("as many as possible").',
+  args: A.object({ of: A.pick, min: A.int(0), max: A.int(1), join: A.optional(A.string), differentLevels: A.optional(A.boolean), zonesFree: A.optional(A.boolean), largest: A.optional(A.boolean) }),
+  compile: (a: { of: Word; min: number; max: number; join?: string; differentLevels?: boolean; zonesFree?: boolean; largest?: boolean }, ctx): PickFn => {
+    const of = ctx.pick(a.of, 'of') as PickFn, sep = a.join ?? ' and ', props = ctx.props, monFree = ctx.rt.ops.monFree;
     if (a.min > a.max) ctx.fail(`min ${a.min} is above max ${a.max}`);
     const where = (c: Choice) => `${c.zone}|${c.at}|${String(c.uid)}|${c.id}`;
+    const diffLv = !!a.differentLevels;
     return (s, r) => {
       const opts = of(s, r), out: Choice[] = [], cur: Choice[] = [], seen = new Set<string>();
+      const max = a.zonesFree ? Math.min(a.max, monFree(s)) : a.max;
       const walk = (start: number): void => {
         if (cur.length >= a.min) {
           const sig = cur.map(where).sort().join('+');
@@ -713,11 +717,17 @@ definePick('subsets', {
             out.push({ id: -1, zone: many[0]?.zone ?? 'none', at: -1, uid: null, key: many.map((c) => c.key).join('+'), name: many.map((c) => c.name).join(sep), many });
           }
         }
-        if (cur.length === a.max) return;
-        for (let i = start; i < opts.length; i++) { cur.push(opts[i]); walk(i + 1); cur.pop(); }
+        if (cur.length >= max) return;
+        for (let i = start; i < opts.length; i++) {
+          if (diffLv && cur.some((c) => props[c.id]?.lv === props[opts[i].id]?.lv)) continue;
+          cur.push(opts[i]); walk(i + 1); cur.pop();
+        }
       };
       walk(0);
-      return out;
+      if (!a.largest || !out.length) return out;
+      let top = 0;
+      for (const c of out) top = Math.max(top, c.many!.length);
+      return out.filter((c) => c.many!.length === top);
     };
   },
 });
@@ -852,6 +862,14 @@ definePick('onlyIf', {
     return (s, r) => { for (const c of conds) if (!c(s, r)) return []; return of(s, r); };
   },
 });
+definePick('triggerCard', {
+  doc: "The card whose move set off this queued trigger (a `tributed` trigger's Tributed monster), if it is now in the zone; none for an effect that is not such a trigger.",
+  args: A.object({ zone: A.zone(['hand', 'deck', 'extra', 'gy', 'ban']) }),
+  compile: (a: { zone: Exclude<Zone, 'field'> }, ctx): PickFn => {
+    const rt = ctx.rt, z = a.zone;
+    return (s, r) => (r.ev !== undefined && s[z][r.ev] > taken(r.chosen, z, r.ev) ? [rt.choiceIn(z, r.ev)] : []);
+  },
+});
 definePick('fromTop', {
   doc: 'Each distinct card (of a group or filter, if given) among the top n known cards of the Deck.',
   args: A.object({ n: A.int(1), group: A.optional(A.group), filter: A.optional(A.cond) }, { atMostOne: ['group', 'filter'] }),
@@ -892,13 +910,14 @@ defineAct('move', {
   },
 });
 defineAct('summon', {
-  doc: 'Special Summon a card (from where it is or the given zone), optionally with its effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as its materials (the ledger lists them on the summon).',
-  args: A.object({ what: A.choice, from: A.optional(A.zone()), noEff: A.optional(A.boolean), as: A.optional(A.card), mats: A.optional(A.choice), matsTo: A.optional(A.enum('gy', 'ban', 'deck')) }),
-  compile: (a: { what: string; from?: Zone; noEff?: boolean; as?: CardId; mats?: string; matsTo?: 'gy' | 'ban' | 'deck' }, ctx): ActFn => {
+  doc: 'Special Summon a card (from where it is or the given zone), optionally with its effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as its materials (the ledger lists them on the summon). `banishOnLeave`: it is banished when it leaves the field; `method: synchro`: the summon is treated as a Synchro Summon (what `summonedBy` reads).',
+  args: A.object({ what: A.choice, from: A.optional(A.zone()), noEff: A.optional(A.boolean), as: A.optional(A.card), mats: A.optional(A.choice), matsTo: A.optional(A.enum('gy', 'ban', 'deck')), banishOnLeave: A.optional(A.boolean), method: A.optional(A.enum('synchro')) }),
+  compile: (a: { what: string; from?: Zone; noEff?: boolean; as?: CardId; mats?: string; matsTo?: 'gy' | 'ban' | 'deck'; banishOnLeave?: boolean; method?: 'synchro' }, ctx): ActFn => {
     if (a.from === 'field') ctx.fail('a monster is summoned from a zone, not from the field', 'from');
     if (a.matsTo !== undefined && a.mats === undefined) ctx.fail('needs `mats`', 'matsTo');
     if (a.mats === 'self') ctx.fail('names a choice (choose[].as), not this card', 'mats');
     const slot = slotOf(a.what, ctx), rt = ctx.rt, noEff = !!a.noEff, nm = a.as === undefined ? undefined : ctx.ix[a.as];
+    const fate = a.banishOnLeave ? FATE_BANISH : 0, how = a.method;
     const mslot = a.mats === undefined ? -2 : ctx.choiceSlot(a.mats), matsTo = a.matsTo ?? 'gy';
     return (n, r) => {
       const ids: number[] = [];
@@ -909,7 +928,7 @@ defineAct('summon', {
       rt.each(r, slot, (c) => {
         const lz = rt.takeOut(n, fromZone(c, a.from, n));
         L.sum(n, c.id, 'special', lz, ids.length ? ids : null, extra);
-        rt.ops.place(n, c.id, { special: true, noEff, nm, from: lz });
+        rt.ops.place(n, c.id, { special: true, noEff, nm, from: lz, fate, how });
       });
     };
   },
@@ -1063,7 +1082,7 @@ defineAct('fusionSummon', {
       if (toGy.length >= 2) rt.batchToGy(n, toGy);
       L.sum(n, card, 'fusion', 'extra', ids, extra!);
       rt.state.W(n, 'extra')[card]--;
-      rt.ops.place(n, card, { special: true, from: 'extra', uses });
+      rt.ops.place(n, card, { special: true, from: 'extra', uses, how: 'fusion' });
     };
   },
 });
@@ -1184,6 +1203,47 @@ defineAct('noDirectAttacks', {
   doc: 'You cannot attack directly for the rest of the turn.', args: A.none,
   compile: (): ActFn => (n) => { n.noDirect = true; },
 });
+defineAct('changeLevel', {
+  doc: "The chosen monster's Level changes by `by` (up if positive, down if negative; never below 1).", args: A.object({ what: A.choice, by: { k: 'number', int: true } }),
+  compile: (a: { what: string; by: number }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt;
+    return (n, r) => rt.each(r, slot, (c) => {
+      const i = rt.monIndex(n, c);
+      if (i < 0) throw new Error(`card ${rt.ids[c.id]} is not a monster on the field`);
+      n.mons[i] = { ...n.mons[i], lvl: Math.max(1, n.mons[i].lvl + a.by) };
+    });
+  },
+});
+defineAct('normalSummon', {
+  doc: "Normal Summon the chosen card from the hand: an additional Normal Summon (it neither needs nor uses the turn's Normal Summon).", args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt;
+    return (n, r) => rt.each(r, slot, (c) => {
+      rt.takeOut(n, { id: c.id, zone: 'hand', at: -1, uid: null });
+      L.sum(n, c.id, 'normal');
+      rt.ops.place(n, c.id, { special: false, from: 'hand' });
+    });
+  },
+});
+defineAct('createToken', {
+  doc: 'Special Summon a Token the file declares (`tokens`) to your field. It ceases to exist when it leaves the field; the ledger does not list it.', args: A.object({ card: A.card }),
+  compile: (a: { card: CardId }, ctx): ActFn => {
+    const id = ctx.ix[a.card], rt = ctx.rt;
+    if (!ctx.props[id]?.token) ctx.fail(`"${a.card}" is not a Token (declare it in tokens)`, 'card');
+    return (n) => { rt.ops.place(n, id, { special: true, fate: FATE_TOKEN }); };
+  },
+});
+defineAct('tribute', {
+  doc: 'Tribute a monster you control: it goes to the GY (a monster banished when it leaves the field: banished; a Token: gone) as a Tribute, which `tributed` reads.', args: A.object({ what: A.choice }),
+  compile: (a: { what: string }, ctx): ActFn => {
+    const slot = slotOf(a.what, ctx), rt = ctx.rt;
+    return (n, r) => rt.asMaterial('tribute', () => rt.each(r, slot, (c) => {
+      const f = fromZone(c, 'field', n);
+      if (f.zone !== 'mon') throw new Error(`card ${rt.ids[c.id]} is not a monster on the field`);
+      rt.moveCard(n, f, 'gy');
+    }));
+  },
+});
 
 // Triggers: when an effect with `trigger` is queued.
 interface PlaceEv { id: number; nm: number; special: boolean; from: string | null }
@@ -1227,11 +1287,36 @@ defineTrigger('sentToGy', {
   },
 });
 defineTrigger('usedAsMaterial', {
-  doc: 'This card is sent to the GY as material for a Fusion Summon (`method`, default fusion).', args: A.oneOf(A.none, A.object({ method: A.optional(A.enum('fusion')) })),
-  compile: (a: true | { method?: 'fusion' }): TriggerFn => {
-    const method = (a === true ? undefined : a.method) ?? 'fusion';
-    return trig('move', (ev: MoveEv & { mat: string | null }, self) => ev.id === self && ev.to === 'gy' && ev.mat === method);
+  doc: 'This card is sent to the GY as material for a Summon of the given `method` (fusion, synchro or link; default fusion); `for`: only for a monster of the group; `anyZone`: wherever it went (banished too).',
+  args: A.oneOf(A.none, A.object({ method: A.optional(A.enum('fusion', 'synchro', 'link')), for: A.optional(A.group), anyZone: A.optional(A.boolean) })),
+  compile: (a: true | { method?: 'fusion' | 'synchro' | 'link'; for?: string; anyZone?: boolean }, ctx): TriggerFn => {
+    const o = a === true ? {} : a;
+    const method = o.method ?? 'fusion', any = !!o.anyZone;
+    let mask: Uint8Array | null = null;
+    if (o.for !== undefined) { mask = new Uint8Array(ctx.props.length); for (const i of ctx.group(o.for)) mask[i] = 1; }
+    return trig('move', (ev: MoveEv & { mat: string | null; matFor: number }, self) => ev.id === self && (ev.to === 'gy' || (any && ev.to === 'banished')) && ev.mat === method
+      && (mask === null || (ev.matFor >= 0 && mask[ev.matFor] === 1)));
   },
+});
+defineTrigger('tributed', {
+  doc: 'A monster you control (of the group, if given: its printed card) is Tributed (by `tribute`, or for a Tribute Summon). The queued effect knows which (`triggerCard`).', args: A.oneOf(A.none, A.object({ group: A.optional(A.group) })),
+  compile: (a: true | { group?: string }, ctx): TriggerFn => {
+    const g = a === true ? undefined : a.group;
+    let mask: Uint8Array | null = null;
+    if (g !== undefined) { mask = new Uint8Array(ctx.props.length); for (const i of ctx.group(g)) mask[i] = 1; }
+    return trig('move', (ev: MoveEv & { mat: string | null }) => ev.mat === 'tribute' && ev.from === 'field' && (mask === null || mask[ev.id] === 1), true);
+  },
+});
+defineTrigger('summonedBy', {
+  doc: 'A monster is Synchro, Fusion or Link Summoned (`method`; a summon treated as one counts); `notSelf`: not this card.', args: A.object({ method: A.enum('synchro', 'fusion', 'link'), notSelf: A.optional(A.boolean) }),
+  compile: (a: { method: string; notSelf?: boolean }): TriggerFn => {
+    const ns = !!a.notSelf;
+    return trig('place', (ev: PlaceEv & { how: string | null }, self) => ev.how === a.method && (!ns || ev.id !== self));
+  },
+});
+defineTrigger('addedToHand', {
+  doc: 'This card is added to the hand from the Deck, GY or banishment (not by a draw).', args: A.none,
+  compile: (): TriggerFn => trig('move', (ev: MoveEv, self) => ev.id === self && ev.to === 'hand' && ev.from !== 'field' && ev.from !== 'hand'),
 });
 defineTrigger('monstersToGyTogether', {
   doc: 'Two (or the given number) or more monsters are sent to the GY at the same time (a summon\'s materials).', args: A.oneOf(A.none, A.int(2)),

@@ -4,7 +4,7 @@
 // card. Port of the reference's shuffle / fromDeck / draw / place / monToGY / stToGY /
 // oppTargets / oppRemove. moves.ts (Task 6) builds Normal and Tribute Summons on these.
 
-import type { Mon, OppCard, OppCardState, ST, State } from './types';
+import { FATE_BANISH, FATE_TOKEN, type Mon, type OppCard, type OppCardState, type ST, type State } from './types';
 import type { StateOps } from './state';
 import { L, type LedgerZone } from './record';
 
@@ -17,7 +17,11 @@ export function removeAt<T>(a: T[], i: number): T {
   return x;
 }
 
-export interface PlaceOpts { special?: boolean; emz?: boolean; nm?: number; noEff?: boolean; uses?: number; lvl?: number; marks?: number; ownProc?: boolean; from?: LedgerZone }
+export interface PlaceOpts { special?: boolean; emz?: boolean; nm?: number; noEff?: boolean; uses?: number; lvl?: number; marks?: number; ownProc?: boolean; from?: LedgerZone;
+  /** `Mon.fate`: banished when it leaves the field, or a Token. */
+  fate?: number;
+  /** How it is summoned when that is a Synchro, Fusion or Link Summon (or treated as one): the `summonedBy` trigger reads it. */
+  how?: string }
 
 export interface OpsHooks {
   /** Index of the unknown card (what a draw from an unknown Deck gives). */
@@ -26,7 +30,7 @@ export interface OpsHooks {
   level(id: number): number;
   /** Name a monster has on the field, unless the summon gives one. */
   fieldName(s: State, id: number, ownProc: boolean): number;
-  onPlace(s: State, m: Mon, special: boolean, from?: LedgerZone): void;
+  onPlace(s: State, m: Mon, special: boolean, from?: LedgerZone, how?: string): void;
   onLeaveField(s: State, id: number, kind: 'mon' | 'st', wasFaceUp: boolean, to?: LedgerZone): void;
   onOppMonsterToGy(s: State): void;
 }
@@ -91,16 +95,29 @@ export function createOps(so: StateOps, h: OpsHooks): Ops {
       id, emz: !!o.emz, nm: o.nm ?? h.fieldName(s, id, !!o.ownProc), noEff: !!o.noEff,
       uses: o.uses || 0, lvl: o.lvl || h.level(id), marks: o.marks || 0, uid: s.uid++,
     };
+    if (o.fate) m.fate = o.fate;
     s.mons.push(m);
     s.summons++;
-    h.onPlace(s, m, o.special !== false, o.from);
+    h.onPlace(s, m, o.special !== false, o.from, o.how);
     return m;
   }
 
   function monToGy(s: State, idx: number, ledger = true): Mon {
     const m = removeAt(s.mons, idx);
-    W(s, 'gy')[m.id]++;
-    if (ledger) L.mv(s, m.id, 'field', 'gy');
+    // "Banish it when it leaves the field": banished instead. Without `ledger` (a summon's material
+    // or Tribute, which the summon's entry lists as going to the GY) the caller writes its move from
+    // the GY to banishment after that entry. A Token ceases to exist (the ledger never lists Tokens);
+    // its leaving still sets off what waits for a monster leaving the field (a Tribute, a material).
+    if (m.fate === FATE_BANISH) {
+      W(s, 'ban')[m.id]++;
+      if (ledger) L.mv(s, m.id, 'field', 'banished');
+      h.onLeaveField(s, m.id, 'mon', true, 'banished');
+      return m;
+    }
+    if (m.fate !== FATE_TOKEN) {
+      W(s, 'gy')[m.id]++;
+      if (ledger) L.mv(s, m.id, 'field', 'gy');
+    }
     h.onLeaveField(s, m.id, 'mon', true, 'gy');
     return m;
   }
