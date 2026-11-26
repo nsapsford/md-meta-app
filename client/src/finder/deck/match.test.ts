@@ -93,6 +93,38 @@ describe('matchDeckFile', () => {
   });
 });
 
+describe('the Synchron list', () => {
+  // The user's Synchron list (40 Main Deck cards in 24 different passcodes; 15 Extra Deck cards).
+  const MAIN: [number, number][] = [
+    [94145021, 2], [9742784, 1], [74644400, 1], [16449363, 1], [91215724, 1], [23434538, 1], [77202120, 1], [17201951, 1], [18711696, 3], [63977008, 1],
+    [37799519, 1], [14558127, 3], [13021682, 1], [63184227, 1], [42141493, 3], [73218792, 3], [39015, 1], [70088809, 3], [67723438, 3], [43834302, 2],
+    [91002901, 1], [32807846, 1], [26387390, 1], [49415281, 3],
+  ];
+  const EXTRA_LIST = [89194103, 42711820, 90953320, 77075360, 93125329, 73580471, 44508094, 30983281, 81020646, 7841112, 84815190, 27572350, 79519259, 63436931, 29053656];
+  const list: DeckList = { main: MAIN.map(([passcode, count]) => ({ passcode, count })), extra: EXTRA_LIST.map((passcode) => ({ passcode, count: 1 })) };
+
+  it('is 40 Main Deck cards and matches the synchron file with nothing unknown', () => {
+    expect(MAIN.reduce((t, [, k]) => t + k, 0)).toBe(40);
+    expect(matchDeckFile(list)).toEqual({ fileId: 'synchron', known: MAIN.length, total: MAIN.length, unknown: [] });
+  });
+
+  it('resolves every Main and Extra Deck card to the file', async () => {
+    const d = await loadDeck('synchron');
+    const r = validateDeckFile(d.file, d.shared);
+    if (!r.ok) throw new Error(JSON.stringify(r.errors));
+    const res = resolveList(list, r.file);
+    expect([res.blanks, res.unknown]).toEqual([0, []]);
+    expect(Object.values(res.main).reduce((t, k) => t + k, 0)).toBe(40);
+    expect(Object.keys(res.extra).length).toBe(15);
+  });
+
+  it('a list of staples with one Synchron card is a Synchron list; Reinforcement and Emergency Teleport alone are not', () => {
+    const generic = [14558127, 94145021, 23434538, 42141493];
+    expect(matchDeckFile(m([...generic, 63977008]))?.fileId).toBe('synchron');
+    expect(matchDeckFile(m([...generic, 32807846, 67723438]))).toBeNull();
+  });
+});
+
 describe('loadDeck', () => {
   it('loads a deck file with its shared files, facts and the hand traps, ready to compile', async () => {
     const d = await loadDeck('dm-azamina');

@@ -135,7 +135,8 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
     for (let i = 0; i < s.mons.length; i++) {
       const m = s.mons[i];
       const bits = (m.noEff ? 1 : 0) | ((m.uses & 7) << 1) | ((m.lvl & 63) << 4) | (m.emz ? 1 << 10 : 0) | ((m.marks & 0xfffff) << 11);
-      const v = mix(mix(m.id + 1, m.nm + 1), bits);
+      const v0 = mix(mix(m.id + 1, m.nm + 1), bits);
+      const v = m.fate ? mix(v0, 0x3f00 + m.fate) : v0;
       m1 = (m1 + mix(0x1b873593, v)) | 0; m2 = (m2 + mix(0x5bd1e995, v + 0x7f4a7c15)) | 0;
     }
     a = mix(a, m1); b = mix(b, m2); a = mix(a, s.mons.length);
@@ -150,7 +151,7 @@ export function createStateOps(nCards: number, nOpt: number, nFlags: number): St
     a = mix(a, 0x100 | (s.ns ? 1 : 0) | (s.spell ? 2 : 0) | (s.addLock ? 4 : 0) | (s.noDirect ? 8 : 0));
     a = mix(a, s.flags); b = mix(b, s.flags ^ 0x5bf03635);
     for (let i = 0; i < s.opt.length; i++) { a = mix(a, s.opt[i] | 0); b = mix(b, (s.opt[i] ^ 0x5bf03635) + 0x1f83d9ab * (i + 1)); }
-    for (let i = 0; i < s.pend.length; i++) { const v = s.pend[i].e + 1; a = mix(a, v); b = mix(b, v * 31 + 7); }
+    for (let i = 0; i < s.pend.length; i++) { const p = s.pend[i], v = p.e + 1; a = mix(a, v); b = mix(b, v * 31 + 7); if (p.c !== undefined) a = mix(a, 0x7c00 + p.c); }
     if (s.opp) {
       const o = s.opp;
       if (o.k === null) {

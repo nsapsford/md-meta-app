@@ -27,6 +27,7 @@ function knownCards(dir = FILES): Known {
     const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
     if (Array.isArray(j)) for (const c of j) { if (c.name) k.names.add(c.name); codes(c.passcode); }   // card facts
     for (const c of j.cards ?? []) { k.ids.add(c.id); if (c.short) k.shorts.add(c.short); codes(c.passcodes); }   // deck files
+    for (const t of j.tokens ?? []) { k.ids.add(t.id); if (t.name) k.names.add(t.name); if (t.short) k.shorts.add(t.short); }   // declared Tokens
     for (const t of j.traps ?? []) {   // hand-trap data
       for (const n of [t.name, t.label]) if (n) k.names.add(n);
       if (t.short) k.shorts.add(t.short);

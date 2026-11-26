@@ -13,7 +13,8 @@ Argument notation: `zone` is one of `hand`, `deck`, `extra`, `gy`, `ban`, `field
 `self` or a name bound by the effect's `choose[].as`. `which` is at most one of `card`
 (a card id), `group` (a group name) or `filter` (a condition evaluated per card); none means
 any card. `?` marks an optional argument. `none` means the value is `true` or `{}`.
-`opp` is `{ kind?: mon|st, faceUp?, targetable?, destroyable? }`.
+`opp` is `{ kind?: mon|st, faceUp?, targetable?, destroyable?, ext? }` (`ext`: an Extra Deck
+monster, what "Special Summoned from the Extra Deck" reads off their field).
 
 "This card" in a condition is the effect's own card, a filter's candidate, or one material of an
 Extra Deck rule (`mats`, fusion `slots`). For a material, the other materials are its chosen
@@ -29,6 +30,14 @@ Fusion rules take `more`, a filter for their "1+" materials: beside one material
 Summon locks (`summonLocks`, top level): each is `{ flag, allow?, all? }`. While the flag is set (by `setFlag`), only monsters matching `allow` (none if it is absent) can be Special Summoned from the Extra Deck; with `all`, from anywhere. The engine respects it for every Extra Deck summon: Fusion picks, Synchro and Link Summons, and an effect's `summon` words.
 
 Synchro and Link rules take `thenIf`, a material filter: their `then` effect is queued only when at least one material (read where it was) matches it.
+
+Synchro rules take `tunerIs`, a filter the Tuner must match ("1 DARK Tuner", "1 "Synchron" Tuner"), and `nonTunerIs`, a filter every other material must match ("1+ non-Tuner Dragon monsters"). Materials leave the field as Synchro Material (`usedAsMaterial` with `method: synchro`); the summoned monster is Synchro Summoned (`summonedBy`).
+
+A card's `synchroFromHand: { for: group, limit }` says "this card in your hand can also be used as material" for a Synchro Summon of the group's monsters, once per turn by the `limit` name (a limit like an effect's `shared` one). A Synchro Summon takes at most the hand cards it allows beside at least one monster on the field; the ledger writes such a card as put on the field first, so the summon's entry lists it with the others.
+
+Tokens (`tokens`, top level): `{ id, name, short, race, attr, level, atk, def }`, a Token the file's cards create with `createToken`. A Token is a card id for every word, but it is in no zone and in no saved list. It ceases to exist when it leaves the field, and the ledger never lists it (the app's checker skips Tokens).
+
+A monster Special Summoned with `banishOnLeave` is banished whenever it leaves the field (as material, Tributed, sent or returned): its triggers see it go to banishment. As a summon's material the ledger lists it with the others, then moves it from the GY to banishment.
 
 Effect fields: `followUp: true` is part of another effect's resolution ("then you can ..."): it is never a move of its own and runs only when an effect `queue`s it (declining it is offered unless it is `mandatory`). `queueFirst` (a trigger) queues it at the front of the pending list instead of the back. Card fields: `materialAttribute: "any"` (see the condition). Fusion rules take `uses`, a filter: the Fusion Monster gets one use of its counted effect per material matching it. A field filter (`fromField`, `control`, `has` in `field`) reads each monster where it is (its name and Level there).
 
@@ -123,13 +132,14 @@ the cards of a shared file it uses there.
 | `otherHandCard` | pick | none, or `{ group? \| filter? }` | Each distinct card in hand other than this one (another copy of it counts). |
 | `cheapest` | pick | `{ of: pick, n? }` | Only the n (default 1) choices of the nested pick with the lowest discard value. |
 | `first` | pick | `{ of: pick, n? }` | Only the first n (default 1) choices of the nested pick (a zone pick lists cards in list order). |
-| `subsets` | pick | `{ of: pick, min, max, join? }` | Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and "). |
+| `subsets` | pick | `{ of: pick, min, max, join?, differentLevels?, zonesFree?, largest? }` | Each set of min..max choices of the nested pick, the same cards from the same places once; its name joins the members with `join` (default " and "). `differentLevels`: no two members with the same printed Level; `zonesFree`: at most as many members as there are free Main Monster Zones; `largest`: only the largest such sets ("as many as possible"). |
 | `oppCard` | pick | none, or `opp` | Each of the opponent's matching cards. |
 | `union` | pick | list of picks (≥ 1) | Each choice of each nested pick, in order. |
 | `onlyIf` | pick | `{ if: conditions (≥ 1), of: pick }` | The nested pick's choices while every condition holds (they may read earlier choices), else none. |
+| `triggerCard` | pick | `{ zone }` (not `field`) | The card whose move set off this queued trigger (a `tributed` trigger's Tributed monster), if it is now in the zone. |
 | `fromTop` | pick | `{ n, group? \| filter? }` | Each distinct card (of the group or filter, if given) among the top n known cards of the Deck. |
 | `move` | action | `{ what, to: zone, from?: zone }` | Move a card to a zone. |
-| `summon` | action | `{ what, from?: zone, noEff?, as?: card, mats?: what, matsTo?: gy\|ban\|deck }` | Special Summon a card, optionally with effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as the summon's materials: the ledger lists them on the summon (with `materialsTo`, and `materialsFrom: gy` for GY materials), not as moves; two or more going to the GY set off `monstersToGyTogether`. |
+| `summon` | action | `{ what, from?: zone, noEff?, as?: card, mats?: what, matsTo?: gy\|ban\|deck, banishOnLeave?, method?: synchro }` | Special Summon a card, optionally with effects negated or under another name. With `mats`, the chosen cards go to `matsTo` (default the GY) first as the summon's materials: the ledger lists them on the summon (with `materialsTo`, and `materialsFrom: gy` for GY materials), not as moves; two or more going to the GY set off `monstersToGyTogether`. `banishOnLeave`: "banish it when it leaves the field"; `method: synchro`: "treated as a Synchro Summon" (`summonedBy` sees it; the ledger writes a Special Summon). |
 | `discard` | action | `{ what }` | Discard a card from the hand to the GY. |
 | `discardCheapest` | action | `true` or a number | Discard the given number (default 1) of different cards from the hand with the lowest discard value (ties in list order). |
 | `draw` | action | number ≥ 1 | Draw that many cards. |
@@ -151,6 +161,10 @@ the cards of a shared file it uses there.
 | `destroy` | action | `{ what }` | Destroy a chosen card: one of yours goes to the GY (with its triggers), one of the opponent's is destroyed. |
 | `returnToHand` | action | `{ what }` | Return a chosen card to the hand: yours from where it is (an Extra Deck monster to the Extra Deck); the opponent's leaves their field (as a banish: no GY). |
 | `noDirectAttacks` | action | none | You cannot attack directly for the rest of the turn. |
+| `changeLevel` | action | `{ what, by: integer }` | The chosen monster's Level changes by `by` (up if positive, down if negative; never below 1). The ledger checker reads printed Levels, so a Synchro Summon using it may be flagged. |
+| `normalSummon` | action | `{ what }` | Normal Summon the chosen card from the hand: an additional Normal Summon (it neither needs nor uses the turn's Normal Summon); its Normal Summon triggers start. |
+| `createToken` | action | `{ card }` (a declared Token) | Special Summon the Token to your field (see `tokens`). |
+| `tribute` | action | `{ what }` | Tribute a monster you control: it goes to the GY (banished if it is banished when it leaves the field; a Token is gone) as a Tribute, which `tributed` reads. |
 | `normalSummoned` | trigger | none | This card is Normal or Tribute Summoned. |
 | `specialSummoned` | trigger | none, or `{ from?: zone }` | This card is Special Summoned. |
 | `summoned` | trigger | none | This card is Normal, Tribute or Special Summoned. |
@@ -158,5 +172,8 @@ the cards of a shared file it uses there.
 | `leftField` | trigger | none, or `{ to?: zone, faceUp? }` | This card leaves the field (`faceUp`: only while face-up, or only while face-down). |
 | `sentToGy` | trigger | none, or `{ from?: zone }` | This card is sent to the GY. |
 | `oppMonsterToGy` | trigger | none | A monster the opponent controls is sent to the GY. |
-| `usedAsMaterial` | trigger | none, or `{ method?: fusion }` | This card is sent to the GY as material for a Fusion Summon. |
+| `usedAsMaterial` | trigger | none, or `{ method?: fusion\|synchro\|link, for?: group, anyZone? }` | This card is sent to the GY as material for a Summon of that method (default Fusion); `for`: only for a monster of the group; `anyZone`: wherever it went (a material banished as it leaves counts). |
+| `tributed` | trigger | none, or `{ group? }` | A monster you control (of the group, if given) is Tributed (`tribute`, or a Tribute Summon's Tribute). The queued effect knows which (`triggerCard`). |
+| `summonedBy` | trigger | `{ method: synchro\|fusion\|link, notSelf? }` | A monster is Synchro, Fusion or Link Summoned (a summon treated as one counts); `notSelf`: not this card. |
+| `addedToHand` | trigger | none | This card is added to the hand from the Deck, GY or banishment (not by a draw). |
 | `monstersToGyTogether` | trigger | none, or a number ≥ 2 | Two (or that many) or more monsters are sent to the GY at the same time (a summon's materials). A GY effect listening for it needs its card in the GY before: a copy that went there in the same batch does not count. |
