@@ -76,7 +76,7 @@ export const ACCEPTED_EXPORT_TEXT = {
 
 // ── Ledger checker errors that are the checker's, not the line's (ledger.ts) ──
 
-type LedgerStep = { activations?: { card: string }[]; summons?: { card: string; materials?: string[] }[]; moves?: { card: string; from: string }[] };
+type LedgerStep = { text?: string; activations?: { card: string }[]; summons?: { card: string; materials?: string[] }[]; moves?: { card: string; from: string }[] };
 
 /** Does the step take a card of this name off the field (as a material, or a move from the field)? */
 const leavesField = (s: LedgerStep, name: string) =>
@@ -100,5 +100,24 @@ export const ACCEPTED_LEDGER: AcceptedLedgerError[] = [
       return true;
     },
     reason: "The ledger checker records 'can't activate its effects this turn' by card name. When one copy is summoned under the restriction (Dark Magical Curtain: 'neither player can activate their effects this turn') and a second copy is then Special Summoned by its own procedure, the second copy may activate (Diabellstar the Black Witch's Set). Accepted only for an activation whose card was last summoned in a step with no activation, after an earlier restricted summon of the same name, and only when no copy of that name leaves the field (as a material or a move from the field) between that last summon and the activation.",
+  },
+  {
+    test: (issue, steps) => {
+      const m = /^Material Levels add up to (\d+), but "(.+)" is Level (\d+)\.$/.exec(issue.message);
+      if (issue.severity !== 'error' || !m || issue.step == null) return false;
+      const diff = Number(m[3]) - Number(m[1]);
+      // The Level changes written before the flagged step ("<card>'s Level becomes 2 lower", "its Level becomes 1 higher").
+      let change = 0;
+      for (const s of steps.slice(0, issue.step - 1)) for (const x of (s.text ?? '').matchAll(/Level becomes (\d+) (?:lower|higher)/g)) change += Number(x[1]);
+      // Tokens: the checker skips them as materials, so their Levels are missing from its sum.
+      const tokens = (steps[issue.step - 1]?.summons ?? []).some((x) => x.card === m[2] && (x.materials ?? []).some((n) => /\btoken\b/i.test(n)));
+      return (change > 0 && Math.abs(diff) <= change) || (tokens && diff > 0 && diff <= change + 12);
+    },
+    reason: "The ledger checker adds up the materials' printed Levels and skips Tokens. A monster whose Level an effect changed on the field (Junk Meister, Synchro Fellowship, Golden Cloud Beast - Malong) is Synchro Material at its new Level, and a Token (Stardust Token) adds its Level. Accepted only when the line wrote Level changes earlier that cover the difference, or the summon lists a Token and the printed sum falls short.",
+  },
+  {
+    test: (issue, steps) => issue.severity === 'error' && issue.step != null && /^A second Normal Summon this turn\./.test(issue.message)
+      && steps.slice(0, issue.step).some((s) => /additional Normal Summon\)/.test(s.text ?? '')),
+    reason: "Synchro Fellowship grants an additional Normal Summon of a \"Synchron\" monster (\"in addition to your Normal Summon/Set\"); the ledger checker allows a second one only for text that says \"additional Normal Summon\". Accepted only when a step up to the flagged one is that additional Normal Summon.",
   },
 ];

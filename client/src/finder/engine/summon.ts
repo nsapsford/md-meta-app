@@ -5,10 +5,10 @@
 // loop, with each rule's data (Level, rating, material counts, Tuners, material
 // conditions, relations, bottom arrows) in place of its card checks. Xyz is not built.
 
-import type { CardProps, Choice, CompiledDeck, CompiledExtraRule, CondFn, Place } from '../deck/compile';
+import type { CardProps, Choice, CompiledDeck, CompiledExtraRule, CondFn, HandSynchro, Place } from '../deck/compile';
 import type { StateOps } from './state';
 import { step, done, L } from './record';
-import { MOVE_EXTRA, type EnginePush, type Move, type OppCard, type State, type Tags } from './types';
+import { FATE_BANISH, FATE_TOKEN, MOVE_EXTRA, type EnginePush, type Move, type OppCard, type State, type Tags } from './types';
 
 /** A possible material: one of your monsters (`idx` in `s.mons`) or a face-up opponent's monster (`uid`). */
 export interface MatView { side: 'me' | 'opp'; idx?: number; uid?: OppCard['uid']; id: number; nm: number; race: string; attr: string; sub: string; ext: boolean;
@@ -58,6 +58,12 @@ function eachSubset(n: number, lo: number, hi: number, fn: (pick: number[]) => v
   }
 }
 
+/**
+ * A possible Synchro Material: one of your monsters with a Level (`i`, its index in `s.mons`), or a
+ * card in your hand that can be material from there (`i` -1, `hand` its rule).
+ */
+interface Cand { i: number; id: number; lvl: number; tuner: boolean; hand: HandSynchro | null }
+
 export interface Summons {
   /** Synchro Summon moves (`syn:<card>:<sorted material ids joined by +>`). */
   genSynchro(s: State, push: EnginePush): void;
@@ -79,21 +85,32 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
   const linkRepeat = new Set(links.map((r) => r.card)).size !== links.length;
 
   const fieldChoice = (s: State, i: number): Choice => matChoice(s.mons[i].id, { zone: 'mon', at: i, uid: s.mons[i].uid });
+  const HAND: Place = Object.freeze({ zone: 'hand', at: -1, uid: null }) as Place;
+  const candChoice = (s: State, c: Cand): Choice => (c.hand ? matChoice(c.id, HAND) : fieldChoice(s, c.i));
   // The materials' card ids, sorted as strings (as Array.prototype.sort does) and joined by '+'.
   const byName = ids.map((_x, i) => i).sort((a, b) => (ids[a] < ids[b] ? -1 : ids[a] > ids[b] ? 1 : 0));
   const rank = new Int32Array(ids.length);
   byName.forEach((i, k) => { rank[i] = k; });
-  const sig = (s: State, pick: number[]): string => {
-    const cs = pick.map((i) => s.mons[i].id);
-    for (let a = 1; a < cs.length; a++) { const x = cs[a]; let b = a - 1; while (b >= 0 && rank[cs[b]] > rank[x]) { cs[b + 1] = cs[b]; b--; } cs[b + 1] = x; }
-    let out = ids[cs[0]];
-    for (let a = 1; a < cs.length; a++) out += '+' + ids[cs[a]];
+  const sig = (s: State, pick: number[]): string => sigOf(pick.map((i) => s.mons[i].id), null);
+  /** Sorted material ids joined by '+'; a material from the hand (`hand[k]`) is written `h.<id>`. */
+  const sigOf = (cs: number[], hand: boolean[] | null): string => {
+    const ord = cs.map((_x, k) => k);
+    for (let a = 1; a < ord.length; a++) { const x = ord[a]; let b = a - 1; while (b >= 0 && rank[cs[ord[b]]] > rank[cs[x]]) { ord[b + 1] = ord[b]; b--; } ord[b + 1] = x; }
+    const nm = (k: number) => (hand && hand[k] ? 'h.' : '') + ids[cs[k]];
+    let out = nm(ord[0]);
+    for (let a = 1; a < ord.length; a++) out += '+' + nm(ord[a]);
     return out;
   };
 
   const heads = new Map<SynchroRule | LinkRule, string>();
-  /** The summon: materials to the GY (one ledger entry naming them), then the monster from the Extra Deck. */
-  function summonRun(r: SynchroRule | LinkRule, pick: number[], emz: boolean): Move['run'] {
+  /**
+   * The summon: materials to the GY (one ledger entry naming them), then the monster from the Extra
+   * Deck. `pick`: field indices, ascending; `hand`: materials from the hand (written to the ledger as
+   * put on the field first, so the summon's entry can list them with the others). A material that is
+   * banished when it leaves the field is listed, then moved from the GY to banishment; a Token is listed
+   * (the ledger checker skips Tokens) and ceases to exist.
+   */
+  function summonRun(r: SynchroRule | LinkRule, pick: number[], emz: boolean, hand: HandSynchro[] = []): Move['run'] {
     const method = r.method;
     let head = heads.get(r);
     if (head === undefined) { head = `${method === 'synchro' ? 'Synchro' : 'Link'} Summon ${props[r.card].short} with `; heads.set(r, head); }
@@ -102,47 +119,79 @@ export function createSummons(deck: CompiledDeck, so: StateOps = deck.state): Su
     const down = pick.slice().reverse();
     return (s0) => {
       const n = so.clone(s0);
-      let txt = hd + props[s0.mons[pick[0]].id].short;
-      for (let j = 1; j < pick.length; j++) txt += ' + ' + props[s0.mons[pick[j]].id].short;
-      step(n, txt + '.', INHERENT);
+      const names = pick.map((i) => props[s0.mons[i].id].short).concat(hand.map((h) => props[h.card].short + ' (hand)'));
+      step(n, hd + names.join(' + ') + '.', INHERENT);
       // `thenIf`: the rule's `then` is queued only when a material (read where it was) matches it.
-      const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }));
-      const mats: number[] = [];
-      for (let j = 0; j < down.length; j++) mats.push(ops.monToGy(n, down[j], false).id);
-      if (mats.length >= 2) deck.onBatchToGy(n, mats);
+      const thenOk = !r.thenIf || pick.some((i) => r.thenIf!(s0, { self: s0.mons[i].id, at: { zone: 'mon', at: i, uid: s0.mons[i].uid }, chosen: [] }))
+        || hand.some((h) => r.thenIf!(s0, { self: h.card, at: HAND, chosen: [] }));
+      const mats: number[] = [], toGy: number[] = [], banished: number[] = [];
+      for (const h of hand) L.mv(n, h.card, 'hand', 'field');
+      deck.asMaterial(method, () => {
+        for (let j = 0; j < down.length; j++) {
+          const m = ops.monToGy(n, down[j], false);
+          mats.push(m.id);
+          if (m.fate === FATE_BANISH) banished.push(m.id); else if (m.fate !== FATE_TOKEN) toGy.push(m.id);
+        }
+        for (const h of hand) {
+          so.setOpt(n, h.limit);
+          so.W(n, 'hand')[h.card]--; so.W(n, 'gy')[h.card]++;
+          mats.push(h.card); toGy.push(h.card);
+          deck.onLeaveField(n, h.card, 'mon', true, 'gy');
+        }
+      }, r.card);
+      if (toGy.length >= 2) deck.onBatchToGy(n, toGy);
       L.sum(n, r.card, method, 'extra', mats);
+      for (const id of banished) L.mv(n, id, 'gy', 'banished');
       so.W(n, 'extra')[r.card]--;
-      const m = ops.place(n, r.card, { special: true, emz, from: 'extra' });
+      const m = ops.place(n, r.card, { special: true, emz, from: 'extra', how: method });
       if (r.then && thenOk) deck.queueAfterSummon(n, r.then, m);
       return done(n);
     };
   }
 
+  /** Do the materials meet the rule's `tunerIs` (each Tuner) and `nonTunerIs` (each other material)? */
+  function tunersFit(s: State, r: SynchroRule, pick: Cand[], mats: Choice[]): boolean {
+    for (let j = 0; j < pick.length; j++) {
+      const f = pick[j].tuner ? r.tunerIs : r.nonTunerIs;
+      if (f && !f(s, { self: mats[j].id, at: mats[j], chosen: mats.filter((_x, k) => k !== j) })) return false;
+    }
+    return true;
+  }
+
   function genSynchro(s: State, push: EnginePush): void {
     if (!synchros.length) return;
-    // Monsters with a Level (not Links), by their current Level.
-    const ms: number[] = [];
-    for (let i = 0; i < s.mons.length; i++) if (props[s.mons[i].id].lv && s.mons[i].lvl) ms.push(i);
-    if (ms.length < 2) return;
+    // Monsters with a Level (not Links), by their current Level; then cards that can be material from the hand.
+    const cand: Cand[] = [];
+    for (let i = 0; i < s.mons.length; i++) { const p = props[s.mons[i].id]; if (p.lv && s.mons[i].lvl) cand.push({ i, id: s.mons[i].id, lvl: s.mons[i].lvl, tuner: p.tuner, hand: null }); }
+    if (!cand.length) return;
+    for (const h of deck.handSynchro) {
+      const p = props[h.card];
+      if (s.hand[h.card] && p.lv && !so.getOpt(s, h.limit)) cand.push({ i: -1, id: h.card, lvl: p.lv, tuner: p.tuner, hand: h });
+    }
+    if (cand.length < 2) return;
     // Two picks share a key only when the field holds two copies of a card (or two rules make one card).
     const dup = synRepeat || sameIds(s);
     const seen = new Set<string>();
-    eachSubset(ms.length, Math.max(2, synLo), synHi, (sub) => {
-      const pick = sub.map((j) => ms[j]);
-      let sum = 0, tuners = 0;
-      for (const i of pick) { sum += s.mons[i].lvl; if (props[s.mons[i].id].tuner) tuners++; }
+    eachSubset(cand.length, Math.max(2, synLo), synHi, (sub) => {
+      const pick = sub.map((j) => cand[j]);
+      let sum = 0, tuners = 0, fromHand = 0;
+      for (const c of pick) { sum += c.lvl; if (c.tuner) tuners++; if (c.hand) fromHand++; }
+      if (fromHand === pick.length) return;
       let mats: Choice[] | null = null, sg: string | null = null;
       for (const r of synchros) {
         if (!s.extra[r.card] || !deck.extraAllowed(s, r.card) || pick.length < r.min || pick.length > r.max || sum !== r.level) continue;
         if (r.tuners === 'exactlyOne' ? tuners !== 1 : tuners > 1) continue;
+        if (fromHand && pick.some((c) => c.hand && !c.hand.for[r.card])) continue;
         // Unlike the reference (which marks the signature seen before any rule check), a key is marked
         // seen only once its rule's checks pass: when two copies of a card differ in current Level or
         // in what `mats` reads (its name on the field), a later copy can still make the move.
-        const k = 'syn:' + ids[r.card] + ':' + (sg ??= sig(s, pick));
+        const k = 'syn:' + ids[r.card] + ':' + (sg ??= fromHand ? sigOf(pick.map((c) => c.id), pick.map((c) => !!c.hand)) : sigOf(pick.map((c) => c.id), null));
         if (dup && seen.has(k)) continue;
-        if (r.mats && !allSatisfy(s, r.mats, mats ??= pick.map((i) => fieldChoice(s, i)))) continue;
+        if (r.mats && !allSatisfy(s, r.mats, mats ??= pick.map((c) => candChoice(s, c)))) continue;
+        if ((r.tunerIs || r.nonTunerIs) && !tunersFit(s, r, pick, mats ??= pick.map((c) => candChoice(s, c)))) continue;
         if (dup) seen.add(k);
-        push(k, INHERENT, summonRun(r, pick, false), false, MOVE_EXTRA);
+        const onField = pick.filter((c) => !c.hand).map((c) => c.i);
+        push(k, INHERENT, summonRun(r, onField, false, pick.filter((c) => c.hand).map((c) => c.hand!)), false, MOVE_EXTRA);
       }
     });
   }

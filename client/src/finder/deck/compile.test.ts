@@ -107,7 +107,7 @@ describe('compiled deck tables', () => {
   });
 
   it('compiles the Extra Deck rule to data', () => {
-    expect(deck.extra).toEqual([{ card: deck.ix.SYNC, method: 'synchro', level: 8, min: 2, max: 2, tuners: 'exactlyOne', mats: null, then: 0, thenIf: null }]);
+    expect(deck.extra).toEqual([{ card: deck.ix.SYNC, method: 'synchro', level: 8, min: 2, max: 2, tuners: 'exactlyOne', mats: null, then: 0, thenIf: null, tunerIs: null, nonTunerIs: null }]);
   });
 
   it('Sets end-of-turn cards in order without touching the state', () => {

@@ -2,9 +2,11 @@
 
 The Line Finder's engine knows no cards. Each deck is a JSON file in `client/src/finder/deck/files/`
 written in the words of `docs/finder/vocabulary.md`, with the cards' facts in a file beside it. This
-note is for whoever writes the next one. The two existing files are the worked examples:
-`dm-azamina.json` (Synchro and Link lines, a reference engine to match) and `branded-dracotail.json`
-(Fusion from many places, summon locks, End Phase value, no reference).
+note is for whoever writes the next one. The existing files are the worked examples:
+`dm-azamina.json` (Synchro and Link lines, a reference engine to match), `branded-dracotail.json`
+(Fusion from many places, summon locks, End Phase value, no reference) and `synchron.json` (Synchro
+lines: Tuner and non-Tuner filters, a card used as material from the hand, Tributes and what they set
+off, Level changes, a Token, an additional Normal Summon, no reference).
 
 ## The steps
 
@@ -25,7 +27,10 @@ note is for whoever writes the next one. The two existing files are the worked e
      `choose`, `do`, `tags` for what can answer it, `ledger.effect` numbered as the card prints its
      effects, step `text`);
    - triggers (`trigger`, `mandatory`, `immediate`, `queueFirst`, `followUp` for "then you can");
-   - `extraDeck` rules for every Fusion, Synchro and Link monster;
+   - `extraDeck` rules for every Fusion, Synchro and Link monster (a Synchro's "1 DARK Tuner" or
+     "1+ non-Tuner Dragon monsters" is `tunerIs` / `nonTunerIs`; one that cannot be made from the list
+     gets no rule);
+   - `tokens` for a Token a card creates (`createToken`): it needs no passcode and no facts;
    - `summonLocks` for "you cannot Special Summon ... except ...";
    - `boardValue` for every effect that matters after your turn, `when: "oppTurn"` or
      `"endPhase"`, on the DM file's scale: 1.0 a negate, 0.9 strong removal, 0.5-0.6 a conditional
@@ -48,9 +53,10 @@ note is for whoever writes the next one. The two existing files are the worked e
    against the opponent fields, solved at `PIN` with `strict`, no move throwing, and every best line
    through the server's ledger checker with no error. A ledger error is a deck-file mistake until
    shown otherwise. Run it with `npx vitest run --config vitest.finder.config.ts <id>`.
-7. **Produce a hands report** like `__harness__/hands.report.test.ts` (`npm run finder:hands`): a
-   dozen hands, one built around each starter, solved at the real settings, written to
-   `docs/finder/<id>-hands.md`. Read it for anything plainly wrong, fix the file, re-run 6 and 7,
+7. **Produce a hands report** like `__harness__/hands.report.test.ts` or
+   `__harness__/synchron.hands.report.test.ts` (`npm run finder:hands` runs every file named
+   `*hands.report.test.ts`): a dozen hands, one built around each starter, solved at the real
+   settings, written to `docs/finder/<id>-hands.md`. Read it for anything plainly wrong, fix the file, re-run 6 and 7,
    then give it to the player to try in Master Duel. Board values are tuned from what comes back.
 8. **Run everything** in `client/`: `npm test`, `npm run test:parity`, `npx tsc -b`,
    `npm run build`.
@@ -91,3 +97,16 @@ Recorded here so the next author does not rediscover them.
   the field by the card's printed Attribute (`attribute`), not by an Attribute it has there. A
   monster whose Attribute was changed on the field would be judged by its printed one. Known and
   left as the reference does it.
+
+## Known divergences in Synchron
+
+- **The ledger checker reads printed Levels and skips Tokens.** A Synchro Summon using a monster whose
+  Level Junk Meister, Synchro Fellowship or Malong changed, or a Stardust Token, is flagged by the
+  server's checker; `ACCEPTED_LEDGER` (`__harness__/acceptedDiffs.ts`) accepts exactly those, and
+  Synchro Fellowship's additional Normal Summon (the checker only allows one for text saying
+  "additional Normal Summon"). A line saved in the app shows the same errors until the checker learns
+  them.
+- **Scrap Synchron from the hand** is written to the ledger as put on the field before the Synchro
+  Summon (the checker takes every material from one zone).
+- **Assault Synchron** revives exactly the Tributed Dragon Synchro (`triggerCard`); "or banished" is
+  not modelled.

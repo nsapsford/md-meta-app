@@ -10,6 +10,7 @@ import SaveDeckDialog from '../components/decks/SaveDeckDialog';
 import type { ResolvedCard } from '../api/deckIO';
 import type { Card } from '../types/card';
 import { hapticLight } from '../utils/haptics';
+import { isExtraDeckType } from '../utils/deckEdit';
 
 interface DeckCard {
   id: number;
@@ -19,9 +20,7 @@ interface DeckCard {
   type: string;
 }
 
-function isExtraDeck(type: string): boolean {
-  return ['Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster'].some(t => type.includes(t));
-}
+const isExtraDeck = isExtraDeckType;
 
 export default function DeckBuilder() {
   const [query, setQuery] = useState('');
