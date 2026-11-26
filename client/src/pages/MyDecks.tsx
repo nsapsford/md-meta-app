@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { deleteSavedDeck, exportYdk, type SavedDeck } from '../api/deckIO';
 import { copyText, shareYdk } from '../utils/deckShare';
@@ -8,6 +8,7 @@ import ErrorBanner from '../components/common/ErrorBanner';
 import CardFan from '../components/common/CardFan';
 import { savedDecksQuery } from '../queries/options';
 import { invalidateSavedDecks } from '../queries/invalidate';
+import ImportDeckDialog from '../components/decks/ImportDeckDialog';
 
 const flatten = (rows: Array<{ passcode: number; count: number }>): number[] =>
   rows.flatMap((r) => Array(r.count).fill(r.passcode));
@@ -35,6 +36,8 @@ export default function MyDecks() {
   // Showing a stored copy because the latest refresh failed.
   const offlineCopy = decksQ.data != null && decksQ.isRefetchError;
   const [actionError, setActionError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const navigate = useNavigate();
   const decks = decksQ.data ?? [];
   const loadError = !decksQ.data && decksQ.error ? decksQ.error.message : '';
   const error = actionError || loadError || '';
@@ -62,19 +65,27 @@ export default function MyDecks() {
             Offline copy
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => setImporting(true)}
+          className="ml-auto press text-sm font-semibold px-3 py-1.5 rounded-lg bg-md-surfaceHover hover:bg-md-borderLight"
+        >
+          Import
+        </button>
         <Link
           to="/build-deck"
-          className="ml-auto bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-md-blueLight"
+          className=" bg-md-blue text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-md-blueLight"
         >
           Build a deck
         </Link>
       </div>
+      <ImportDeckDialog open={importing} onClose={() => setImporting(false)} onSaved={(d) => navigate(`/my-decks/${d.id}`)} />
       {error && <ErrorBanner message={error} onRetry={() => { setActionError(''); void refresh(); }} />}
       {loading ? (
         <p className="text-sm text-md-textMuted">Loading…</p>
       ) : decks.length === 0 ? (
         <p className="text-sm text-md-textMuted">
-          No saved decks yet. Use <Link to="/build-deck" className="text-md-blue underline">Build a deck</Link> to create one.
+          No saved decks yet. Import a YDKE code, or use <Link to="/build-deck" className="text-md-blue underline">Build a deck</Link> to create one.
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
@@ -86,7 +97,9 @@ export default function MyDecks() {
                 className="group featured-card rounded-2xl overflow-hidden card-hover p-5 flex flex-col"
               >
                 {/* Fanned cards — same visual language as the Dashboard */}
-                <CardFan cards={fanCardsFor(deck)} />
+                <Link to={`/my-decks/${deck.id}`} aria-label={`Open ${deck.name}`}>
+                  <CardFan cards={fanCardsFor(deck)} />
+                </Link>
 
                 {/* Name + meta — matches the Dashboard deck-name styling */}
                 <div className="mt-4 text-center">
@@ -97,6 +110,7 @@ export default function MyDecks() {
                 </div>
 
                 <div className="flex items-center justify-center gap-2 mt-4">
+                  <Link to={`/my-decks/${deck.id}`} className="press text-xs bg-md-blue/15 text-md-blue px-2.5 py-1 rounded hover:bg-md-blue/25">View / edit</Link>
                   <button onClick={() => exportDeck(deck, 'copy')} className="press text-xs bg-md-surfaceHover px-2.5 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Copy</button>
                   <button onClick={() => exportDeck(deck, 'share')} className="press text-xs bg-md-surfaceHover px-2.5 py-1 rounded hover:bg-md-borderLight hover:text-md-text">Share</button>
                   <button onClick={() => remove(deck.id)} className="press text-xs text-md-red px-2.5 py-1 rounded hover:bg-md-red/10">Delete</button>

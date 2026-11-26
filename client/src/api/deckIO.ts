@@ -58,6 +58,11 @@ export async function createSavedDeck(deck: DeckPayload): Promise<SavedDeck> {
   return res.data;
 }
 
+export async function updateSavedDeck(id: number, deck: DeckPayload): Promise<SavedDeck> {
+  const res = await api.put(`/decks-io/saved/${id}`, deck);
+  return res.data;
+}
+
 export async function deleteSavedDeck(id: number): Promise<void> {
   await api.delete(`/decks-io/saved/${id}`);
 }

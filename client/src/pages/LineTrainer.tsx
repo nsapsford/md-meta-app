@@ -16,6 +16,7 @@ import OpeningDrill from '../components/trainer/OpeningDrill';
 import ReviewSession from '../components/trainer/ReviewSession';
 import CoverageView from '../components/trainer/CoverageView';
 import GeneratePanel from '../components/trainer/GeneratePanel';
+import ImportDeckDialog from '../components/decks/ImportDeckDialog';
 import type { CardMap } from '../components/trainer/shared';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { matchDeckFile } from '../finder/deck/match';
@@ -85,6 +86,7 @@ export default function LineTrainer() {
   const [actionError, setActionError] = useState('');
   const [flash, setFlash] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const eligible = useMemo(
     () => lines.filter((l) => includeDrafts || l.status === 'verified'),
@@ -203,7 +205,14 @@ export default function LineTrainer() {
     return (
       <div className="space-y-4">
         <h1 className="page-title">Line Trainer</h1>
-        <p className="text-sm text-md-textSecondary">Pick the deck whose lines you want to learn.</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-md-textSecondary">Pick the deck whose lines you want to learn.</p>
+          <button type="button" onClick={() => setImporting(true)}
+            className="press ml-auto shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-md-blue text-white hover:bg-md-blueLight">
+            Import deck (YDKE)
+          </button>
+        </div>
+        <ImportDeckDialog open={importing} onClose={() => setImporting(false)} onSaved={(d) => pickDeck(d.id)} />
         {picker.offerFinder && remembered && (
           <button type="button" onClick={() => setTab('finder')}
             className="press w-full text-left p-4 rounded-xl bg-md-blue/10 border border-md-blue/30 hover:border-md-blue/50 transition-colors">
@@ -216,7 +225,7 @@ export default function LineTrainer() {
         ) : picker.show === 'cantReach' ? (
           <ErrorBanner message="Can't reach the server, so your saved decks can't be shown right now." onRetry={() => void decksQ.refetch()} />
         ) : decks.length === 0 ? (
-          <p className="text-sm text-md-textMuted">No saved decks yet. <Link to="/build-deck" className="text-md-blue underline">Save one</Link> first.</p>
+          <p className="text-sm text-md-textMuted">No saved decks yet. Import one, or <Link to="/build-deck" className="text-md-blue underline">build one</Link>.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {decks.map((d) => (

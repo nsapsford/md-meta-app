@@ -34,6 +34,7 @@ const pageImports = {
   metaTrends: () => import('./pages/MetaTrends'),
   deckBuilder: () => import('./pages/DeckBuilder'),
   myDecks: () => import('./pages/MyDecks'),
+  myDeckDetail: () => import('./pages/MyDeckDetail'),
   myGames: () => import('./pages/MyGames'),
   duelMode: () => import('./pages/DuelMode'),
   lineTrainer: () => import('./pages/LineTrainer'),
@@ -45,6 +46,7 @@ const BanList = lazy(pageImports.banList);
 const MetaTrends = lazy(pageImports.metaTrends);
 const DeckBuilder = lazy(pageImports.deckBuilder);
 const MyDecks = lazy(pageImports.myDecks);
+const MyDeckDetail = lazy(pageImports.myDeckDetail);
 const MyGames = lazy(pageImports.myGames);
 const DuelMode = lazy(pageImports.duelMode);
 const LineTrainer = lazy(pageImports.lineTrainer);
@@ -104,6 +106,7 @@ function AnimatedRoutes() {
               <Route path="/deck-builder" element={<Navigate to="/my-decks" replace />} />
               <Route path="/build-deck" element={<DeckBuilder />} />
               <Route path="/my-decks" element={<MyDecks />} />
+              <Route path="/my-decks/:id" element={<MyDeckDetail />} />
               <Route path="/my-games" element={<MyGames />} />
               <Route path="/duel-mode" element={<DuelMode />} />
               <Route path="/trainer" element={<LineTrainer />} />
